@@ -4,7 +4,6 @@ Created on 15 Jan 2022
 @author: gianni
 '''
 
-import argparse
 from dataclasses import dataclass, field
 import anchorscad.core as core
 from subprocess import Popen
@@ -20,7 +19,6 @@ import pathlib
 import anchorscad.runner.runner_status as rs
 from typing import Dict
 import pickle
-import dill
 
 from anchorscad.runner.opendscad_finder import openscad_exe_location
 from anchorscad.runner.process_manager import ProcessManager, ProcessManagerEntry
