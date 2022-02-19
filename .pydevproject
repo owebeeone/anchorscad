@@ -6,6 +6,6 @@
         <path>/${PROJECT_DIR_NAME}/src</path>
     </pydev_pathproperty>
     <pydev_pathproperty name="org.python.pydev.PROJECT_EXTERNAL_SOURCE_PATH">
-        <path>C:\Users\gianni\git\pythonopenscad\src</path>
+        <path>C:\Users\gianni\git\anchorscad\pythonopenscad\src</path>
     </pydev_pathproperty>
 </pydev_project>

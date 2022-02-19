@@ -52,6 +52,7 @@ class MissingPythonOpenScad(Exception):
     '''Could not find module pythonopenscad.'''
         
 OTHER_POSC_LOCATIONS=(
+    Path('../pythonopenscad/src/pythonopenscad/'),
     Path('../../pythonopenscad/src/pythonopenscad/'),
     )
 def find_posc(path_to_module, relative_dirs=OTHER_POSC_LOCATIONS):
