@@ -29,6 +29,12 @@ import platform
 from subprocess import Popen
 import sys
 
+try:
+    import pythonopenscad as posc
+    POSC_AVAIL = True
+except:
+    POSC_AVAIL = False
+    
 
 PATH_SEPARATOR = ';' if platform.system() == 'Windows' else ':'
 PYTHON_PATH = 'PYTHONPATH'
@@ -40,6 +46,26 @@ def log_message(message):
     '''Minimal log function.'''
     if DO_LOG:
         sys.stderr.write(message + '\n')
+        
+        
+class MissingPythonOpenScad(Exception):
+    '''Could not find module pythonopenscad.'''
+        
+OTHER_POSC_LOCATIONS=(
+    Path('../../pythonopenscad/src/pythonopenscad/'),
+    )
+def find_posc(path_to_module, relative_dirs=OTHER_POSC_LOCATIONS):
+    '''If pythonopenscad is not in the path, look for it in some other
+    location and if found, return it's path. If pythonopenscad is able
+    to load, return None.'''
+    if POSC_AVAIL:
+        return None  # Nothing needs to be done.
+    for p in OTHER_POSC_LOCATIONS:
+        posc_path = Path(path_to_module, p)
+        if posc_path.is_dir():
+            return os.path.abspath(posc_path.parents[0])
+    
+    raise MissingPythonOpenScad('Unable to import pythonopenscad')
 
 @dataclass
 class RunAnchorSCADModule:
@@ -60,7 +86,7 @@ class RunAnchorSCADModule:
             if not ad_path in ppath_list:
                 ppath_list.append(ad_path)
                 new_ppath = PATH_SEPARATOR.join(str(p) for p in ppath_list)
-                print(new_ppath)
+                log_message(new_ppath)
                 self.env[PYTHON_PATH] = new_ppath
                 log_message(f"set new ppath to {self.env['PYTHONPATH']}")
             else:
@@ -68,6 +94,20 @@ class RunAnchorSCADModule:
                 self.python_path_ok = True
         else:
             self.env[PYTHON_PATH] = str(ad_path)
+            
+        posc_path = find_posc(self.get_anchorscad_path())
+        if posc_path:
+            self.python_path_ok = False
+            ppath = self.env.get(PYTHON_PATH, None)
+            if ppath:
+                ppath_list = list(Path(i) for i in ppath.split(PATH_SEPARATOR))
+                ppath_list.append(posc_path)
+                
+                new_ppath = PATH_SEPARATOR.join(str(p) for p in ppath_list)
+                log_message(new_ppath)
+                self.env[PYTHON_PATH] = new_ppath
+            else:
+                self.env[PYTHON_PATH] = str(posc_path.parents[1])
 
     
     def run(self):
@@ -77,7 +117,7 @@ class RunAnchorSCADModule:
         if self.env.get(ANCHORSAD_RUNNER_TAG, None) == 'T':
             sys.stderr.write(
                 f'Error: {ANCHORSAD_RUNNER_TAG} environment variable is set. '
-                f'This indicates a failure to properly set {PYTHONPATH}.')
+                f'This indicates a failure to properly set {PYTHON_PATH}.')
             return 1
         
         command = (
