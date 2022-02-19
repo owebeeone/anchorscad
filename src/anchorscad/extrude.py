@@ -89,7 +89,7 @@ class CubicSpline():
         [ -3,  3,  0,  0 ],
         [  1,  0,  0,  0 ]])
     
-    #@staticmethod
+    #@staticmethod # For some reason this breaks on Raspberry Pi OS.
     def _dcoeffs_builder(dims):
         zero_order_derivative_coeffs=np.array([[1.] * dims, [1] * dims, [1] * dims, [1] * dims])
         derivative_coeffs=np.array([[3.] * dims, [2] * dims, [1] * dims, [0] * dims])
@@ -160,8 +160,7 @@ class CubicSpline():
         d_coefs = self.coefs * self._dcoeffs(1)
         return dict((i, self.find_roots(*(d_coefs[0:3, i]), t_range=t_range)) 
                     for i in range(self.dimensions))
-    
-    
+
     def cuve_inflexion_t(self, t_range=(0.0, 1.0)):
         '''Returns a dict with an entry for each dimension containing a list of
         t for each inflection point found.'''
