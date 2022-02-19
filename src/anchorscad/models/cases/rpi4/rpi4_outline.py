@@ -6,10 +6,10 @@ Created on 16 Nov 2021
 
 from dataclasses import dataclass
 
-import ParametricSolid.core as core
-from ParametricSolid.linear import tranX, tranY, tranZ, ROTX_180, \
+import anchorscad.core as core
+from anchorscad.linear import tranX, tranY, tranZ, ROTX_180, \
                                    translate
-import ParametricSolid.linear as l
+import anchorscad.linear as l
 import anchorscad.models.basic.box_side_bevels as bbox
 from anchorscad.models.basic.TriangularPrism import TriangularPrism
 from anchorscad.models.grille.case_vent.basic import RectangularGrilleHoles

@@ -5,12 +5,12 @@ Created on 5 Dec 2021
 '''
 
 from dataclasses import dataclass
-import ParametricSolid.core as core
-import ParametricSolid.extrude as e
-import ParametricSolid.linear as l
+import anchorscad.core as core
+import anchorscad.extrude as e
+import anchorscad.linear as l
 import numpy as np
 
-@core.shape('ParametricSolid.extrude_test_ph.PolyhedraExtrusionTest')
+@core.shape('anchorscad.extrude_test_ph.PolyhedraExtrusionTest')
 @dataclass
 class PolyhedraExtrusionTest(core.CompositeShape):
     '''
@@ -48,7 +48,7 @@ class PolyhedraExtrusionTest(core.CompositeShape):
                      'face_corner', 0, 0)
         return maker
 
-@core.shape('ParametricSolid.extrude_test_ph.PolyhedraCircularTest')
+@core.shape('anchorscad.extrude_test_ph.PolyhedraCircularTest')
 @dataclass
 class PolyhedraCircularTest(core.CompositeShape):
     '''

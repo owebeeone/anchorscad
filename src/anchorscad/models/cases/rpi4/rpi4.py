@@ -4,9 +4,9 @@ Created on 25 Jan 2021
 @author: gianni
 '''
 
-from ParametricSolid.datatree import datatree, Node
+from anchorscad.datatree import datatree, Node
 
-import ParametricSolid.core as core
+import anchorscad.core as core
 from anchorscad.models.cases.rpi4.rpi4_outline import RaspberryPi4Outline
 from anchorscad.models.cases.rpi4.rpi_case import RaspberryPiCase
 

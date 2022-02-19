@@ -4,12 +4,12 @@ Created on 25 Jan 2021
 @author: gianni
 '''
 
-from ParametricSolid.datatree import datatree, Node
+from anchorscad.datatree import datatree, Node
 
-import ParametricSolid.core as core
+import anchorscad.core as core
 from anchorscad.models.cases.rpi4.rpi3_outline import RaspberryPi3Outline
 from anchorscad.models.cases.rpi4.rpi_case import RaspberryPiCase
-from ParametricSolid.linear import translate
+from anchorscad.linear import translate
 
 
 @core.shape('anchorscad/models/cases/rpi3_case')

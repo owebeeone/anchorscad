@@ -5,9 +5,9 @@ Created on 21 Sep 2021
 '''
 
 from dataclasses import dataclass
-import ParametricSolid.core as core
-import ParametricSolid.linear as l
-from ParametricSolid.extrude import PathBuilder, LinearExtrude
+import anchorscad.core as core
+import anchorscad.linear as l
+from anchorscad.extrude import PathBuilder, LinearExtrude
 
 @core.shape('anchorscad.models.joins')
 @dataclass

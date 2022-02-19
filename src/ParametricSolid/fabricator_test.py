@@ -5,10 +5,10 @@ Created on 24 Nov 2021
 '''
 
 
-import ParametricSolid.linear as l
-import ParametricSolid.core as core
-from ParametricSolid.datatree import datatree
-from ParametricSolid.fabricator import Fabricator, \
+import anchorscad.linear as l
+import anchorscad.core as core
+from anchorscad.datatree import datatree
+from anchorscad.fabricator import Fabricator, \
     StlRecipeArgs, ImageRecipeArgs, RecipiesBuilder
 
 

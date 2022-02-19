@@ -5,7 +5,7 @@ Created on 31 Dec 2021
 '''
 import unittest
 
-from ParametricSolid.graph_model import DirectedGraph
+from anchorscad.graph_model import DirectedGraph
 import pathlib as pl
 
 

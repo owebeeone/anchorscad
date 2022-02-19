@@ -5,9 +5,9 @@ Created on 18 Sep 2021
 '''
 
 from dataclasses import dataclass
-import ParametricSolid.core as core
-import ParametricSolid.linear as l
-from ParametricSolid.extrude import PathBuilder, LinearExtrude
+import anchorscad.core as core
+import anchorscad.linear as l
+from anchorscad.extrude import PathBuilder, LinearExtrude
 import numpy as np
 
 INCH=25.4

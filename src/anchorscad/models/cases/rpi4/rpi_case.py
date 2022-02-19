@@ -4,10 +4,10 @@ Created on 16 Nov 2021
 @author: gianni
 '''
 
-from ParametricSolid.datatree import datatree, Node
+from anchorscad.datatree import datatree, Node
 
-import ParametricSolid.core as core
-from ParametricSolid.linear import tranY, tranZ, ROTX_180, ROTX_270, \
+import anchorscad.core as core
+from anchorscad.linear import tranY, tranZ, ROTX_180, ROTX_270, \
     ROTX_90, ROTY_270, ROTY_180, translate, GVector, IDENTITY, \
     plane_line_intersect
 import anchorscad.models.basic.box_side_bevels as bbox

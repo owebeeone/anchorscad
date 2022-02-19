@@ -10,9 +10,9 @@ Created on 25 Jan 2021
 
 from dataclasses import dataclass
 
-import ParametricSolid.core as core
-import ParametricSolid.extrude as e
-import ParametricSolid.linear as l
+import anchorscad.core as core
+import anchorscad.extrude as e
+import anchorscad.linear as l
 import numpy as np
 
 EPSILON = 1.e-10

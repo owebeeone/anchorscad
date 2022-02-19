@@ -8,11 +8,11 @@ Created on 5 Feb 2021
 from dataclasses import dataclass
 import unittest
 
-import ParametricSolid.core as core
-import ParametricSolid.extrude as extrude
-import ParametricSolid.linear as l
-from ParametricSolid.renderer import render
-from ParametricSolid.test_tools import iterable_assert
+import anchorscad.core as core
+import anchorscad.extrude as extrude
+import anchorscad.linear as l
+from anchorscad.renderer import render
+from anchorscad.test_tools import iterable_assert
 import numpy as np
 
 

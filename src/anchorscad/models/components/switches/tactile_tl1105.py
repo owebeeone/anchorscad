@@ -4,10 +4,10 @@ Created on 7 Jan 2022
 @author: gianni
 '''
 
-import ParametricSolid.core as core
-import ParametricSolid.extrude as e
-from ParametricSolid.datatree import datatree, Node
-import ParametricSolid.linear as l
+import anchorscad.core as core
+import anchorscad.extrude as e
+from anchorscad.datatree import datatree, Node
+import anchorscad.linear as l
 import numpy as np
 
 LIST_2_FLOAT = l.list_of(l.strict_float, len_min_max=(2, 3), fill_to_min=0.0)

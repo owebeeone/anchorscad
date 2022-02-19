@@ -5,7 +5,7 @@ Created on 8 Dec 2021
 '''
 
 import unittest
-from ParametricSolid.datatree import datatree, dtargs, override, Node
+from anchorscad.datatree import datatree, dtargs, override, Node
 from dataclasses import dataclass, field
 
 @datatree

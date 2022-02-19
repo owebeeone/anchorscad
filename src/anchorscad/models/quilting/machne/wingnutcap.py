@@ -6,11 +6,11 @@ Created on 14 Feb 2022
 
 from dataclasses import dataclass
 
-from ParametricSolid.core import shape
-import ParametricSolid.core as core
-from ParametricSolid.datatree import datatree, Node
-import ParametricSolid.extrude as e
-import ParametricSolid.linear as l
+from anchorscad.core import shape
+import anchorscad.core as core
+from anchorscad.datatree import datatree, Node
+import anchorscad.extrude as e
+import anchorscad.linear as l
 
 
 @core.shape('anchorscad.models.quilting.machne.WingNutWings')

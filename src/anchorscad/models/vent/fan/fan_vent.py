@@ -5,9 +5,9 @@ Created on 28 Sep 2021
 '''
 
 from dataclasses import dataclass
-import ParametricSolid.core as core
-from ParametricSolid.datatree import datatree, Node
-import ParametricSolid.linear as l
+import anchorscad.core as core
+from anchorscad.datatree import datatree, Node
+import anchorscad.linear as l
 from anchorscad.models.basic.pipe import Pipe
 from anchorscad.models.screws.dims import holeMetricDims 
 from anchorscad.models.grille.round.CurlySpokes import CurlySpokes

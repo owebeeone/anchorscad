@@ -5,8 +5,8 @@ Created on 27 Oct 2021
 '''
 
 from dataclasses import dataclass
-import ParametricSolid.core as core
-import ParametricSolid.linear as l
+import anchorscad.core as core
+import anchorscad.linear as l
 import anchorscad.models.basic.box_side_bevels as bsb
 import numpy as np
 

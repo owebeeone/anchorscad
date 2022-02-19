@@ -5,9 +5,9 @@ Created on 12 Sep 2021
 '''
 
 from dataclasses import dataclass
-import ParametricSolid.core as core
-from ParametricSolid import linear as l
-from ParametricSolid.extrude import PathBuilder, LinearExtrude
+import anchorscad.core as core
+from anchorscad import linear as l
+from anchorscad.extrude import PathBuilder, LinearExtrude
 
 
 @core.shape('anchorscad.models.basic.TriangularPrism')

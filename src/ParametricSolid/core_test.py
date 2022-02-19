@@ -11,10 +11,10 @@ import unittest
 
 from frozendict import frozendict
 
-from ParametricSolid import linear as l
-from ParametricSolid.core import Box, Colour, Text, Cone, Arrow, Coordinates, \
+from anchorscad import linear as l
+from anchorscad.core import Box, Colour, Text, Cone, Arrow, Coordinates, \
     Sphere, AnnotatedCoordinates, at_spec, lazy_shape, args, CoordinatesCage
-from ParametricSolid.renderer import render, render_graph
+from anchorscad.renderer import render, render_graph
 import numpy as np
 import pythonopenscad as posc
 

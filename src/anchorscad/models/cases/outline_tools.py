@@ -7,9 +7,9 @@ Tools for building outlines and access holes.
 '''
 
 from dataclasses import dataclass
-from ParametricSolid.linear import tranX, tranY, tranZ, ROTX_180, \
+from anchorscad.linear import tranX, tranY, tranZ, ROTX_180, \
                                    ROTY_180, translate, GVector
-import ParametricSolid.core as core
+import anchorscad.core as core
 import numpy as np
 import anchorscad.models.basic.connector.hdmi.hdmi_outline as hdmi
 from anchorscad.models.screws.holes import SelfTapHole

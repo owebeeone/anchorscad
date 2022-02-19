@@ -3,8 +3,8 @@
 '''
 import unittest
 
-from ParametricSolid import linear
-from ParametricSolid.test_tools import iterable_assert
+from anchorscad import linear
+from anchorscad.test_tools import iterable_assert
 import numpy as np
 
 

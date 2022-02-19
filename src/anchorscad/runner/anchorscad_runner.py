@@ -6,7 +6,7 @@ Created on 15 Jan 2022
 
 import argparse
 from dataclasses import dataclass, field
-import ParametricSolid.core as core
+import anchorscad.core as core
 from subprocess import Popen
 
 import sys

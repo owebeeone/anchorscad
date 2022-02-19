@@ -5,8 +5,8 @@ Created on 29 Sep 2021
 '''
 
 from dataclasses import dataclass
-import ParametricSolid.core as core
-import ParametricSolid.linear as l
+import anchorscad.core as core
+import anchorscad.linear as l
 from anchorscad.models.screws.holes import CountersinkSelfTapHole
 from anchorscad.models.basic.box_cylinder import BoxCylinder
 

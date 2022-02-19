@@ -8,8 +8,8 @@ import copy
 from dataclasses import dataclass
 from pygments.lexers import graph
 
-from ParametricSolid import core, graph_model
-from ParametricSolid import linear as l
+from anchorscad import core, graph_model
+from anchorscad import linear as l
 import pythonopenscad as posc
 
 
@@ -47,7 +47,10 @@ class Container():
     def _apply_name(self, obj):
         if self.shape_name:
             for o in obj:
-                o.setMetadataName(self.shape_name)
+                try:
+                    o.setMetadataName(self.shape_name)
+                except:
+                    print(o)
 
     def add_solid(self, *obj):
         container = self._get_or_create_container(SOLID_CONTAINER)
@@ -282,7 +285,7 @@ class Context():
         return self.stack[-1].container
         
 class Renderer():
-    '''Provides renderer machinery for ParametricSolid. Renders to PythonOpenScad models.'''
+    '''Provides renderer machinery for anchorscad. Renders to PythonOpenScad models.'''
     model = posc
     
     def __init__(self, initial_frame=None, initial_attrs=None):

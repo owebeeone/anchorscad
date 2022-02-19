@@ -7,9 +7,9 @@ Created on 26 Aug 2021
 
 from dataclasses import dataclass
 
-import ParametricSolid.core as core
-import ParametricSolid.extrude as extrude
-import ParametricSolid.linear as l
+import anchorscad.core as core
+import anchorscad.extrude as extrude
+import anchorscad.linear as l
 from anchorscad.models.screws.CountersunkScrew import CountersunkScrew, FlatSunkScrew
 import numpy as np
 

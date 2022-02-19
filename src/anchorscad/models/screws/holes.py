@@ -6,9 +6,9 @@ Created on 9 Feb 2021
 
 from dataclasses import dataclass
 
-from ParametricSolid.core import shape, CompositeShape, non_defaults_dict, Cylinder, args,\
+from anchorscad.core import shape, CompositeShape, non_defaults_dict, Cylinder, args,\
     surface_args, anchorscad_main, Cone, create_from, anchor
-from ParametricSolid.linear import tranX, tranY, tranZ, ROTX_180
+from anchorscad.linear import tranX, tranY, tranZ, ROTX_180
 from anchorscad.models.basic.pipe import Pipe
 from anchorscad.models.screws.dims import HoleDimensions, holeMetricDims
 import numpy as np

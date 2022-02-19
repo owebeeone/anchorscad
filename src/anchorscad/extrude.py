@@ -11,8 +11,8 @@ from typing import List
 
 from frozendict import frozendict
 
-import ParametricSolid.core as core
-import ParametricSolid.linear as l
+import anchorscad.core as core
+import anchorscad.linear as l
 import numpy as np
 import pyclipper as pc
 

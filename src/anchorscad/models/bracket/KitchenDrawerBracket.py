@@ -5,9 +5,9 @@ Created on 12 Oct 2021
 '''
 
 from dataclasses import dataclass
-import ParametricSolid.core as core
-import ParametricSolid.linear as l
-import ParametricSolid.extrude as e
+import anchorscad.core as core
+import anchorscad.linear as l
+import anchorscad.extrude as e
 from anchorscad.models.basic.cone_ended_prism import ConeEndedPrism
 from anchorscad.models.basic.box_side_bevels import BoxSideBevels
 from anchorscad.models.screws.CountersunkScrew import CountersunkScrew, \

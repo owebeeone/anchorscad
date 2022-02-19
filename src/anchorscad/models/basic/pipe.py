@@ -8,8 +8,8 @@ from dataclasses import dataclass
 
 from numpy.core.defchararray import center
 
-import ParametricSolid.core as core
-import ParametricSolid.linear as l
+import anchorscad.core as core
+import anchorscad.linear as l
 
 
 @core.shape('anchorscad/models/basic/pipe')

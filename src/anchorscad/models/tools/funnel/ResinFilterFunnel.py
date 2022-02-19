@@ -5,8 +5,8 @@ Created on 10 Oct 2021
 '''
 
 from dataclasses import dataclass
-import ParametricSolid.core as core
-import ParametricSolid.linear as l
+import anchorscad.core as core
+import anchorscad.linear as l
 import numpy as np
 
 # Flat filter dimensions.

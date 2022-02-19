@@ -19,8 +19,8 @@ import traceback
 
 from frozendict import frozendict
 
-from ParametricSolid import linear as l
-from ParametricSolid.datatree import Node, BoundNode
+from anchorscad import linear as l
+from anchorscad.datatree import Node, BoundNode
 import numpy as np
 import pythonopenscad as posc
 
@@ -1934,7 +1934,7 @@ def render_examples(module,
     '''Scans a module for all Anchorscad shape classes and renders examples.'''
     classes = find_all_shape_classes(module)
     # Lazy import renderer since renderer depends on this.
-    import ParametricSolid.renderer as renderer
+    import anchorscad.renderer as renderer
     
     shape_count = 0
     example_count = 0

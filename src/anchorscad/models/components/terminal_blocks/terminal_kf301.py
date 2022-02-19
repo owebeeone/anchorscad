@@ -5,10 +5,10 @@ Created on 12 Jan 2022
 '''
 
 from dataclasses import dataclass
-import ParametricSolid.core as core
-import ParametricSolid.extrude as e 
-from ParametricSolid.datatree import datatree, Node
-import ParametricSolid.linear as l
+import anchorscad.core as core
+import anchorscad.extrude as e 
+from anchorscad.datatree import datatree, Node
+import anchorscad.linear as l
 
 EPSILON=0.001
 
