@@ -9,12 +9,20 @@ parameters are passed to run of the subsequent file in the command line.
 Also, the current working directory is changed to the same directory as 
 the file being executed.
 
-Example:
-  python3 src\\anchorscad\\run.py \\
-    src\\anchorscad\\models\\basic\\box_cylinder.py --write --svg_write
+Example1:
+  Run the box_cylinder.py module and generate shape files:
+  python3 src/anchorscad/run.py src/anchorscad/models/basic/box_cylinder.py --write
 
-    - The src\\anchorscad\\models\\basic\\examples_out directory will contain
+    - The src/anchorscad/models/basic/examples_out directory will contain
       the resulting files.
+      
+Example2:
+  Run VS Code with the correct PYTHONPATH:
+  python3 src/anchorscad/run.py src/anchorscad/run_other.py cmd /c code
+
+Example3:
+  Print commands for setting the PYTHONPATH in a terminal.
+  python3 src/anchorscad/run.py src/anchorscad/run_pythonpath.py
 
 Created on 17 Feb 2022
 
