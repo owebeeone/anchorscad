@@ -1,20 +1,5 @@
 ﻿# Installing AnchorSCAD
 
-
-[Requirements](#_s7psdxljcaf0)
-
-[Linux (Debian, Ubuntu, Raspberry Pi OS)](#_2p4dgxlq5vbn)
-
-[Windows](#_8m9jpsadi5i8)
-
-[Testing The Installation](#_399xlwdmo5lb)
-
-[Running AnchorSCAD Modules](#_x3z9y3464ed4)
-
-[License](#_f2cn9t1bbfvs)
-
-
-
 AnchorSCAD can be downloaded using Git from the [AnchorSCAD BitBucket Git](https://bitbucket.org/owebeeone/anchorscad/src/master/) repository. It will also require the [PythonOpenScad Git](https://bitbucket.org/owebeeone/pythonopenscad/src/master/) repository and a number of other easily downloadable tools.
 
 This software is provided under the terms of the LGPL V2.1 license. See the [License](#_f2cn9t1bbfvs) section in this document for more information.
