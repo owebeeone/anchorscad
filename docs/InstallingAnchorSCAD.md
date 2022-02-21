@@ -35,12 +35,12 @@ It is highly recommended that a Python IDE be used. While not endorsing any IDE 
 On Linux (Debian, Ubuntu, Raspberry Pi etc based distros), the following commands pasted  into a terminal running bash should result in a working environment.
 
 
- sudo apt install openscad graphviz python3 git
- mkdir -p ~/git
- cd ~/git
- git clone https://owebeeone@bitbucket.org/owebeeone/anchorscad.git
- cd anchorscad
- git clone https://owebeeone@bitbucket.org/owebeeone/pythonopenscad.git
+	sudo apt install openscad graphviz python3 git
+	mkdir -p ~/git
+	cd ~/git
+	git clone https://owebeeone@bitbucket.org/owebeeone/anchorscad.git
+	cd anchorscad
+	git clone https://owebeeone@bitbucket.org/owebeeone/pythonopenscad.git
  pip3 install -r src/anchorscad/requirements.txt
 
 ## Windows
@@ -52,13 +52,14 @@ Download and install the latest versions of:
 
 After installing those packages, start a new “cmd” shell terminal and run the following:
 
- cd %USERPROFILE%
- mkdir git   # Don’t run if the git directory already exists.
- cd git
- git clone https://owebeeone@bitbucket.org/owebeeone/anchorscad.git
- cd anchorscad
- git clone https://owebeeone@bitbucket.org/owebeeone/pythonopenscad.git
- pip3 install -r src/anchorscad/requirements.txt
+	cd %USERPROFILE%
+	mkdir git   # Don’t run if the git directory already exists.
+	cd git
+	git clone https://owebeeone@bitbucket.org/owebeeone/anchorscad.git
+	cd anchorscad
+	git clone https://owebeeone@bitbucket.org/owebeeone/pythonopenscad.git
+	pip3 install -r src/anchorscad/requirements.txt
+ 
 ## Testing The Installation
 To verify that it is installed you can run a module like so:
 
