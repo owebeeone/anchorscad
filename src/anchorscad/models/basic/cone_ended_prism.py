@@ -1,19 +1,19 @@
 '''
+A triangular prism ended with 2 cones on eiher side. Contains both solid and 
+hull shapes.
+
 Created on 5 Oct 2021
 
 @author: gianni
 '''
 
-from dataclasses import dataclass
-import anchorscad.core as core
-import anchorscad.linear as l
-import anchorscad.extrude as e
+import anchorscad as ad
 import numpy as np
 
 
-@core.shape('anchorscad.models.basic.cone_ended_prism.ConeEndedPrism')
-@dataclass
-class ConeEndedPrism(core.CompositeShape):
+@ad.shape('anchorscad.models.basic.cone_ended_prism.ConeEndedPrism')
+@ad.datatree
+class ConeEndedPrism(ad.CompositeShape):
     '''
     Two cones with a trapezoid connection. Similar to a hull operation
     of two cones.
@@ -23,18 +23,22 @@ class ConeEndedPrism(core.CompositeShape):
         r_base: Base radius (open end).
         r_top: Top radius.
     '''
-    h: float
-    w: float
-    r_base: float
-    r_top: float
-    fn: int=64
+    h: float=110
+    w: float=50
+    r_base: float=33 * 4 / np.pi, 5,
+    r_top: float = 5
+    cone_node: ad.Node=ad.ShapeNode(ad.Cone)
+    extrude_node: ad.Node=ad.ShapeNode(ad.LinearExtrude, {'h': 'w'})
+    box_cage_node: ad.Node=ad.Node(ad.cageof, prefix='box_cage_')
     
-    EXAMPLE_SHAPE_ARGS=core.args(110, 50, 33 * 4 / np.pi, 5)
+    EXAMPLE_SHAPE_ARGS=ad.args(
+        110, 50, 33 * 4 / np.pi, 5, box_cage_as_cage=False)
     EXAMPLE_ANCHORS=(
-        core.surface_args('top'),
-        core.surface_args('base'),
-        core.surface_args('cone1', 'top'),
-        core.surface_args('cone1', 'base')
+        ad.surface_args('top'),
+        ad.surface_args('base'),
+        ad.surface_args('cone1', 'top'),
+        ad.surface_args('cone1', 'base'),
+        ad.surface_args('cage', 'face_edge', 'front', 0),
         )
     
     def __post_init__(self):
@@ -43,22 +47,19 @@ class ConeEndedPrism(core.CompositeShape):
                 if self.r_base > self.r_top
                 else self.r_top)
         size = (r_max * 2, r_max * 2 + self.w, self.h)
-        maker = core.Box(size).cage(
-            'cage').colour([0, 1, 0, 0.5]).at('centre')
+        maker = self.box_cage_node(ad.Box(size)).at('centre')
         size_inner = (r_max * 2, self.w, self.h)
-        box_inner = core.Box(size_inner).cage('inner_cage').at('centre')
+        box_inner = ad.Box(size_inner).cage('inner_cage').at('centre')
         maker.add(box_inner)
             
-        cone = core.Cone(
-            h=self.h, r_base=self.r_base, r_top=self.r_top, fn=self.fn)
+        cone = self.cone_node()
         
         maker.add_at(cone.solid('cone1').at('base'), 
-                     'inner_cage', 'face_edge', 0, 0, post=l.ROTX_90)
+                     'inner_cage', 'face_edge', 0, 0, post=ad.ROTX_90)
         maker.add_at(cone.solid('cone2').at('base'), 
-                     'inner_cage', 'face_edge', 3, 2, post=l.ROTX_90)
+                     'inner_cage', 'face_edge', 3, 2, post=ad.ROTX_90)
         
-        
-        path = (e.PathBuilder()
+        path = (ad.PathBuilder()
                     .move((0., 0))
                     .line((-self.r_base, 0), name='lbase')
                     .line((-self.r_top, self.h), name='lside')
@@ -68,28 +69,25 @@ class ConeEndedPrism(core.CompositeShape):
                     .line((0, 0), name='rbase')
                     .build())
        
-        prism = e.LinearExtrude(
-            path=path, 
-            h=self.w, 
-            fn=self.fn)
+        prism = self.extrude_node(path=path)
         
         maker.add_at(prism.solid('prism').at('lbase', 0), 
-                     'cone1', 'base', post=l.ROTX_180)
+                     'cone1', 'base', post=ad.ROTX_180)
         
-        self.maker = maker
+        self.set_maker(maker)
 
-    @core.anchor('top of the shape')
+    @ad.anchor('top of the shape')
     def top(self):
         return self.at('cage', 'face_centre', 4)
 
-    @core.anchor('base of the shape')
+    @ad.anchor('base of the shape')
     def base(self):
         return self.at('cage', 'face_centre', 1)
 
 
-@core.shape('anchorscad.models.basic.cone_ended_prism.ConeEndedHull')
-@dataclass
-class ConeEndedHull(core.CompositeShape):
+@ad.shape('anchorscad.models.basic.cone_ended_prism.ConeEndedHull')
+@ad.datatree
+class ConeEndedHull(ad.CompositeShape):
     '''
     A "hull" made from ConeEndedPrism.
     Args:
@@ -98,24 +96,22 @@ class ConeEndedHull(core.CompositeShape):
         r_base: Base radius (open end).
         r_top: Top radius.
         t: Thickness of hull wall.
+        t_top: Thickness of hull at top.
     '''
-    h: float
-    w: float
-    r_base: float
-    r_top: float
-    t: float
+
+    cep_node: ad.Node=ad.ShapeNode(ConeEndedPrism)
+    t: float=1.5
+    inner_cep_node: ad.Node=ad.ShapeNode(ConeEndedPrism, 'w')
     t_top: float=0
-    epsilon: float=0.001
-    fn: int=128
+    epsilon: float=0.005
     
-    EXAMPLE_SHAPE_ARGS=core.args(110, 50, 33 * 4 / np.pi, 4.5, 1.5, 1.5)
+    EXAMPLE_SHAPE_ARGS=ad.args(
+        h=110, w=50, r_base=33 * 4 / np.pi, r_top=4.5, t=3, t_top=1.5, fn=32)
     EXAMPLE_ANCHORS=()
     
     def __post_init__(self):
         
-        outer = ConeEndedPrism(
-            h=self.h, w=self.w, r_base=self.r_base, r_top=self.r_top, 
-            fn=self.fn)
+        outer = self.cep_node()
         self.outer = outer
         
         t = self.t
@@ -125,21 +121,19 @@ class ConeEndedHull(core.CompositeShape):
         else:
             inner_r_top = self.r_top - t
         
-        
         epsilon = self.epsilon
-        inner = ConeEndedPrism(
+        inner = self.inner_cep_node(
             h=self.h - self.t_top + epsilon * 2, 
-            w=self.w, r_base=self.r_base -t, r_top=inner_r_top, 
-            fn=self.fn)
+            r_base=self.r_base -t, r_top=inner_r_top)
         self.inner = inner
         
         maker = outer.solid('outer').at('centre')
         
         maker.add_at(inner.hole('inner').at('cone1', 'base'),
-                     'cone1', 'base', post=l.tranZ(epsilon))
+                     'cone1', 'base', post=ad.tranZ(epsilon))
 
-        self.maker = maker
+        self.set_maker(maker)
 
 
 if __name__ == '__main__':
-    core.anchorscad_main(False)
+    ad.anchorscad_main(False)

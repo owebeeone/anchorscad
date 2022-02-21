@@ -1651,9 +1651,9 @@ class Cone(Shape):
 class Cylinder(Cone):
     '''Creates a Cone that has the same top and base radius. (a cylinder)'''
     h: float=1.0
-    r: float=None
-    r_base: float=None
-    r_top: float=field(init=False)
+    r: float=1.0
+    r_base: float=field(init=False)  # Hide this in the constructor.
+    r_top: float=field(init=False)  # Hide this in the constructor.
     # The fields below should be marked kw only (Python 3.10 feature).
     fn: int=None
     fa: float=None
