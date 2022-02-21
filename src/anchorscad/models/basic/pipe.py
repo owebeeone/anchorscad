@@ -6,15 +6,12 @@ Created on 26 Jan 2021
 
 from dataclasses import dataclass
 
-from numpy.core.defchararray import center
-
-import anchorscad.core as core
-import anchorscad.linear as l
+import anchorscad as ad
 
 
-@core.shape('anchorscad/models/basic/pipe')
-@dataclass
-class Pipe(core.CompositeShape):
+@ad.shape('anchorscad/models/basic/pipe')
+@ad.datatree
+class Pipe(ad.CompositeShape):
     '''
     A pipe.
     '''
@@ -26,31 +23,31 @@ class Pipe(core.CompositeShape):
     fa: float=None
     fs: float=None
     
-    EXAMPLE_SHAPE_ARGS=core.args(h=50, inside_r=6, outside_r=10)
+    EXAMPLE_SHAPE_ARGS=ad.args(h=50, inside_r=6, outside_r=10)
     EXAMPLE_ANCHORS=(
-        core.surface_args('top'),
-        core.surface_args('base'),
-        core.surface_args('surface', 50, 0),
-        core.surface_args('inner_surface', 0, 45),
+        ad.surface_args('top'),
+        ad.surface_args('base'),
+        ad.surface_args('surface', 50, 0),
+        ad.surface_args('inner_surface', 0, 45),
         )
     
     def __post_init__(self):
         assert self.outside_r > self.inside_r, (
             f'Inside radius ({self.inside_r}) must be smaller than outside ({self.outside_r}')
-        params = core.non_defaults_dict(self, include=('fn', 'fa', 'fs'))
-        maker = core.Cone(
+        params = ad.non_defaults_dict(self, include=('fn', 'fa', 'fs'))
+        maker = ad.Cone(
             h=self.h, r_base=self.outside_r, r_top=self.outside_r, **params).solid(
             'outer').at('centre')
         
         self.set_maker(maker)
         
-        maker.add_at(core.Cone(
+        maker.add_at(ad.Cone(
             h=self.h + self.hole_h_delta, r_base=self.inside_r, r_top=self.inside_r, **params).hole(
             'inner').at('centre'))
 
-    @core.anchor('inner surface anchor corrected so Z points away from surface.')
+    @ad.anchor('inner surface anchor corrected so Z points away from surface.')
     def inner_surface(self, *args, **kwds):
-        return self.maker.at('inner', 'surface', *args, **kwds) * l.ROTX_180
+        return self.maker.at('inner', 'surface', *args, **kwds) * ad.ROTX_180
 
 if __name__ == '__main__':
-    core.anchorscad_main(False)
+    ad.anchorscad_main(False)

@@ -1,4 +1,6 @@
 '''
+Models for an alternative bracket for Hettich drawers.
+
 Created on 12 Oct 2021
 
 @author: gianni
