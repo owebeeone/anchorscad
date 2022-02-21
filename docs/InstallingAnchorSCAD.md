@@ -64,11 +64,11 @@ After installing those packages, start a new “cmd” shell terminal and run th
 To verify that it is installed you can run a module like so:
 
 
- python3 src/anchorscad/run.py src/anchorscad/extrude.py
+	python3 src/anchorscad/run.py src/anchorscad/extrude.py
 
 Or you can run a longer test where every shape is run and images of all example shapes are created.
 
- python3 src/anchorscad/run.py src/anchorscad/runner/anchorscad\_runner.py ../..
+	python3 src/anchorscad/run.py src/anchorscad/runner/anchorscad\_runner.py ../..
 
 The generated files will reside in “src/anchorscad/runner/generated”.
 # Running AnchorSCAD Modules
@@ -78,6 +78,7 @@ Once everything is installed, you can open your favourite IDE but you will need 
 You can also use the “python3 src/anchorscad/run.py” command to run Python modules that depend on AnchorSCAD or PythonOpenSCAD which only sets the PYTHONPATH environment variable and current directory to the appropriate locations.
 
 You can now check out the [Quick Start](https://docs.google.com/document/u/0/d/1p-qAE5oR-BQ2jcotNhv5IGMNw_UzNxbYEiZat76aUy4/edit) instructions to start building your models.
+
 # License
 [AnchorSCAD](https://bitbucket.org/owebeeone/anchorscad/src/master/) is available under the terms of the [GNU LESSER GENERAL PUBLIC LICENSE](https://www.gnu.org/licenses/old-licenses/lgpl-2.1.en.html#SEC1).
 
