@@ -1,4 +1,6 @@
 '''
+A Raspberry Pi Case shell. Works with the RPi3 and RPi4 outlines.
+
 Created on 16 Nov 2021
 
 @author: gianni
