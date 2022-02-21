@@ -98,7 +98,7 @@ class ElipticConeHull(core.CompositeShape):
             fn=self.fn)
         
         maker = outer.solid('outer').at('top')
-        self.maker = maker
+        self.set_maker(maker)
         
         inner = ElipticCone(
             h=self.h + 2 * self.epsilon,
@@ -213,8 +213,6 @@ class FilterFunnel(core.CompositeShape):
         
         hull.add_at(rim.solid('rim').at('base'), 'base')
         
-        self.maker = hull
-        
         adapter = ElipticConeHull(
             h=self.h_adapter,
             r_base=self.r_adapter,
@@ -227,7 +225,7 @@ class FilterFunnel(core.CompositeShape):
                     'inner', 'top', post=l.tranZ(-self.offs_adapter))
 
         maker = hull.solid('hull').at()
-        self.maker = maker
+        self.set_maker(maker)
         
         # Add ribs on the conic surfaces.
         count_conic_side = 2 ** self.conic_rib_level

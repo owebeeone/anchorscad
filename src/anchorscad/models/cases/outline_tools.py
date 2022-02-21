@@ -222,7 +222,7 @@ class BaseOutline(core.CompositeShape):
             bevel_radius=self.bevel_radius, 
             fn=self.fn).solid('board').at('face_centre', 4)
         
-        self.maker = maker
+        self.set_maker(maker)
         
         params = core.non_defaults_dict_include(self, include=('fn', 'fa', 'fs'))
 

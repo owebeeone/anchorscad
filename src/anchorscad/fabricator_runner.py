@@ -48,7 +48,7 @@ def get_plate():
             
             def __post_init__(self):
                 maker = core.cageof(core.Box([300, 300, 1]), False)
-                self.maker = maker
+                self.set_maker(maker)
             
             @core.anchor
             def plate(self):

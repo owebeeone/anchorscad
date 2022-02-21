@@ -79,7 +79,7 @@ class SpoolHolder(core.CompositeShape):
         
         maker.add_at(cut_box, 'holder', 'surface', 0, 90)
         
-        self.maker = maker
+        self.set_maker(maker)
 
 
 @core.shape('anchorscad.models.quilting.machne.SpoolHolderCap')
@@ -143,7 +143,7 @@ class SpoolHolderCap(core.CompositeShape):
              
         maker.add_at(slicer, 'shaft_cage', 'base', rh=0.5, post=l.ROTX_90)
         
-        self.maker = maker
+        self.set_maker(maker)
 
 if __name__ == '__main__':
     core.anchorscad_main(False)

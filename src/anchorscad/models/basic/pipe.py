@@ -42,7 +42,7 @@ class Pipe(core.CompositeShape):
             h=self.h, r_base=self.outside_r, r_top=self.outside_r, **params).solid(
             'outer').at('centre')
         
-        self.maker = maker
+        self.set_maker(maker)
         
         maker.add_at(core.Cone(
             h=self.h + self.hole_h_delta, r_base=self.inside_r, r_top=self.inside_r, **params).hole(

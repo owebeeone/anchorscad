@@ -1824,7 +1824,7 @@ class Coordinates(CompositeShape):
             'base', pre=t * l.rotZ(180)), 'y', pre=l.rotZ(-90))
         maker .add_at(arrow.solid('z_arrow').colour(self.colour_z).at(
             'base', pre=t * l.rotZ(180)), 'z', pre=l.rotX(-90))
-        self.maker = maker
+        self.set_maker(maker)
             
     @anchor('The base of the stem of the object')
     def origin(self):
@@ -1868,7 +1868,7 @@ class AnnotatedCoordinates(CompositeShape):
                 [-10 * self.text_stem_size_ratio, -5 * -self.text_stem_size_ratio, 0]) * l.rotZ(-45)
             maker.add(txt.solid('label').colour([0, 1, 0.5]).at('default', 'centre', post=xform))
 
-        self.maker = maker
+        self.set_maker(maker)
     
     @anchor('The base of the stem of the object')
     def origin(self, *args, **kwds):

@@ -47,7 +47,7 @@ class WingNutWings(core.CompositeShape):
         
         maker.add_at(shape.solid('rhs').at(post=l.scale([-1, 1, 1])))
                 
-        self.maker = maker
+        self.set_maker(maker)
         
     @core.anchor('The centre of the arc for attaching to cylinder')
     def arc_centre(self):
@@ -96,7 +96,7 @@ class WingNutCap(core.CompositeShape):
                          .at('arc_centre'), 
                          'surface', 0, i * 180)
         
-        self.maker = maker
+        self.set_maker(maker)
 
 
 if __name__ == '__main__':

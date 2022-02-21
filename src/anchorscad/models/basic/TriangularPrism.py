@@ -40,7 +40,7 @@ class TriangularPrism(core.CompositeShape):
         maker.add_at(shape.solid('prism').at('face3', 0.5, rh=0.5), 
                      'face_centre', 2, post=l.ROTX_180)
         
-        self.maker = maker
+        self.set_maker(maker)
 
     @core.anchor('Base of the prism.')
     def base(self, *args, **kwds):

@@ -103,7 +103,7 @@ class FanVent(core.CompositeShape):
         maker.add_at(grille.named_shape('grille', mode).at('base'),
                      'face_centre', 1, post=l.ROTY_180)
         
-        self.maker = maker
+        self.set_maker(maker)
 
     @core.anchor('Centre of grille.')
     def grille_centre(self, *args, **kwds):

@@ -47,7 +47,7 @@ class HoleTester(core.CompositeShape):
         
         maker = core.Box(size=swatch_size).solid('substrate').at('centre')
         
-        self.maker = maker
+        self.set_maker(maker)
         params = core.non_defaults_dict(self, include=('fn', 'fa', 'fs'))
         fnparams = core.non_defaults_dict(self, include=('fn',))
         

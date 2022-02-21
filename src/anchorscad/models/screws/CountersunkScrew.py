@@ -158,7 +158,7 @@ class CountersunkScrew(core.CompositeShape):
         maker.add_at(shape_func('screw_hole').at('base_edge', 0),
                      'base', post=l.rotY(180))
         
-        self.maker = maker
+        self.set_maker(maker)
 
     def createHeadDims(self, shaft_dims):
         '''Creates a default set of countersunk screw set of head dimensions.'''

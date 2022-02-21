@@ -121,7 +121,7 @@ class DoveTail(core.CompositeShape):
             ('front', 'right', half_count - 1), post=l.ROTX_90),
                      'face_centre', 1)
         
-        self.maker = maker
+        self.set_maker(maker)
         
 if __name__ == '__main__':
     core.anchorscad_main(False)

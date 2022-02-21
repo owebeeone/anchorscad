@@ -374,12 +374,12 @@ class V2PipeCrossBracket(core.CompositeShape):
         # Orient for slicing and apply printing shrink compensation in the
         # X/Y plane as the Z axis does not shrink as that is constantly
         # filled as each layer is deposited at the correct location.
-        self.maker = maker.solid('scaled').at(
+        self.set_maker(maker.solid('scaled').at(
             'face_cutter', 'cutter', 'hypot', 0.5, cutter_size / 2,
             post=l.ROTX_180 * l.scale([
                 self.shrink_factor, 
                 self.shrink_factor, 
-                1]))
+                1])))
         
 #         for i in range(4):
 #             

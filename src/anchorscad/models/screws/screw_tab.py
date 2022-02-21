@@ -46,7 +46,7 @@ class ScrewTab(core.CompositeShape):
         maker.add_at(screw.composite('screw').at('top'), 
                      'cylinder', 'top')
         
-        self.maker = maker
+        self.set_maker(maker)
 
     @core.anchor('An example anchor specifier.')
     def side(self, *args, **kwds):

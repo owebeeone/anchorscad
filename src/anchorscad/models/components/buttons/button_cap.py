@@ -61,7 +61,7 @@ class ButtonWings(core.CompositeShape):
         for i in range(self.wing_count):
             maker.add_at(shape.solid(('wing', i)).at(),
                          post=l.rotZ(rot_angle_offset + i * angle_per_wing))
-        self.maker = maker
+        self.set_maker(maker)
 
 
 @core.shape('anchorscad.models.components.buttons.ButtonCap')
@@ -148,7 +148,7 @@ class ButtonCap(core.CompositeShape):
         maker.add_at(wings_shape.named_shape('cap_wings', wings_mode).at('base'),
                      'base', post=l.tranZ(EPSILON))
         
-        self.maker = maker
+        self.set_maker(maker)
 
 @core.shape('anchorscad.models.components.buttons.EngravedButtonCap')
 @datatree
@@ -193,7 +193,7 @@ class EngravedButtonCap(core.CompositeShape):
                      .at('base'),
                      'base')
 
-        self.maker = maker
+        self.set_maker(maker)
 
 
 if __name__ == '__main__':

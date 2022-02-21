@@ -103,7 +103,7 @@ class CurlySpokes(core.CompositeShape):
         maker.add_at(core.Cylinder(r=self.r_inner, h=self.h + self.epsilon, fn=fn)
                      .named_shape('inner_core', spokes_mode).at('centre'))
         
-        self.maker = maker
+        self.set_maker(maker)
         
     def points(self, r, start_angle, *phis):
         sum_phis = start_angle

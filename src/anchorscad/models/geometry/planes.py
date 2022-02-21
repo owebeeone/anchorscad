@@ -24,7 +24,7 @@ class Planes(core.CompositeShape):
         maker = core.Box([100, 100, 1]).solid(
             'plane1').colour([1, 1, 0, 0.5]).at('centre')
         
-        self.maker = maker
+        self.set_maker(maker)
 
     @core.anchor('An example anchor specifier.')
     def side(self, *args, **kwds):

@@ -55,7 +55,7 @@ class HdmiOutline(core.CompositeShape):
         maker.add_at(shape.solid('hdmi').at('base_lhs', 0),
                      'face_edge', 0, 0, post=l.ROTX_270)
         
-        self.maker = maker
+        self.set_maker(maker)
 
     def cage_shape(self):
         shape = core.Box(self.size)
@@ -85,7 +85,7 @@ class HdmiOutlineTest(core.CompositeShape):
         
         maker.add_at(self.outline.hole('outline').at('centre'),
                      'centre')
-        self.maker = maker
+        self.set_maker(maker)
 
 
 if __name__ == '__main__':

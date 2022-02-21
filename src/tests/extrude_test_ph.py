@@ -31,7 +31,7 @@ class PolyhedraExtrusionTest(core.CompositeShape):
         
         maker.add_at(shape2.hole('hole').at('centre'), 'centre')
 
-        self.maker = maker
+        self.set_maker(maker)
         
     def make_extrusion(self, size):
         path = (e.PathBuilder()
@@ -72,7 +72,7 @@ class PolyhedraCircularTest(core.CompositeShape):
         maker.add_at(shape2.hole('hole').at('top', 0.5, self.size2[2] / 2), 
                      'top', 0.5, self.size[2] / 2)
 
-        self.maker = maker
+        self.set_maker(maker)
         
     def make_extrusion(self, size, offset):
         path = (e.PathBuilder()

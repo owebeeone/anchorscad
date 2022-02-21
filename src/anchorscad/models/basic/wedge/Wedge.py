@@ -68,7 +68,7 @@ class Wedge(core.CompositeShape):
                      post=l.ROTX_180 * l.translate([0, -5, 0]))
         
                 
-        self.maker = maker
+        self.set_maker(maker)
         
 if __name__ == '__main__':
     core.anchorscad_main(False)

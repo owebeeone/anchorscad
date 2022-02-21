@@ -127,7 +127,7 @@ class ButtonBody(CompositeShape):
         wings_shape = self.body_wing_node()
         maker.add_at(wings_shape.named_shape('body_wings', wings_mode).at('base'),
                      'rim_plate_cage', 'base', rh=1, post=ROTZ_180 * tranZ(-EPSILON))
-        self.maker = maker
+        self.set_maker(maker)
 
     @anchor('Plate top.')
     def plate(self, *args, **kwds):
@@ -173,7 +173,7 @@ class ButtonForTactileSwitch(CompositeShape):
         maker.add_at(switch_shape.hole('switch_hole').at('switch_top'),
                      'plate_cage', 'top', post=tranZ(EPSILON))
         
-        self.maker = maker
+        self.set_maker(maker)
 
     def select_switch(self):
         if self.switch_type is None:
@@ -231,7 +231,7 @@ class ButtonAssemblyTest(CompositeShape):
         maker.add_at(cap_shape.solid('cap').colour([1, 0.3, 0.8, 1]).at('base'),
                      'rim_plate_cage', 'base', rh=1, post=ROTZ_180 * tranZ(-0.))
         
-        self.maker = maker
+        self.set_maker(maker)
 
 
 if __name__ == '__main__':

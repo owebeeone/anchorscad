@@ -90,7 +90,7 @@ class TerminalKF301Terminal(core.CompositeShape):
                      .at('face_centre', 2),
                      'block', 'face_centre', 2, post=l.ROTY_180)
         
-        self.maker = maker
+        self.set_maker(maker)
 
 @core.shape('anchorscad.models.components.terminal_blocks.TerminalKF301Body')
 @datatree
@@ -137,7 +137,7 @@ class TerminalKF301Body(core.CompositeShape):
                      'face_edge', 1, 0, post=l.ROTY_180 * l.ROTZ_180)
         
 
-        self.maker = maker
+        self.set_maker(maker)
 
     @core.anchor('An example anchor specifier.')
     def side(self, *args, **kwds):
@@ -171,7 +171,7 @@ class TerminalKF301(core.CompositeShape):
                          .at('face_edge', 3, 0), 
                          'face_edge', 3, 0, post=l.tranZ(-i * self.pin_pitch))
             
-        self.maker = maker
+        self.set_maker(maker)
         
 if __name__ == '__main__':
     core.anchorscad_main(False)

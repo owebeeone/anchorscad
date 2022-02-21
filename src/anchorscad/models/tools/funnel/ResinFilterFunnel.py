@@ -90,7 +90,7 @@ class ConePipe(core.CompositeShape):
         maker.add_at(inner_cone.hole('inner').at('centre'),
                       'centre')
         
-        self.maker = maker
+        self.set_maker(maker)
 
 
 @core.shape('anchorscad.models.tools.funnel.ResinFilterFunnel')
@@ -223,7 +223,7 @@ class ResinFilterFunnel(core.CompositeShape):
                      .at('base'),
                      'adapter', 'base', rh=1)
         
-        self.maker = maker.solid('resin_funnel').at('top', rh=1)
+        self.set_maker(maker.solid('resin_funnel').at('top', rh=1))
         
         # Tabs
         

@@ -27,7 +27,7 @@ class SquarePipe(ad.CompositeShape):
                       self.size[2] + EPSILON)
         maker2 = ad.Box(inner_size).hole('hole').at('centre')
         maker.add_at(maker2, 'centre')
-        self.maker = maker
+        self.set_maker(maker)
 
     @ad.anchor('Inner hole.')
     def inner(self, *args, **kwds):
@@ -54,7 +54,7 @@ class SquarePipeTee(ad.CompositeShape):
         maker.add_at(shape.composite('stem').at('face_centre', 1),
                      'face_centre', 1, post=ad.ROTX_90)
         
-        self.maker = maker
+        self.set_maker(maker)
 
 
 if __name__ == '__main__':

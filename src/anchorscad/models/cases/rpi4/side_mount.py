@@ -63,7 +63,7 @@ class SideMount(CompositeShape):
         
         box_cage = Box([self.outer_dia, ])
         
-        self.maker = maker
+        self.set_maker(maker)
         
     def _make_sunk_profle(self): 
         bevel_r = self.bevel_r

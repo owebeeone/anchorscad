@@ -60,7 +60,7 @@ EPSILON = 1.e-10
 #             new_size = adjust + inner_size
 #             maker.add(core.Box(new_size).solid(('box', i)).at('centre'))
 #
-#         self.maker = maker
+#         self.set_maker(maker)
 #
 
 
@@ -113,7 +113,7 @@ class BoxSideBevels(core.CompositeShape):
             maker.add_at(
                 e.LinearExtrude(path, h=sz).solid('hull').at('face_0', 0.5, 0),
                 'face_edge', 0, 0)
-        self.maker = maker
+        self.set_maker(maker)
 
 
 @core.shape('anchorscad/models/basic/box_shell')
@@ -160,7 +160,7 @@ class BoxShell(core.CompositeShape):
         maker.add(centre_cage_box.cage('shell_centre').at('centre'))
         maker.add(inner_box.hole('inner').at('centre'))
         
-        self.maker = maker
+        self.set_maker(maker)
 
 
 @core.shape('anchorscad/models/basic/box_open_shell')
@@ -200,7 +200,7 @@ class BoxOpenShell(core.CompositeShape):
         maker.add_at(inner_box.hole('inner').at(
             'face_centre', 4, pre=l.translate([0, 0, self.z_adjust])), 'face_centre', 4)
         
-        self.maker = maker
+        self.set_maker(maker)
         
 
 
@@ -225,7 +225,7 @@ class BoxCutter(core.CompositeShape):
         maker.add(core.Box(self.cut_size).hole('cut_box').at(
             'face_centre', self.cut_face, post=self.post))
         
-        self.maker = maker
+        self.set_maker(maker)
 
 if __name__ == "__main__":
     core.anchorscad_main(False)

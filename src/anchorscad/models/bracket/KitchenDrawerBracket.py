@@ -143,7 +143,7 @@ class KitchenDrawerMountHole(core.CompositeShape):
         maker.add_at(access_hole.hole('access_hole').at('base'),
                      'top', post=l.ROTX_180 * l.tranZ(self.epsilon))
         
-        self.maker = maker
+        self.set_maker(maker)
         
     def centre_offs(self):
         return self.rw / 2 + self.shell_w
@@ -228,7 +228,7 @@ class KitchenDrawerOutline(core.CompositeShape):
                      post=l.IDENTITY)
         
         
-        self.maker = maker
+        self.set_maker(maker)
 
     @core.anchor('Upper notch on side of drawer.')
     def lower_notch(self, t=0.0, **kwds):
@@ -305,7 +305,7 @@ class KitchenDrawerSideAdjuster(core.CompositeShape):
                          .at('face_centre', 1),
                          'base', post=l.tranZ(epsilon))
 
-        self.maker = maker
+        self.set_maker(maker)
         
 
 @core.shape('anchorscad.models.bracket.KitchenDrawerBracket')
@@ -648,9 +648,9 @@ class KitchenDrawerBracket(core.CompositeShape):
             self.maker = self.adjuster_solid.solid('adjuster').at('base')
         else:
             if self.make_mirror:
-                self.maker = maker.solid('mirror').at(post=l.mirror(l.X_AXIS))
+                self.set_maker(maker.solid('mirror').at(post=l.mirror(l.X_AXIS)))
             else:
-                self.maker = maker
+                self.set_maker(maker)
 
     @core.anchor('An example anchor specifier.')
     def side(self, *args, **kwds):

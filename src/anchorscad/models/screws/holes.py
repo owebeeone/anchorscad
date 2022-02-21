@@ -58,7 +58,7 @@ class SelfTapHole(CompositeShape):
         maker.add_at(thru_hole.composite('thru').at('top'), 'top', pre=tranZ(self.overlap_delta))
         maker.add_at(tap_hole.composite('tap').at('base'), 'base', pre=tranZ(self.overlap_delta))
         
-        self.maker = maker
+        self.set_maker(maker)
         
     @anchor('The entrance point for screws')
     def start(self):
@@ -105,7 +105,7 @@ class CountersinkAccessHole(CompositeShape):
         maker.add_at(couter_sink_hole.hole('couter_sink_hole').colour([1,0,0]).at('surface', access_r, tangent=False),
                      'access_hole', 'surface', self.overlap_delta, tangent=False)
         
-        self.maker = maker
+        self.set_maker(maker)
 
 
 @shape('anchorscad/models/screws/holes/countersink_access_hole')
@@ -140,7 +140,7 @@ class CountersinkSelfTapHole(CompositeShape):
             self.access_dia = self_tap_hole.outer_dia + self.overlap_delta
         countersink_acccess_hole = create_from(CountersinkAccessHole, self)
         maker = self_tap_hole.composite('screw_hole').at('top')
-        self.maker = maker
+        self.set_maker(maker)
 
         maker.add_at(countersink_acccess_hole.composite('access_hole').at('base', post=ROTX_180),
                      'top')

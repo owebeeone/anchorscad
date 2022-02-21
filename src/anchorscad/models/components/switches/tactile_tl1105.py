@@ -99,7 +99,7 @@ class TactileSwitchTL1105Lead(core.CompositeShape):
         maker.add_at(self.cage_node(cage_shape).at('face_edge', 2, 0, 1),
                      'top_end', 1, rh=1, post=l.ROTX_180)
         
-        self.maker = maker 
+        self.set_maker(maker) 
 
     @core.anchor('Body edge.')
     def body_edge(self, rh=0.5):
@@ -174,7 +174,7 @@ class TactileSwitchTL1105(core.CompositeShape):
                              ('lead_pos_cage', i), 'face_edge', 0, 0, j, 
                              post=l.ROTX_270)
         
-        self.maker = maker
+        self.set_maker(maker)
         
 
     @core.anchor('The hole location for the specified lead number.')
@@ -205,7 +205,7 @@ class TactileSwitchTL59Lead(core.CompositeShape):
     def __post_init__(self):
         shape = core.Box(self.size)
         maker = shape.solid('terminal').at()
-        self.maker = maker 
+        self.set_maker(maker) 
 
     @core.anchor('Body edge.')
     def body_edge(self, rh=0.5):
@@ -266,7 +266,7 @@ class TactileSwitchTL59(core.CompositeShape):
                          .at('lead_hole_pos'),
                          ('lead_pos_cage', 0), 'face_edge', 2 + 3 * i, 1 + 2 * i, 
                          post=l.ROTX_90)
-        self.maker = maker
+        self.set_maker(maker)
 
     @core.anchor('The hole location for the specified lead number.')
     def lead_hole(self, lead_no, at_end=False):
@@ -324,7 +324,7 @@ class TactileSwitchOutline(core.CompositeShape):
                 push_hole_shape.solid('push_hole_shape').at('top'), 
                 'switch_base', post=l.ROTX_180 * l.tranZ(EPSILON))
             
-        self.maker = maker
+        self.set_maker(maker)
 
 
 if __name__ == '__main__':

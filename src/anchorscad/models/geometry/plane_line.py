@@ -26,7 +26,7 @@ class PlaneLine(core.CompositeShape):
     
     def __post_init__(self):
         maker = core.AnnotatedCoordinates().cage('origin').at()
-        self.maker = maker
+        self.set_maker(maker)
         maker.add_at(
             core.Box(self.size).solid('plane1')
             .transparent(True).colour([1, 1, 0, 0.3]).at('centre'),

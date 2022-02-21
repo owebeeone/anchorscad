@@ -384,7 +384,7 @@ class PipeCrossBracket(core.CompositeShape):
                      'tag', 'edge7', 0, post=l.ROTX_270 * l.ROTV111_240) 
 #         maker.add_at(tie_maker_r.solid(('face_edge', 3, 0, 1)).at(), 'base', 'face_edge', 3, 0, 1)
         
-        self.maker = maker
+        self.set_maker(maker)
         
 
     

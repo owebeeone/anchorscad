@@ -87,7 +87,7 @@ class Snap(core.CompositeShape):
             'face_centre', 1, 
             post=l.translate([-self.epsilon / 2, -self.epsilon, 0]))
         
-        self.maker = maker
+        self.set_maker(maker)
         
     @core.anchor('Snap seam edge.')
     def snap(self, rpos=0.5):

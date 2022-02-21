@@ -80,7 +80,7 @@ class Tnut(core.CompositeShape):
                          'flat', 'surface', degrees=i * 360 / 4
                          )
         
-        self.maker = maker
+        self.set_maker(maker)
         
 
     @core.anchor('An example anchor')
@@ -111,7 +111,7 @@ class TnutExample(core.CompositeShape):
                      'face_centre', 4,
                      post=l.tranZ(epsilon))
 
-        self.maker = maker
+        self.set_maker(maker)
 
 if __name__ == "__main__":
     core.anchorscad_main(False)
