@@ -4,31 +4,41 @@ Created on 29 Sep 2021
 @author: gianni
 '''
 
-from dataclasses import dataclass
+from dataclasses import field
 import anchorscad as an
 
 
 @an.shape('anchorscad.models.basic.box_cylinder')
-@dataclass
+@an.datatree
 class BoxCylinder(an.CompositeShape):
     '''
-    <description>
+    A Box with half a cylinder protruding from one side.
+    
+    Build as an LinearExtrude but has both Cylinder and Box cages for anchors. 
+    The Box cage is the primary shape.
     '''
     size: tuple=(10, 20, 30)
-    fn: int=36
+    r: float=field(init=False)  # reflects size[0] / 2
+    h: float=field(init=False)  # reflects size[2]
+    extrude_node: an.Node=an.ShapeNode(an.LinearExtrude, {})
+    cylinder_node: an.Node=an.ShapeNode(an.Cylinder, 'r', 'h')
+    box_cage_of_node: an.Node=an.Node(an.cageof, prefix='box_cage_')
+    cyliner_cage_of_node: an.Node=an.Node(an.cageof, prefix='cylinder_cage_')
     
-    EXAMPLE_SHAPE_ARGS=an.args()
+    EXAMPLE_SHAPE_ARGS=an.args(fn=32,
+                               box_cage_as_cage=False,
+                               cylinder_cage_as_cage=True)
     EXAMPLE_ANCHORS=(
         an.surface_args('face_corner', 0, 0),
-        an.surface_args('cylinder', 'top'),
-        an.surface_args('cylinder', 'base'),)
+        an.surface_args('cylinder', 'base'),
+        an.surface_args('round_centre'),)
     
     def __post_init__(self):
         r = self.size[1] / 2
         self.r = r
+        self.h = self.size[2]
         cage_size = (self.size[0] + r, self.size[1], self.size[2])
-        maker = an.Box(cage_size).cage(
-            'cage').colour([1, 1, 0, 0.5]).at(
+        maker = self.box_cage_of_node(an.Box(cage_size)).at(
                 'face_corner', 0, 0)
             
         path = (an.PathBuilder()
@@ -40,16 +50,18 @@ class BoxCylinder(an.CompositeShape):
             .line([0, 0], 'edge4')
             .build())
         
-        shape = an.LinearExtrude(path, self.size[2], fn=self.fn)
+        shape = self.extrude_node(path, self.size[2])
         
         maker.add_at(shape.solid('box_cylinder').at('edge4', 1.0),
                      'face_edge', 0, 0, post=an.ROTY_180)
         
-        maker.add_at(an.Cylinder(r=r, h=self.size[2])
-                     .cage('cylinder').at('surface'),
+        cylinder_cage = self.cyliner_cage_of_node(
+            self.cylinder_node(fn=2 * self.fn),
+            properties=an.CageOfProperties(name='cylinder', colour=(1, 0, 0, 0.4)))
+        maker.add_at(cylinder_cage.at('surface'),
                      'box_cylinder', 'arc', 0, pre=an.tranX(2 * r))
         
-        self.maker = maker
+        self.set_maker(maker)
 
     @an.anchor('Round centre.')
     def round_centre(self, h=0, rh=None):
