@@ -18,7 +18,7 @@ from anchorscad.models.vent.fan.fan_vent import FanVent
 from anchorscad.models.screws.screw_tab import ScrewTab
 import anchorscad.models.cases.outline_tools as ot 
 from time import time
-from anchorscad.models.cases.rpi4.rpi4_outline import RaspberryPi4Outline
+from anchorscad.models.cases.rpi.rpi4_outline import RaspberryPi4Outline
 
 # The time of life.
 MODEL_V0=1632924118

@@ -7,15 +7,7 @@ Created on 16 Nov 2021
 from dataclasses import dataclass
 
 import anchorscad.core as core
-from anchorscad.linear import tranX, tranY, tranZ, ROTX_180, \
-                                   translate
-import anchorscad.linear as l
-import anchorscad.models.basic.box_side_bevels as bbox
-from anchorscad.models.basic.TriangularPrism import TriangularPrism
-from anchorscad.models.grille.case_vent.basic import RectangularGrilleHoles
-from anchorscad.models.fastners.snaps import Snap
-from anchorscad.models.vent.fan.fan_vent import FanVent
-from anchorscad.models.screws.screw_tab import ScrewTab
+from anchorscad.linear import tranX, tranY, translate
 import anchorscad.models.cases.outline_tools as ot 
 from time import time
 

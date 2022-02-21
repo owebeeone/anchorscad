@@ -7,8 +7,8 @@ Created on 25 Jan 2021
 from anchorscad.datatree import datatree, Node
 
 import anchorscad.core as core
-from anchorscad.models.cases.rpi4.rpi3_outline import RaspberryPi3Outline
-from anchorscad.models.cases.rpi4.rpi_case import RaspberryPiCase
+from anchorscad.models.cases.rpi.rpi3_outline import RaspberryPi3Outline
+from anchorscad.models.cases.rpi.rpi_case import RaspberryPiCase
 from anchorscad.linear import translate
 
 
