@@ -1966,6 +1966,29 @@ def render_examples(module,
                         end_example(clz, e)
     return shape_count, example_count
 
+@dataclass
+class ModuleDefault():
+    '''Default anchorscad_main command line default values.
+    
+    Adding the following to an anchorscad_main module will result
+    in the default to be --write instead of --no-write.
+    
+    MAIN_DEFAULT=ModuleDefault(True)
+    
+    Similarly, write_graph_files and write_graph_svg_files apply
+    as well.
+    '''
+    write_files: bool=False
+    write_graph_files: bool=False
+    write_graph_svg_files: bool=False
+    
+    def apply(self, obj):
+        '''Apply the default values to obj.'''
+        for f in self.__dataclass_fields__:
+            curval = getattr(obj, f)
+            if curval is None:
+                setattr(obj, f, getattr(self, f))
+
 
 class ExampleCommandLineRenderer():
     '''Command line parser and runner for invoking the renderer on examples.'''
@@ -2016,7 +2039,7 @@ class ExampleCommandLineRenderer():
             dest='write_files',
             action='store_true',
             help='Writes models to files.')
-        argq.set_defaults(write_files=False)
+        argq.set_defaults(write_files=None)
 
         argq.add_argument(
             '--no-graph_write', 
@@ -2029,7 +2052,7 @@ class ExampleCommandLineRenderer():
             dest='write_graph_files',
             action='store_true',
             help='Produces a graph of shape_names in .dot GraphViz format.')
-        argq.set_defaults(write_graph_files=False)
+        argq.set_defaults(write_graph_files=None)
         
         argq.add_argument(
             '--no-svg_write', 
@@ -2042,7 +2065,7 @@ class ExampleCommandLineRenderer():
             dest='write_graph_svg_files',
             action='store_true',
             help='Produces a graph of shape_names in .dot and .svg formats.')
-        argq.set_defaults(write_graph_svg_files=False)
+        argq.set_defaults(write_graph_svg_files=None)
         
         argq.add_argument(
             '--out_file_name', 
@@ -2094,7 +2117,7 @@ class ExampleCommandLineRenderer():
         self.status = 1
         
     def _load_anchorcad_module(self, module):
-        if self.argp.module:
+        if module:
             globalsd = {}
             localsd = {}
             exec(f'import {module} as _m', globalsd, localsd)
@@ -2103,6 +2126,11 @@ class ExampleCommandLineRenderer():
         else:
             self.module = sys.modules['__main__']
             self.module_name = ''
+            
+        if hasattr(self.module, 'MAIN_DEFAULT'):
+            main_default = self.module.MAIN_DEFAULT
+            main_default.apply(self.argp)
+            
 
     def file_writer(self, obj, clz, example_name, base_example_name):
         fname = self.argp.out_file_name.format(
@@ -2163,14 +2191,11 @@ class ExampleCommandLineRenderer():
         Note that by default, run() will exit the process.
         '''
         try:
+            self._load_anchorcad_module(self.argp.module)
             if not self.argp.write_files:
                 sys.stderr.write(
                     f'Anchorscad example renderer running in (--no-write) mode.\n')
-            if self.argp.module:
-                self._load_anchorcad_module(self.argp.module)
-            else:
-                self.module = sys.modules['__main__']
-                self.module_name = ''
+
             self.run_module()
 
         except BaseException as ex:
