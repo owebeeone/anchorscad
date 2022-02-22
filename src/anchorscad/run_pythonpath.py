@@ -15,7 +15,7 @@ export {env}="{ppath}"
 
 WIN_FORMAT = '''\
 For cmd shell:
-set {env}="{ppath}"
+set "{env}={ppath}"
 
 For powershell:
 $env:{env} = '{ppath}'

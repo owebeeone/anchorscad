@@ -4,9 +4,6 @@ Created on 14 Feb 2022
 @author: gianni
 '''
 
-from dataclasses import dataclass
-
-from anchorscad.core import shape
 import anchorscad.core as core
 from anchorscad.datatree import datatree, Node
 import anchorscad.extrude as e

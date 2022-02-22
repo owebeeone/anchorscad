@@ -1,38 +1,39 @@
 '''
+Tabs with screw hole support models.
+
 Created on 29 Sep 2021
 
 @author: gianni
 '''
 
-from dataclasses import dataclass
-import anchorscad.core as core
-import anchorscad.linear as l
+import anchorscad as ad
 from anchorscad.models.screws.holes import CountersinkSelfTapHole
 from anchorscad.models.basic.box_cylinder import BoxCylinder
 
 
-@core.shape('anchorscad.models.screws.screw_tab')
-@dataclass
-class ScrewTab(core.CompositeShape):
+@ad.shape('anchorscad.models.screws.screw_tab')
+@ad.datatree
+class ScrewTab(ad.CompositeShape):
     '''
-    <description>
+    Creates a tab with a screw hold. Can be placed on the side of a box
+    to make a support hole.
     '''
     dia: float=2.6 # Screw M size
     width: float=dia * 1.9 + 2
     depth: float=dia * 1.5 / 2 + 1
     h: float=8 
     screw: type=CountersinkSelfTapHole
-    fn: int=36
+    box_cyl_node: ad.Node=ad.ShapeNode(BoxCylinder, {})
     
-    EXAMPLE_SHAPE_ARGS=core.args()
-    EXAMPLE_ANCHORS=(core.surface_args('face_corner', 0, 0),)
+    EXAMPLE_SHAPE_ARGS=ad.args(fn=32)
+    EXAMPLE_ANCHORS=(ad.surface_args('face_corner', 0, 0),)
     
     def __post_init__(self):
+        tab = self.box_cyl_node((self.depth, self.width, self.h))
         max_outer_dia = (
             self.width 
             if self.width < self.depth * 2 
             else self.depth * 2)
-        tab = BoxCylinder((self.depth, self.width, self.h), fn=self.fn)
         screw =self.screw(
             dia = self.dia,
             thru_len=self.h, 
@@ -48,9 +49,9 @@ class ScrewTab(core.CompositeShape):
         
         self.set_maker(maker)
 
-    @core.anchor('An example anchor specifier.')
+    @ad.anchor('Mounting point.')
     def side(self, *args, **kwds):
         return self.maker.at('face_edge', *args, **kwds)
 
 if __name__ == '__main__':
-    core.anchorscad_main(False)
+    ad.anchorscad_main(False)

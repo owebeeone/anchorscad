@@ -468,6 +468,8 @@ class AnchorScadRunner(core.ExampleCommandLineRenderer):
         
         if hasattr(anchorscad_module, 'RUNNER_EXCLUDE'):
             if anchorscad_module.RUNNER_EXCLUDE:
+                sys.stderr.write('Excluded by RUNNER_EXCLUDE variable: '
+                                 f'{module_name}\n')
                 return
         classes = core.find_all_shape_classes(anchorscad_module)
         if not classes:

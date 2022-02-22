@@ -64,6 +64,7 @@ class RaspberryPiCase(core.CompositeShape):
         depth=0.3 if wall_thickness > 0.5 else wall_thickness * 0.5)
     do_versioned_example: bool=False
     split_box_delta: float=0
+    screw_tab_node: Node=core.ShapeNode(ScrewTab, prefix='screw_tab')
     cageof_node: Node=Node(core.cageof, prefix='rpi_cage_')
     rpi_cage_properties: core.CageOfProperties=core.CageOfProperties(
         name='split_box_cage')
@@ -284,7 +285,7 @@ class RaspberryPiCase(core.CompositeShape):
                             self.TAB_REAR_RHS, 
                             self.TAB_REAR_LHS)
             tab_trans = ROTY_180
-            tab_shape = ScrewTab()
+            tab_shape = self.screw_tab_node()
             for i, a in enumerate(tab_anchors):
                 maker.add_at(tab_shape
                         .composite(('tab', i))
