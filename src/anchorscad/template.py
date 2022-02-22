@@ -22,7 +22,6 @@ class ShapeName(ad.CompositeShape):
         shape = ad.Box(self.size)
         maker = shape.solid('box').at('face_corner', 'front', 0)
         self.set_maker(maker)
-        
 
     @ad.anchor('An example anchor')
     def example(self):
