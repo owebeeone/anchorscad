@@ -5,7 +5,7 @@ Created on ${date}
 '''
 
 import anchorscad as ad
-import numpy as np
+
 
 @ad.shape('${file}/ShapeName')
 @ad.datatree
@@ -20,14 +20,18 @@ class ShapeName(ad.CompositeShape):
 
     def __post_init__(self):
         shape = ad.Box(self.size)
-        maker = shape.solid('box').at('face_corner', 0, 0)
+        maker = shape.solid('box').at('face_corner', 'front', 0)
         self.set_maker(maker)
         
 
     @ad.anchor('An example anchor')
-    def origin(self):
+    def example(self):
         return self.maker.at()
 
+
+# Uncomment the line below to default to writing OpenSCAD files
+# when anchorscad_main is run with no --write or --no-write options.
+#MAIN_DEFAULT=ad.ModuleDefault(True)
 
 if __name__ == "__main__":
     ad.anchorscad_main(False)
