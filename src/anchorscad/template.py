@@ -24,7 +24,7 @@ class ShapeName(ad.CompositeShape):
         self.set_maker(maker)
 
     @ad.anchor('An example anchor')
-    def example(self):
+    def example_anchor(self):
         return self.maker.at()
 
 

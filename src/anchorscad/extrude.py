@@ -664,7 +664,7 @@ class PathBuilder():
             return _normalize(self.direction(t))
         
         def normal2d(self, t, dims=[0, 1]):
-            return None
+            return _normalize(self.dir)
         
         def extremes(self):
             p = self.point
@@ -875,7 +875,7 @@ class PathBuilder():
     def move(self, point, name=None, direction=None):
         if not self.multi and self.ops:
             raise MoveNotAllowedException(f'Move is not allowed in non multi-path builder.')
-        if direction:
+        if not direction is None:
             direction = np.array(LIST_2_FLOAT(direction))
         return self.add_op(self._MoveTo(np.array(LIST_2_FLOAT(point)),
                                         dir=direction,
@@ -1734,10 +1734,10 @@ class RotateExtrude(ExtrudedShape):
         }
     
     def select_attrs(self, renderer):
-        if self.path_fn:
-            return core.ModelAttributes(fn=self.path_fn)
         if self.fn:
             return core.ModelAttributes(fn=self.fn)
+        if self.path_fn:
+            return core.ModelAttributes(fn=self.path_fn)
         return renderer.get_current_attributes()
     
     def select_path_attrs(self, renderer):
@@ -1835,6 +1835,7 @@ class RotateExtrude(ExtrudedShape):
                      * l.translate([pos[0], pos[1], 0])
                      * l.ROTY_90  
                      * l.rotXSinCos(normal[1], -normal[0]))
+
     
     @core.anchor('Centre of the extrusion arc.')
     def centre(self):
