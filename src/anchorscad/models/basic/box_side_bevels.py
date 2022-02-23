@@ -10,16 +10,16 @@ Created on 25 Jan 2021
 
 from dataclasses import dataclass
 
-import anchorscad.core as core
+import anchorscad as ad
 import anchorscad.extrude as e
 import anchorscad.linear as l
 import numpy as np
 
 EPSILON = 1.e-10
 
-# @core.shape('anchorscad/models/basic/box_side_bevels')
+# @ad.shape('anchorscad/models/basic/box_side_bevels')
 # @dataclass
-# class BoxSideBevelsX(core.CompositeShape):
+# class BoxSideBevelsX(ad.CompositeShape):
 #     '''
 #     Creates a box with bevels on 4 size (flat top and bottom).
 #     '''
@@ -30,24 +30,24 @@ EPSILON = 1.e-10
 #     fs: float=None
 #
 #
-#     EXAMPLE_SHAPE_ARGS=core.args([100., 80., 40.], bevel_radius=8, fn=20)
+#     EXAMPLE_SHAPE_ARGS=ad.args([100., 80., 40.], bevel_radius=8, fn=20)
 #     EXAMPLE_ANCHORS=tuple(
-#         (core.surface_args('face_corner', f, c)) for f in (0, 3) for c in range(4)
-#         ) + tuple(core.surface_args('face_edge', f, c) for f in (1, 3) for c in range(4)
-#         ) + tuple(core.surface_args('face_centre', f) for f in (0, 3)
+#         (ad.surface_args('face_corner', f, c)) for f in (0, 3) for c in range(4)
+#         ) + tuple(ad.surface_args('face_edge', f, c) for f in (1, 3) for c in range(4)
+#         ) + tuple(ad.surface_args('face_centre', f) for f in (0, 3)
 #         ) + (
-#             core.surface_args('face_edge', 2, 2, 0.1),
-#             core.surface_args('face_edge', 2, 2, -0.5),
-#              core.inner_args('centre'),)
+#             ad.surface_args('face_edge', 2, 2, 0.1),
+#             ad.surface_args('face_edge', 2, 2, -0.5),
+#              ad.inner_args('centre'),)
 #
 #     def __post_init__(self):
 #         size_delta = np.array([2 * self.bevel_radius, 2 * self.bevel_radius, 0])
 #         inner_size = np.array(self.size) - size_delta
-#         maker = core.Box(self.size).cage('shell').at('centre')
-#         maker.add(core.Box(inner_size).cage('hull').at('centre'))
+#         maker = ad.Box(self.size).cage('shell').at('centre')
+#         maker.add(ad.Box(inner_size).cage('hull').at('centre'))
 #
-#         params = core.non_defaults_dict(self, include=('fn', 'fa', 'fs'))
-#         roundc = core.Cylinder(h=self.size[2], r=self.bevel_radius, **params)
+#         params = ad.non_defaults_dict(self, include=('fn', 'fa', 'fs'))
+#         roundc = ad.Cylinder(h=self.size[2], r=self.bevel_radius, **params)
 #         faces = ((0, 1), (2, 1), (3, 3), (5, 1))
 #         for f, e in faces:
 #             maker.add_at(roundc.solid(f).at('centre'), 'hull', 'face_edge', f, e, post=l.ROTY_90)
@@ -58,15 +58,15 @@ EPSILON = 1.e-10
 #             adjust = np.array([0, 0, 0])
 #             adjust[i] = 2 * self.bevel_radius
 #             new_size = adjust + inner_size
-#             maker.add(core.Box(new_size).solid(('box', i)).at('centre'))
+#             maker.add(ad.Box(new_size).solid(('box', i)).at('centre'))
 #
-#         self.set_maker(maker)
+#         return maker
 #
 
 
-@core.shape('anchorscad/models/basic/box_side_bevels')
+@ad.shape('anchorscad/models/basic/box_side_bevels')
 @dataclass
-class BoxSideBevels(core.CompositeShape):
+class BoxSideBevels(ad.CompositeShape):
     '''
     Creates a box with bevels on 4 size (flat top and bottom) using extrusion.
     '''
@@ -77,18 +77,18 @@ class BoxSideBevels(core.CompositeShape):
     fs: float=None
 
 
-    EXAMPLE_SHAPE_ARGS=core.args([100., 80., 40.], bevel_radius=8, fn=20)
+    EXAMPLE_SHAPE_ARGS=ad.args([100., 80., 40.], bevel_radius=8, fn=20)
     EXAMPLE_ANCHORS=tuple(
-        (core.surface_args('face_corner', f, c)) for f in (0, 3) for c in range(4)
-        ) + tuple(core.surface_args('face_edge', f, c) for f in (1, 3) for c in range(4)
-        ) + tuple(core.surface_args('face_centre', f) for f in (0, 3)
+        (ad.surface_args('face_corner', f, c)) for f in (0, 3) for c in range(4)
+        ) + tuple(ad.surface_args('face_edge', f, c) for f in (1, 3) for c in range(4)
+        ) + tuple(ad.surface_args('face_centre', f) for f in (0, 3)
         ) + (
-            core.surface_args('face_edge', 2, 2, 0.1),
-            core.surface_args('face_edge', 2, 2, -0.5),
-             core.inner_args('centre'),)
+            ad.surface_args('face_edge', 2, 2, 0.1),
+            ad.surface_args('face_edge', 2, 2, -0.5),
+             ad.inner_args('centre'),)
 
-    def __post_init__(self):
-        shape = core.Box(self.size)
+    def build(self) -> ad.Maker:
+        shape = ad.Box(self.size)
         maker = shape.cage('shell').colour([0, 1, 0, 0.5]).transparent(True).at('centre')
         
         r = self.bevel_radius
@@ -113,12 +113,12 @@ class BoxSideBevels(core.CompositeShape):
             maker.add_at(
                 e.LinearExtrude(path, h=sz).solid('hull').at('face_0', 0.5, 0),
                 'face_edge', 0, 0)
-        self.set_maker(maker)
+        return maker
 
 
-@core.shape('anchorscad/models/basic/box_shell')
+@ad.shape('anchorscad/models/basic/box_shell')
 @dataclass
-class BoxShell(core.CompositeShape):
+class BoxShell(ad.CompositeShape):
     '''
     Creates a box with the same box type hollowed out.
     '''
@@ -130,12 +130,12 @@ class BoxShell(core.CompositeShape):
     fa: float=None
     fs: float=None
     
-    EXAMPLE_SHAPE_ARGS=core.args(
+    EXAMPLE_SHAPE_ARGS=ad.args(
         [100., 80., 40.], bevel_radius=8, shell_size=1.5, fn=20)
     
     EXAMPLE_ANCHORS=BoxSideBevels.EXAMPLE_ANCHORS
     
-    def __post_init__(self):
+    def build(self) -> ad.Maker:
         size = np.array(self.size)
         centre_size = size - self.shell_size
         inner_size = size - 2 * self.shell_size
@@ -150,7 +150,7 @@ class BoxShell(core.CompositeShape):
             centre_bevel= 0
             
         
-        params = core.non_defaults_dict(self, include=('fn', 'fa', 'fs'))
+        params = ad.non_defaults_dict(self, include=('fn', 'fa', 'fs'))
         
         outer_box = self.box_class(size=self.size, bevel_radius=self.bevel_radius, **params)
         centre_cage_box = self.box_class(size=centre_size, bevel_radius=centre_bevel, **params)
@@ -160,12 +160,12 @@ class BoxShell(core.CompositeShape):
         maker.add(centre_cage_box.cage('shell_centre').at('centre'))
         maker.add(inner_box.hole('inner').at('centre'))
         
-        self.set_maker(maker)
+        return maker
 
 
-@core.shape('anchorscad/models/basic/box_open_shell')
+@ad.shape('anchorscad/models/basic/box_open_shell')
 @dataclass
-class BoxOpenShell(core.CompositeShape):
+class BoxOpenShell(ad.CompositeShape):
     '''
     Creates a box with the same box type but open at the top.
     '''
@@ -178,12 +178,12 @@ class BoxOpenShell(core.CompositeShape):
     fa: float=None
     fs: float=None
     
-    EXAMPLE_SHAPE_ARGS=core.args(
+    EXAMPLE_SHAPE_ARGS=ad.args(
         [100., 80., 40.], bevel_radius=8, shell_size=3, z_adjust=-.01, fn=20)
     
     EXAMPLE_ANCHORS=BoxSideBevels.EXAMPLE_ANCHORS
     
-    def __post_init__(self):
+    def build(self) -> ad.Maker:
         size = np.array(self.size)
         inner_size = size - np.array([2, 2, 1]) * self.shell_size
         if self.bevel_radius > self.shell_size:
@@ -191,7 +191,7 @@ class BoxOpenShell(core.CompositeShape):
         else:
             inner_bevel= 0
         
-        params = core.non_defaults_dict(self, include=('fn', 'fa', 'fs'))
+        params = ad.non_defaults_dict(self, include=('fn', 'fa', 'fs'))
         
         outer_box = self.box_class(size=self.size, bevel_radius=self.bevel_radius, **params)
         inner_box = self.box_class(size=inner_size, bevel_radius=inner_bevel, **params)
@@ -200,32 +200,32 @@ class BoxOpenShell(core.CompositeShape):
         maker.add_at(inner_box.hole('inner').at(
             'face_centre', 4, pre=l.translate([0, 0, self.z_adjust])), 'face_centre', 4)
         
-        self.set_maker(maker)
+        return maker
         
 
 
-@core.shape('anchorscad/models/basic/box_shell')
+@ad.shape('anchorscad/models/basic/box_shell')
 @dataclass
-class BoxCutter(core.CompositeShape):
+class BoxCutter(ad.CompositeShape):
     ''''''
-    model: core.Shape   # The model to be cut
+    model: ad.Shape   # The model to be cut
     cut_size: tuple=(200, 200, 200)
     cut_face: int=1
     post: l.GVector=l.IDENTITY
     
     
-    EXAMPLE_SHAPE_ARGS=core.args(
+    EXAMPLE_SHAPE_ARGS=ad.args(
         BoxShell([100., 80., 40.], bevel_radius=8, shell_size=1.5, fn=40), 
         post=l.translate([0, 0, 10]) * l.ROTY_180)
     
     EXAMPLE_ANCHORS=BoxSideBevels.EXAMPLE_ANCHORS
     
-    def __post_init__(self):
+    def build(self):
         maker = self.model.composite('main').at()
-        maker.add(core.Box(self.cut_size).hole('cut_box').at(
+        maker.add(ad.Box(self.cut_size).hole('cut_box').at(
             'face_centre', self.cut_face, post=self.post))
         
-        self.set_maker(maker)
+        return maker
 
 if __name__ == "__main__":
-    core.anchorscad_main(False)
+    ad.anchorscad_main()

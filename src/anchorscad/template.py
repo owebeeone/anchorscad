@@ -34,4 +34,4 @@ class ShapeName(ad.CompositeShape):
 #MAIN_DEFAULT=ad.ModuleDefault(True)
 
 if __name__ == "__main__":
-    ad.anchorscad_main(False)
+    ad.anchorscad_main()
