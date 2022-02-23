@@ -1,4 +1,6 @@
 '''
+Torus shape.
+
 Created on 23 Feb 2022
 
 @author: gianni
@@ -49,7 +51,7 @@ class Torus(ad.CompositeShape):
             )
         }
 
-    def __post_init__(self):
+    def build(self) -> ad.Maker:
         centre = (self.r_hole + self.r_section, 0)
         rotz = ad.rotZ(-self.section_start_angle_degrees)
         start_pos = (
@@ -71,7 +73,7 @@ class Torus(ad.CompositeShape):
         shape = self.rotate_extrude_node()
         
         maker = shape.solid('torus').at()
-        self.set_maker(maker)
+        return maker
 
     @ad.anchor('Surface anchor')
     def surface(self, degrees=0, radians=None, section_degrees=0, t=0):

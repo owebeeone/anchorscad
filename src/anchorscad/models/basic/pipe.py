@@ -30,7 +30,7 @@ class Pipe(ad.CompositeShape):
         ad.surface_args('inner_surface', 0, 45),
         )
     
-    def __post_init__(self):
+    def build(self) -> ad.Maker:
         assert self.outside_r > self.inside_r, (
             f'Inside radius ({self.inside_r}) must be smaller than outside ({self.outside_r}')
         maker = self.outside_cyl_node().solid('outer').at('centre')
@@ -38,7 +38,7 @@ class Pipe(ad.CompositeShape):
         maker.add(self.inside_cyl_node(
             h=self.h + self.hole_h_delta).hole('inner').at('centre'))
         
-        self.set_maker(maker)
+        return maker
 
     @ad.anchor('inner surface anchor')
     def inner_surface(self, *args, **kwds):

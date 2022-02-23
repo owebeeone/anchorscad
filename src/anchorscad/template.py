@@ -18,10 +18,11 @@ class ShapeName(ad.CompositeShape):
     
     EXAMPLE_SHAPE_ARGS=ad.args()
 
-    def __post_init__(self):
+    def build(self) -> ad.Maker:
+        # Add your shape building code here...
         shape = ad.Box(self.size)
         maker = shape.solid('box').at('face_corner', 'front', 0)
-        self.set_maker(maker)
+        return maker
 
     @ad.anchor('An example anchor')
     def example_anchor(self):

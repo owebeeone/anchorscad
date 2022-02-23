@@ -51,6 +51,8 @@ class InvalidNumberOfParametersException(CoreEception):
 class IllegalStateException(CoreEception):
     '''An operation was attempted where not permitted.'''
 
+class MustImplementBuild(CoreEception):
+    '''Must implement build() function returning a Maker.'''
 
 class ShapeNode(Node):
     '''A datatree Node that by default preserves the names of the
@@ -1718,6 +1720,17 @@ class CompositeShape(Shape):
         if hasattr(self, 'maker'):
             raise IllegalStateException('Cannot set maker more than once.')
         self._set_maker(maker)
+        
+    def __post_init__(self):
+        maker = self.build()
+        assert not maker is None, 'Function build() must return a Maker.' 
+        self._set_maker(maker)
+        
+    def build(self) -> Maker:
+        '''build() must be overridden in derived classes.'''
+        raise MustImplementBuild(
+            f'{self.__class__.__module__}.{self.__class__.__name__} '
+            'must implement function build().')
 
 
 @shape('anchorscad/core/arrow')
@@ -1740,8 +1753,7 @@ class Arrow(CompositeShape):
     EXAMPLE_SHAPE_ARGS=args(
         r_stem_top=4, r_stem_base=6, l_stem=35, l_head=20, r_head_base=10, fn=30)
     
-    
-    def __post_init__(self):
+    def build(self) -> Maker:
         if self.r_stem_base is None:
             self.r_stem_base = self.r_stem_top
             
@@ -1751,7 +1763,7 @@ class Arrow(CompositeShape):
         stem = Cone(h=self.l_stem, r_base=self.r_stem_base, r_top=self.r_stem_top, **f_args)
         maker = stem.solid('stem').at('base')
         maker.add_at(head.solid('head').at('base', post=l.rotX(180)), 'top')
-        self.set_maker(maker)
+        return maker
         
     @anchor('The base of the stem of the object')
     def base(self, *args, **kwds):
@@ -1809,7 +1821,7 @@ class Coordinates(CompositeShape):
     fa: float=None
     fs: float=None
     
-    def __post_init__(self):
+    def build(self) -> Maker:
         if self.r_stem_base is None:
             self.r_stem_base = self.r_stem_top
         exclude=('overlap', 'colour_x', 'colour_y', 'colour_z', )
@@ -1824,8 +1836,8 @@ class Coordinates(CompositeShape):
             'base', pre=t * l.rotZ(180)), 'y', pre=l.rotZ(-90))
         maker .add_at(arrow.solid('z_arrow').colour(self.colour_z).at(
             'base', pre=t * l.rotZ(180)), 'z', pre=l.rotX(-90))
-        self.set_maker(maker)
-            
+        return maker
+
     @anchor('The base of the stem of the object')
     def origin(self):
         return l.IDENTITY
@@ -1848,8 +1860,7 @@ class AnnotatedCoordinates(CompositeShape):
     EXAMPLE_SHAPE_ARGS=args(label='This is label')
     
     
-    def __post_init__(self):
-        
+    def build(self) -> Maker:
         if not self.coord_labels:
             self.coord_labels = frozendict({'x': 'x', 'y': 'y', 'z': 'z'})
         
@@ -1868,7 +1879,7 @@ class AnnotatedCoordinates(CompositeShape):
                 [-10 * self.text_stem_size_ratio, -5 * -self.text_stem_size_ratio, 0]) * l.rotZ(-45)
             maker.add(txt.solid('label').colour([0, 1, 0.5]).at('default', 'centre', post=xform))
 
-        self.set_maker(maker)
+        return maker
     
     @anchor('The base of the stem of the object')
     def origin(self, *args, **kwds):
