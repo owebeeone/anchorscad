@@ -98,7 +98,7 @@ class BoxSideBevels(ad.CompositeShape):
             sx = self.size[0]
             sy = self.size[1]
             sz = self.size[2]
-            path = (e.PathBuilder()
+            path = (ad.PathBuilder()
                     .move([r, 0])
                     .line([sx - r, 0], 'face_0')
                     .arc_tangent_point([sx, r], name='edge_0_5', metadata=self)

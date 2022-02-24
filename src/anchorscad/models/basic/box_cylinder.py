@@ -33,7 +33,7 @@ class BoxCylinder(an.CompositeShape):
         an.surface_args('cylinder', 'base'),
         an.surface_args('round_centre'),)
     
-    def __post_init__(self):
+    def build(self) -> an.Maker:
         r = self.size[1] / 2
         self.r = r
         self.h = self.size[2]
@@ -61,7 +61,7 @@ class BoxCylinder(an.CompositeShape):
         maker.add_at(cylinder_cage.at('surface'),
                      'box_cylinder', 'arc', 0, pre=an.tranX(2 * r))
         
-        self.set_maker(maker)
+        return maker
 
     @an.anchor('Round centre.')
     def round_centre(self, h=0, rh=None):
@@ -72,4 +72,4 @@ class BoxCylinder(an.CompositeShape):
 
 
 if __name__ == '__main__':
-    an.anchorscad_main(False)
+    an.anchorscad_main()

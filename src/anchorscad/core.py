@@ -1949,6 +1949,7 @@ def render_examples(module,
     
     shape_count = 0
     example_count = 0
+    error_count = 0
     for clz in classes:
         if render_options.match_name(clz.__name__):
             shape_count += 1
@@ -1968,6 +1969,7 @@ def render_examples(module,
                     if shape_consumer:
                         shape_consumer(maker, shape, clz, name, e)
                 except BaseException as ex:
+                    error_count += 1
                     traceback.print_exception(*sys.exc_info(), limit=20) 
                     sys.stderr.write(
                         f'Error while rendering {clz.__name__} example:{e}:\n{ex}\n')
@@ -1975,7 +1977,7 @@ def render_examples(module,
                 finally:
                     if end_example:
                         end_example(clz, e)
-    return shape_count, example_count
+    return shape_count, example_count, error_count
 
 @dataclass
 class ModuleDefault():
@@ -2021,6 +2023,8 @@ class ExampleCommandLineRenderer():
     '''
     
     def __init__(self, args, do_exit_on_completion=None):
+        self.counts = (0,) * 3
+        self.args = args
         argq = argparse.ArgumentParser(
             formatter_class=argparse.RawDescriptionHelpFormatter,
             description=self.DESCRIPTION,
@@ -2109,7 +2113,7 @@ class ExampleCommandLineRenderer():
         self.argq = argq
         self.add_more_args()
         if do_exit_on_completion is None:
-            self.do_exit_on_completion = not getattr(sys, 'ps1', sys.flags.interactive)
+            self.do_exit_on_completion = (not hasattr(sys, 'ps1')) or sys.flags.interactive
         else:
             self.do_exit_on_completion = do_exit_on_completion
         self.parse()
@@ -2118,7 +2122,7 @@ class ExampleCommandLineRenderer():
         pass
         
     def parse(self):
-        self.argp = self.argq.parse_args()
+        self.argp = self.argq.parse_args(self.args)
         self.options = RenderOptions(
             render_attributes=ModelAttributes(),
             level=self.argp.level,
@@ -2195,12 +2199,21 @@ class ExampleCommandLineRenderer():
         else:
             self.invoke_render_examples()
         
-        sys.stderr.write(f'shapes: {self.counts[0]}\nexamples: {self.counts[1]}\n')
+        sys.stderr.write(f'shapes: {self.counts[0]}\n'
+                         f'examples: {self.counts[1]}\n'
+                         f'errors: {self.counts[2]}\n')
+
+    def fix_status(self):
+        if self.status:
+            return
+        if self.counts[2]:
+            self.status = 1
 
     def run(self):
         '''Renders the example shapes on the Shape classes found in the specified module.
         Note that by default, run() will exit the process.
         '''
+        self.status = 0
         try:
             self._load_anchorcad_module(self.argp.module)
             if not self.argp.write_files:
@@ -2215,6 +2228,7 @@ class ExampleCommandLineRenderer():
                 self.status= 3
             raise
         finally:
+            self.fix_status()
             if self.do_exit_on_completion:
                 sys.exit(self.status) 
         
@@ -2227,13 +2241,13 @@ def anchorscad_main(do_exit_on_completion=None):
             Anchorscad.anchorscad_main()
 
     '''
-    clr = ExampleCommandLineRenderer(sys.argv, do_exit_on_completion)
+    clr = ExampleCommandLineRenderer(sys.argv[1:], do_exit_on_completion)
     clr.run()
     return clr.status
 
 
 if __name__ == "__main__":
-    anchorscad_main(False)
+    anchorscad_main()
     
     
     
