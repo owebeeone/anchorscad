@@ -1007,13 +1007,15 @@ def cageof(shape: Shape=None,
            cage_name: object=None,
            properties: CageOfProperties=CageOfProperties()):
     '''Conditionally returns either a cage mode or solid (but transparent)
-    Maker. This can be used as a datateee Node and parameters will become
-    encapsulating class fields.
+    Maker. This can be used in a datatree Node and parameters will become
+    encapsulated class fields. The default name is 'cage' from the 
+    properties parameter but can be overridden by a cage_name parameter.
     Args:
       shape: Shape to be made a cage.
       as_cage: If true, the shape will be treated as a cage and not rendered
                If false, it will be rendered transparent with the given colour.
-      cage_properties: to be applied.
+      cage_name: The name of the resulting Maker.
+      properties: to be applied.
     '''
     return properties.apply(shape, as_cage, name=cage_name)
 
