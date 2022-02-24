@@ -16,7 +16,9 @@ class ShapeName(ad.CompositeShape):
     
     size: tuple=(1, 2, 3)
     
-    EXAMPLE_SHAPE_ARGS=ad.args()
+    EXAMPLE_SHAPE_ARGS=ad.args(size=(10, 20, 30))
+    EXAMPLE_ANCHORS=(
+        ad.surface_args('face_centre', 'top'),)
 
     def build(self) -> ad.Maker:
         # Add your shape building code here...
