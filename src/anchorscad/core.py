@@ -1419,7 +1419,7 @@ class Box(Shape):
     
 
 
-TEXT_DEPTH_MAP={'centre':0.0, 'rear': -0.5, 'front':0.5}
+TEXT_DEPTH_MAP={'centre':0.0, 'center':0.0, 'rear': -0.5, 'front':0.5}
 
 def non_defaults_dict(dataclas_obj, include=None, exclude=()):
     if not (include is None or isinstance(include, tuple) or isinstance(include, dict)):
@@ -1511,10 +1511,15 @@ class Text(Shape):
     EXAMPLE_SHAPE_ARGS=args('Text Example', depth=5)
 
     def render(self, renderer):
+        # Allow for proper spelling of centre.
+        halign = 'center' if self.halign == 'centre' else self.halign
+        valign = 'center' if self.valign == 'centre' else self.valign
         text_obj = renderer.model.Translate([0, 0, self.depth * -0.5])(
              renderer.model.Linear_Extrude(self.depth)(
                  self.text_node.call_with_alt_defaults(
                      renderer.model.Text, 
+                     halign=halign,
+                     valign=valign,
                      alt_defaults=renderer.get_current_attributes())))
         return renderer.add(text_obj)
     
