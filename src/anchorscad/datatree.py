@@ -102,6 +102,8 @@ class Node:
     # The default value for the expose_if_avail init parameter. Derived classes can override.
     DEFAULT_EXPOSE_IF_AVAIL=frozendict()
     
+    ALT_DEFAULT_ALLOW_SET=None
+    
     def __init__(self, 
                  clz_or_func, 
                  *expose_spec, 
@@ -313,9 +315,12 @@ class BoundNode:
 
     def call_with(self, clz_or_func, *args, **kwds):
         return self._invoke(self, clz_or_func, args, kwds)
+    
+    def call_with_alt_defaults(self, clz_or_func, *args, alt_defaults=None, **kwds):
+        return self._invoke(self, clz_or_func, args, kwds, alt_defaults)
         
     @classmethod
-    def _invoke(cls, node, clz_or_func, args, kwds):
+    def _invoke(cls, node, clz_or_func, args, kwds, alt_defaults=None):
         # Resolve parameter values.
         # Priority order:
         # 1. Override (if any)
@@ -338,10 +343,20 @@ class BoundNode:
         else:
             ovrde_bind = passed_bind
         
-        # Pull any values left from the parent.
+        alt_default_allow_set = node.node.ALT_DEFAULT_ALLOW_SET
+        # Pull any values left from the parent or, as a final resort,
+        # the alt_defaults object.
         for fr, to in node.node.expose_map.items():
             if not fr in ovrde_bind:
-                ovrde_bind[fr] = getattr(node.parent, to)
+                val = getattr(node.parent, to)
+                if (val is None
+                    and ((alt_default_allow_set is None)
+                         or (fr in alt_default_allow_set))
+                    and hasattr(alt_defaults, to)):
+                        # Pull the attribute from alt_defaults if
+                        # its available and otherwise we have None.
+                        val = getattr(alt_defaults, to)
+                ovrde_bind[fr] = val
         
         return clz_or_func(**ovrde_bind)
     

@@ -20,7 +20,7 @@ import traceback
 from frozendict import frozendict
 
 from anchorscad import linear as l
-from anchorscad.datatree import Node, BoundNode
+from anchorscad.datatree import Node, BoundNode, datatree
 import numpy as np
 import pythonopenscad as posc
 
@@ -1461,6 +1461,7 @@ def create_from(targetclas, dataclas_obj, exclude=()):
     return targetclas(**values_dict(targetclas, dataclas_obj, exclude))
     
 ARGS_XLATION_TABLE={'fn': '_fn', 'fa': '_fa', 'fs': '_fs'}
+ARGS_REV_XLATION_TABLE={'_fn': 'fn', '_fa': 'fa', '_fs': 'fs'}
 def translate_names(out_dict, xlation_table=ARGS_XLATION_TABLE):
     for old_name, new_name in xlation_table.items():
         if old_name in out_dict:
@@ -1487,7 +1488,7 @@ def fill_params(
 
 
 @shape('anchorscad/core/text')
-@dataclass
+@datatree
 class Text(Shape):
     '''Generates 3D text.'''
     text: posc.str_strict=None
@@ -1501,22 +1502,21 @@ class Text(Shape):
     language: posc.str_strict=None
     script: posc.str_strict=None
     fn: int=None
-    
+    text_node: Node=field(default=Node(posc.Text, 
+                                       ARGS_REV_XLATION_TABLE, 
+                                       expose_all=True), 
+                          init=False)
     
     EXAMPLE_ANCHORS=(surface_args('default', 'rear'),)
-    EXAMPLE_SHAPE_ARGS=args('Text Example')
+    EXAMPLE_SHAPE_ARGS=args('Text Example', depth=5)
 
     def render(self, renderer):
-        params = fill_params(self, renderer, ('fn',), exclude=('depth',))
-        text_obj = renderer.model.Translate([0, 0, -0.5])(
-             renderer.model.Linear_Extrude(1)(
-                 renderer.model.Text(**params)))
-        if self.depth == 1:
-            return renderer.add(text_obj)
-        
-        scale_obj = renderer.model.Scale([1, 1, self.depth])
-        scale_obj(text_obj)
-        return renderer.add(scale_obj)
+        text_obj = renderer.model.Translate([0, 0, self.depth * -0.5])(
+             renderer.model.Linear_Extrude(self.depth)(
+                 self.text_node.call_with_alt_defaults(
+                     renderer.model.Text, 
+                     alt_defaults=renderer.get_current_attributes())))
+        return renderer.add(text_obj)
     
     @anchor('The default position for this text. depth=(rear, centre, front)')
     def default(self, depth='centre', rd=None):
