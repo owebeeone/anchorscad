@@ -46,5 +46,39 @@ class Pipe(ad.CompositeShape):
         return self.maker.at('inner', 'surface', *args, **kwds) * ad.ROTX_180
 
 
+@ad.shape
+@ad.datatree
+class TeePipe(ad.CompositeShape):
+    '''
+    A Tee pipe.
+    '''
+    through_h: float=50
+    tee_h: float=30
+    tee_pos: float=25
+    inside_r: float=8
+    outside_r: float=10
+    through_node: ad.Node=ad.ShapeNode(Pipe, {'h': 'through_h'}, expose_all=True)
+    tee_node: ad.Node=ad.ShapeNode(Pipe, {'h': 'tee_h'}, expose_all=True)  
+    
+    EXAMPLE_SHAPE_ARGS=ad.args(inside_r=6, outside_r=10, fn=64)
+    EXAMPLE_ANCHORS=(
+        ad.surface_args('tee', 'top'),
+        ad.surface_args('tee', 'surface', 15, 225),
+        ad.surface_args('base'),
+        ad.surface_args('surface', 50, 0),
+        ad.surface_args('inner_surface', 0, 45),
+        )
+    
+    def build(self) -> ad.Maker:
+        maker = self.through_node().composite('through').at('base')
+        maker.add_at(
+                self.tee_node().composite('tee')
+                .at('base'),
+                'base', self.tee_pos, post=ad.ROTX_90
+            )
+
+        return maker
+
+
 if __name__ == '__main__':
     ad.anchorscad_main(False)
