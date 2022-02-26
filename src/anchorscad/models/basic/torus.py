@@ -9,7 +9,7 @@ from dataclasses import field
 import anchorscad as ad
 
 
-@ad.shape('anchorscad/models/basic/Torus')
+@ad.shape('anchorscad/models/basic/torus.Torus')
 @ad.datatree
 class Torus(ad.CompositeShape):
     '''
@@ -101,6 +101,36 @@ class Torus(ad.CompositeShape):
             degrees=degrees,
             radians=radians,
             t=t) * ad.ROTX_180
+
+
+
+@ad.shape
+@ad.datatree
+class TorusChain(ad.CompositeShape):
+    '''
+    A chain of tori.
+    '''
+    count: int=10
+    torus_node: ad.Node=ad.ShapeNode(Torus)
+
+    EXAMPLE_SHAPE_ARGS=ad.args(
+        path_fn=32,
+        fn=64)
+    
+    EXAMPLE_ANCHORS=(ad.surface_args(
+            'surface', section_degrees=10, degrees=10),)
+
+    def build(self) -> ad.Maker:
+        shape = self.torus_node()
+        maker = shape.solid(('torus', 0)).at()
+        
+        for i in range(1, self.count):
+            maker.add_at(
+                shape.solid(('torus', i)).at('surface'),
+                ('torus', i-1), 'surface', degrees=180, 
+                post=ad.ROTX_180 * ad.ROTZ_90)
+        
+        return maker
 
 
 if __name__ == "__main__":

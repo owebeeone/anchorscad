@@ -127,7 +127,7 @@ class CubicSpline():
   
     @classmethod
     def find_roots(cls, a, b, c, *, t_range=(0.0, 1.0)):
-        '''Find roots of quaratic polynomial that are between t_range.'''
+        '''Find roots of quadratic polynomial that are between t_range.'''
         # a, b, c are quadratic coefficients i.e. at^2 + bt + c
         if a == 0:
             # Degenerate curve is a linear. Only one possible root.
@@ -518,10 +518,10 @@ def solve_circle_points_radius(p1, p2, r, left=True):
         return (centre, r)
     opp_side = np.sqrt(r**2 - leng **2)
     if left:
-        dir = np.array([-pdn[1], pdn[0]]) #+90 degrees
+        dire = np.array([-pdn[1], pdn[0]]) #+90 degrees
     else:
-        dir = np.array([pdn[1], -pdn[0]]) #-90 degrees
-    centre = (p1 + p2) / 2 + dir * opp_side
+        dire = np.array([pdn[1], -pdn[0]]) #-90 degrees
+    centre = (p1 + p2) / 2 + dire * opp_side
     return (centre, r)
 
 def _less_than(a, b):
@@ -533,7 +533,7 @@ def _greater_than(a, b):
 @dataclass()
 class CircularArc:
     start_angle: float  # Angles in radians
-    sweep_angle: float   # Angles in radians
+    sweep_angle: float  # Angles in radians
     radius: float
     centre: np.array
     
@@ -896,7 +896,7 @@ class PathBuilder():
                name=None):
         '''A line from the current point to a length away given
         by following the tangent from the previous op transformed by rotating
-        by angle or a GMatrix xform.'''
+        by angle or a GMatrix transform.'''
         assert len(self.ops) > 0, "Cannot line to without starting point"
         d_vector = to_gvector(self.last_op().direction_normalized(1.0))
         if degrees or radians or sinr_cosr:
