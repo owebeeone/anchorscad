@@ -8,7 +8,7 @@ Created on 25 Jan 2021
 
 '''
 
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 
 import anchorscad as ad
 import anchorscad.extrude as e
@@ -65,17 +65,18 @@ EPSILON = 1.e-10
 
 
 @ad.shape('anchorscad/models/basic/box_side_bevels')
-@dataclass
+@ad.datatree
 class BoxSideBevels(ad.CompositeShape):
     '''
     Creates a box with bevels on 4 size (flat top and bottom) using extrusion.
     '''
     size: tuple=(30., 20., 10.)
     bevel_radius: float=2.0
+    cageof_node: ad.Node=field(
+        default=ad.Node(ad.cageof, prefix='cage_'), init=False)
     fn: int=None
     fa: float=None
     fs: float=None
-
 
     EXAMPLE_SHAPE_ARGS=ad.args([100., 80., 40.], bevel_radius=8, fn=20)
     EXAMPLE_ANCHORS=tuple(
@@ -86,10 +87,19 @@ class BoxSideBevels(ad.CompositeShape):
             ad.surface_args('face_edge', 2, 2, 0.1),
             ad.surface_args('face_edge', 2, 2, -0.5),
              ad.inner_args('centre'),)
+        
+    EXAMPLES_EXTENDED={
+        'show_cage': ad.ExampleParams(
+            shape_args=ad.args([50., 30., 20.], 8,
+                                cage_as_cage=False,
+                                fn=64),
+            anchors=(ad.surface_args('face_edge', 0, 0),))
+        }
+    
 
     def build(self) -> ad.Maker:
         shape = ad.Box(self.size)
-        maker = shape.cage('shell').colour([0, 1, 0, 0.5]).transparent(True).at('centre')
+        maker = self.cageof_node(shape, cage_name='shell').at('centre')
         
         r = self.bevel_radius
         if r <= EPSILON:

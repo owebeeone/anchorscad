@@ -103,7 +103,6 @@ class Torus(ad.CompositeShape):
             t=t) * ad.ROTX_180
 
 
-
 @ad.shape
 @ad.datatree
 class TorusChain(ad.CompositeShape):

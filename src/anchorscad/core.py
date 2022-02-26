@@ -1356,6 +1356,21 @@ class Box(Shape):
             surface_args('face_edge', 'left', 2, -0.5),
             inner_args('centre'),)
     EXAMPLE_SHAPE_ARGS=args([100, 120, 140])
+    EXAMPLES_EXTENDED={
+        'one_face': ExampleParams(
+            shape_args=args((100, 100, 100)),
+            anchors=(
+                surface_args('face_centre', 'front'),
+                surface_args('face_corner', 'front', 0),
+                surface_args('face_edge', 'front', 2),
+                surface_args('face_edge', 'front', 1, 0.15),
+                surface_args('face_centre', 'top'),
+                surface_args('face_corner', 'top', 0),
+                surface_args('face_edge', 'top', 2),
+                surface_args('face_edge', 'top', 1, 0.15),)
+            )
+        }
+
     
     FACE_MAP=frozendict({
         0: 0,
@@ -1569,7 +1584,7 @@ class Sphere(Shape):
     
     @anchor('A location on the sphere.')
     def surface(self, degrees: ANGLES_TYPE=ANGLES_TYPE([0, 0, 0]), radians: ANGLES_TYPE=None):
-        if radians:
+        if not radians is None:
             angle_type = 'radians'
             angles = ANGLES_TYPE(radians)
         else:
