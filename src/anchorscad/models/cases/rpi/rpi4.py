@@ -12,7 +12,7 @@ from anchorscad.models.cases.rpi.rpi_case import RaspberryPiCase
 
 
 @core.shape('anchorscad/models/cases/rpi4_case')
-@datatree
+@datatree(chain_post_init=True)
 class RaspberryPi4Case(RaspberryPiCase):
     '''A Raspberry Pi 4 Case.'''
     do_versioned_example: bool=False

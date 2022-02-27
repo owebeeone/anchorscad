@@ -29,7 +29,7 @@ DELTA=ot.DELTA
 
 
 @core.shape('anchorscad/models/cases/rpi_case')
-@datatree
+@datatree(chain_post_init=True)
 class RaspberryPiCase(core.CompositeShape):
     '''A Generic Raspberry Pi Case.'''
     outline_model: core.Shape=None
@@ -143,7 +143,7 @@ class RaspberryPiCase(core.CompositeShape):
                             base_anchor=core.surface_args(
                                 'main', 'face_centre', 4, post=ROTX_180))}
 
-    def __post_init__(self):
+    def build(self):
         params = core.non_defaults_dict(self, include=('fn', 'fa', 'fs'))
         if self.outline_model is None:
             self.outline_model = self.outline_model_class()
@@ -293,7 +293,6 @@ class RaspberryPiCase(core.CompositeShape):
                         post=a.apply(maker) * tab_trans)
         
         top_maker = maker.solid('main').at('centre')
-        self.maker = top_maker
         
         if self.show_outline:
             top_maker.add_at(
@@ -338,6 +337,7 @@ class RaspberryPiCase(core.CompositeShape):
                 .at('default', rd=0.4),
                 post=text_anchor.apply(top_maker))
         
+        return top_maker
             
     def make_flange(self, width, height):
         return TriangularPrism([

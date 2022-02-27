@@ -66,7 +66,7 @@ class FanVent(core.CompositeShape):
     EXAMPLE_SHAPE_ARGS=core.args(fan_cage_as_cage=False)
     EXAMPLE_ANCHORS=()
     
-    def __post_init__(self):
+    def build(self) -> core.Maker:
         self.fan_cage_shape = core.Box(self.screw_params.size)
         maker = self.fan_cage(cage_name='fan').at('face_centre', 1)
         
@@ -103,7 +103,7 @@ class FanVent(core.CompositeShape):
         maker.add_at(grille.named_shape('grille', mode).at('base'),
                      'face_centre', 1, post=l.ROTY_180)
         
-        self.set_maker(maker)
+        return maker
 
     @core.anchor('Centre of grille.')
     def grille_centre(self, *args, **kwds):

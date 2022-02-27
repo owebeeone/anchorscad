@@ -41,7 +41,7 @@ class ConeEndedPrism(ad.CompositeShape):
         ad.surface_args('cage', 'face_edge', 'front', 0),
         )
     
-    def __post_init__(self):
+    def build(self) -> ad.Maker:
         
         r_max= (self.r_base
                 if self.r_base > self.r_top
@@ -74,7 +74,7 @@ class ConeEndedPrism(ad.CompositeShape):
         maker.add_at(prism.solid('prism').at('lbase', 0), 
                      'cone1', 'base', post=ad.ROTX_180)
         
-        self.set_maker(maker)
+        return maker
 
     @ad.anchor('top of the shape')
     def top(self):
@@ -109,7 +109,7 @@ class ConeEndedHull(ad.CompositeShape):
         h=110, w=50, r_base=33 * 4 / np.pi, r_top=4.5, t=3, t_top=1.5, fn=32)
     EXAMPLE_ANCHORS=()
     
-    def __post_init__(self):
+    def build(self) -> ad.Maker:
         
         outer = self.cep_node()
         self.outer = outer
@@ -132,7 +132,7 @@ class ConeEndedHull(ad.CompositeShape):
         maker.add_at(inner.hole('inner').at('cone1', 'base'),
                      'cone1', 'base', post=ad.tranZ(epsilon))
 
-        self.set_maker(maker)
+        return maker
 
 
 if __name__ == '__main__':

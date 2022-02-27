@@ -377,7 +377,7 @@ class AnchorScadRunner(core.ExampleCommandLineRenderer):
         
         ex_runner = ExampleRunner(
             out_dir=self.argp.out_dir,
-            module_name=self.argp.dirs[1],
+            module_name=self.argp.dirs[2],
             out_file_format=self.argp.out_file_format)
         
         core.render_examples(
@@ -454,7 +454,7 @@ class AnchorScadRunner(core.ExampleCommandLineRenderer):
         
     
     def load_and_run_module(self):
-        module_name = self.argp.dirs[1]
+        module_name = self.argp.dirs[2]
         print(f'file={self.argp.dirs[0]}, module={module_name}')
         try:
             anchorscad_module = importlib.import_module(module_name)

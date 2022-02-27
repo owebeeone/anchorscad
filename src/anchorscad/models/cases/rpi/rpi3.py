@@ -13,7 +13,7 @@ from anchorscad.linear import translate
 
 
 @core.shape('anchorscad/models/cases/rpi3_case')
-@datatree
+@datatree(chain_post_init=True)
 class RaspberryPi3Case(RaspberryPiCase):
     '''A Raspberry Pi 3 Case.'''
     inner_size_delta: tuple=(1, 2, 22)
