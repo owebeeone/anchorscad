@@ -20,4 +20,3 @@ class RaspberryPi4Case(RaspberryPiCase):
     
 if __name__ == "__main__":
     core.anchorscad_main(False)
-
