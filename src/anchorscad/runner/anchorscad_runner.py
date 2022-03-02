@@ -327,13 +327,12 @@ class AnchorScadRunner(core.ExampleCommandLineRenderer):
         self.stats = AnchorScadRunnerStats()
     
     def add_more_args(self):
-        core.ExampleCommandLineRenderer.add_more_args(self)
 
         self.argq.add_argument(
             'dirs',
             metavar='dirs',
             type=str,
-            nargs='*',
+            nargs='...',
             default=('.',),
             help='List of directories to scan.')
                 
@@ -348,6 +347,7 @@ class AnchorScadRunner(core.ExampleCommandLineRenderer):
             dest='recursive',
             action='store_true',
             help='Recursively pass through directories.')
+        self.argq.set_defaults(recursive=None)
                 
         self.argq.add_argument(
             '--out_file_format', 
@@ -370,14 +370,12 @@ class AnchorScadRunner(core.ExampleCommandLineRenderer):
             default='.',
             help='Reference directory used to compare generated files to.')
         
-        
-        self.argq.set_defaults(recursive=True)
 
     def run_module(self):
         
         ex_runner = ExampleRunner(
             out_dir=self.argp.out_dir,
-            module_name=self.argp.dirs[2],
+            module_name=self.argp.dirs[1],
             out_file_format=self.argp.out_file_format)
         
         core.render_examples(
@@ -454,7 +452,7 @@ class AnchorScadRunner(core.ExampleCommandLineRenderer):
         
     
     def load_and_run_module(self):
-        module_name = self.argp.dirs[2]
+        module_name = self.argp.dirs[1]
         print(f'file={self.argp.dirs[0]}, module={module_name}')
         try:
             anchorscad_module = importlib.import_module(module_name)
@@ -492,12 +490,12 @@ class AnchorScadRunner(core.ExampleCommandLineRenderer):
         env['PYTHONPATH'] = new_path
         env[ENVIRON_NAME] = filename
         
-        command = (
-            sys.executable,
-            self.this_module_file,
-            filename,
-            mod_name
-            )
+        sub_argv = self.reconstruct(dirs=(filename, mod_name))
+        
+        command = ((
+                sys.executable,
+                self.this_module_file,) 
+            + sub_argv) 
         
         entry = AnchorScadRunnerEntry(
             filename=filename, mod_name=mod_name, env=env, as_runner=self)
@@ -550,7 +548,7 @@ def remove_from_list(l, v):
         return
         
 def run():
-    runner = AnchorScadRunner(sys.argv)
+    runner = AnchorScadRunner(sys.argv[1:])
     runner.run()
 
 if __name__ == '__main__':

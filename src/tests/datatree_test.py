@@ -156,7 +156,7 @@ class Test(unittest.TestCase):
                 self.s.append('A')
                 
         
-        @datatree
+        @datatree(chain_post_init=True)
         class B(A):
             b: float=1
             leaf: Node=Node(LeafType2)
@@ -170,7 +170,7 @@ class Test(unittest.TestCase):
       
     def test_multiple_inheritance(self):
         
-        @datatree
+        @datatree(chain_post_init=True)
         class A1():
             a1: float=1
             s: list=field(default_factory=lambda : list())
@@ -178,7 +178,7 @@ class Test(unittest.TestCase):
             def __post_init__(self):
                 self.s.append('A1')
                   
-        @datatree
+        @datatree(chain_post_init=True)
         class A2():
             a2: float=1
             leaf: Node=Node(LeafType2)
@@ -187,7 +187,7 @@ class Test(unittest.TestCase):
             def __post_init__(self):
                 self.s.append('A2')
                 
-        @datatree
+        @datatree(chain_post_init=True)
         class B(A1, A2):
             b: float=1
             s: list=field(default_factory=lambda : list())
@@ -200,7 +200,7 @@ class Test(unittest.TestCase):
         
     def test_multiple_inheritance_mix_dataclass_datatree(self):
         
-        @datatree
+        @datatree(chain_post_init=True)
         class A1():
             a1: float=1
             leaf: Node=Node(LeafType2)
@@ -209,7 +209,7 @@ class Test(unittest.TestCase):
             def __post_init__(self):
                 self.s.append('A1')
                   
-        @dataclass
+        @datatree(chain_post_init=True)
         class A2():
             a2: float=1
             s: list=field(default_factory=lambda : list())
@@ -217,7 +217,7 @@ class Test(unittest.TestCase):
             def __post_init__(self):
                 self.s.append('A2')
 
-        @datatree
+        @datatree(chain_post_init=True)
         class B(A1, A2):
             b: float=1
             s: list=field(default_factory=lambda : list())
@@ -231,7 +231,7 @@ class Test(unittest.TestCase):
        
     def test_multiple_inheritance_mix_dataclass_datatree_no_pi(self):
         
-        @datatree
+        @datatree(chain_post_init=True)
         class A1():
             a1: float=1
             leaf: Node=Node(LeafType2)
@@ -240,7 +240,7 @@ class Test(unittest.TestCase):
             def __post_init__(self):
                 self.s.append('A1')
                   
-        @dataclass
+        @datatree(chain_post_init=True)
         class A2():
             a2: float=1
             s: list=field(default_factory=lambda : list())
@@ -248,12 +248,12 @@ class Test(unittest.TestCase):
             def __post_init__(self):
                 self.s.append('A2')
 
-        @datatree
+        @datatree(chain_post_init=True)
         class B(A1, A2):
             b: float=1
             s: list=field(default_factory=lambda : list())
             
-        @datatree
+        @datatree(chain_post_init=True)
         class C(B):
             b: float=1
             
@@ -263,6 +263,27 @@ class Test(unittest.TestCase):
         self.assertEqual(C().s, ['A1', 'A2', 'C'])
         self.assertEqual(C().leaf(), LeafType2(leaf_a=10, leaf_b=20, override=None))
     
+    def test_multiple_inheritance_no_post_init_no_chain(self):
+        
+        class A:
+            def do_thing(self, s, v):
+                s.append(v)
+
+        @dataclass
+        class B(A):
+            b: float=1
+            s: list=field(default_factory=lambda : list())
+            
+            def __post_init__(self):
+                self.do_thing(self.s, 'B')
+            
+        @datatree
+        class C(B):
+            b: float=1
+            
+                
+        self.assertEqual(C().s, ['B'])
+        
     def test_function(self):
         al = []
         bl = []

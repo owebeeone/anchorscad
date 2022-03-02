@@ -48,6 +48,9 @@ class IncorrectAnchorArgs(CoreEception):
 class InvalidNumberOfParametersException(CoreEception):
     '''Number of parameters provided is incorrect.'''
     
+class InvalidParametersException(CoreEception):
+    '''Parameters provided were not recognised..'''
+    
 class IllegalStateException(CoreEception):
     '''An operation was attempted where not permitted.'''
 
@@ -2024,6 +2027,98 @@ class ModuleDefault():
             if curval is None:
                 setattr(obj, f, getattr(self, f))
 
+            
+class ArgumentParserWithReconstruct(argparse.ArgumentParser):
+    '''Like Python's argparse.ArgumentParser but also able to 
+    reconstruct a set of command line params from the argp 
+    values.'''
+    MISSING_VALUE=object()
+    
+    @dataclass
+    class ParameterDef:
+        dest: str
+        option_strings: str=None
+        actions: dict=field(default_factory=dict)
+        param_args: tuple=field(default=None, init=False)
+        
+        def get_value(self, name):
+            if name in self.param_args[1]:
+                return self.param_args[1][name]
+            return ArgumentParserWithReconstruct.MISSING_VALUE
+        
+        def get_default(self):
+            return self.get_value('default')
+        
+        def get_nargs(self):
+            return self.get_value('nargs')
+        
+    def reconstruct(self, argp, overrides=Node):
+        '''Returns an argv for the current argp.'''
+        parameter_defs = getattr(self, 'parameter_defs', {} )
+        
+        result = []
+        for pdef in parameter_defs.values():
+            aval = getattr(argp, pdef.dest, None)
+            if overrides and pdef.dest in overrides:
+                aval = overrides[pdef.dest]
+            if aval is None:
+                continue
+            
+            if pdef.actions:
+                if aval:
+                    if 'store_true' in pdef.actions:
+                        param_args = pdef.actions['store_true']
+                        result.append(param_args[0][0])
+                else:
+                    if 'store_false' in pdef.actions:
+                        param_args = pdef.actions['store_false']
+                        result.append(param_args[0][0])
+            else:
+                if pdef.get_default() is aval:
+                    continue
+                nargs = pdef.get_nargs()
+                if nargs is self.MISSING_VALUE or nargs == 1:
+                    result.append(pdef.param_args[0][0])
+                    result.append(str(aval))
+                if nargs in ['*', '+', '...']:
+                    arg_name = pdef.param_args[0][0]
+                    if arg_name[0] in self.prefix_chars:
+                        result.append(arg_name)
+                    result.extend(str(a) for a in aval)
+                    
+        return tuple(result)
+    
+    def get_parameter_defs(self):
+        parameter_defs = getattr(self, 'parameter_defs', None)
+        if not parameter_defs:
+            parameter_defs = {}
+            self.parameter_defs = parameter_defs
+        return parameter_defs
+    
+    def get_parameter_def(self, dest):
+        parameter_defs = self.get_parameter_defs()
+        result = parameter_defs.get(dest, None)
+        if result is None:
+            result = self.ParameterDef(dest)
+            parameter_defs[dest] = result
+        return result
+    
+    def add_argument(self, *args, **kwds):
+        '''Overrides ArgumentParser's function of the same name.'''
+        if 'dest' in kwds:
+            dest = kwds['dest']
+        else:
+            dest = args[0].strip(self.prefix_chars)
+            
+        parameter_def = self.get_parameter_def(dest)
+        if 'action' in kwds:
+            action = kwds['action']
+            parameter_def.actions[action] = (args, kwds)
+        else:
+            parameter_def.param_args = (args, kwds)
+        
+        return argparse.ArgumentParser.add_argument(self, *args, **kwds)
+
 
 class ExampleCommandLineRenderer():
     '''Command line parser and runner for invoking the renderer on examples.'''
@@ -2047,78 +2142,76 @@ class ExampleCommandLineRenderer():
     def __init__(self, args, do_exit_on_completion=None):
         self.counts = (0,) * 3
         self.args = args
-        argq = argparse.ArgumentParser(
+        argq = ArgumentParserWithReconstruct(
             formatter_class=argparse.RawDescriptionHelpFormatter,
             description=self.DESCRIPTION,
             epilog=textwrap.dedent(self.EXAMPLE_USAGE))
 
-        argq.add_argument(
-            '--class_name', 
-            type=str,
-            default='*',
-            nargs='*',
-            help='The name/s of the shape classes to render.')
+        self.argq = argq
+        self.add_base_args()
+        self.add_more_args()
+        if do_exit_on_completion is None:
+            self.do_exit_on_completion = (not hasattr(sys, 'ps1')) or sys.flags.interactive
+        else:
+            self.do_exit_on_completion = do_exit_on_completion
+        self.parse()
         
-        argq.add_argument(
-            '--module', 
-            type=str,
-            default=None,
-            help='The python module to be loaded.')
-        
-        argq.add_argument(
+    def add_base_args(self):
+
+        self.argq.add_argument(
             '--no-write', 
             dest='write_files',
             action='store_false',
             help='Perform a test run. It will not make changes to file system.')
         
-        argq.add_argument(
+        self.argq.add_argument(
             '--write', 
             dest='write_files',
             action='store_true',
             help='Writes models to files.')
-        argq.set_defaults(write_files=None)
+        self.argq.set_defaults(write_files=None)
 
-        argq.add_argument(
+        self.argq.add_argument(
             '--no-graph_write', 
             dest='write_graph_files',
             action='store_false',
             help='Produces a graph of shape_names in .dot GraphViz format.')
         
-        argq.add_argument(
+        self.argq.add_argument(
             '--graph_write', 
             dest='write_graph_files',
             action='store_true',
             help='Produces a graph of shape_names in .dot GraphViz format.')
-        argq.set_defaults(write_graph_files=None)
+        self.argq.set_defaults(write_graph_files=None)
         
-        argq.add_argument(
+        self.argq.add_argument(
             '--no-svg_write', 
             dest='write_graph_svg_files',
             action='store_false',
             help='Produces a graph of shape_names in .dot and .svg formats.')
         
-        argq.add_argument(
+        self.argq.add_argument(
             '--svg_write', 
             dest='write_graph_svg_files',
             action='store_true',
             help='Produces a graph of shape_names in .dot and .svg formats.')
-        argq.set_defaults(write_graph_svg_files=None)
+        self.argq.set_defaults(write_graph_svg_files=None)
         
-        argq.add_argument(
+        self.argq.add_argument(
             '--out_file_name', 
             type=str,
             default=os.path.join(
                 'examples_out', 'anchorcad_{class_name}_{example}_example.scad'),
             help='The OpenSCAD formatted output filename.')
         
-        argq.add_argument(
+        self.argq.add_argument(
             '--graph_file_name', 
             type=str,
             default=os.path.join(
                 'examples_out', 'anchorcad_{class_name}_{example}_example.dot'),
             help='The GraphViz shape_name graph output filename.')
         
-        argq.add_argument(
+        self.argq.add_argument(
             '--level', 
             type=int,
             default=10,
@@ -2126,25 +2219,33 @@ class ExampleCommandLineRenderer():
                   'Shape classes with a lower level than this are excluded unless '
                   'they are specifically named.'))
         
-        argq.add_argument(
+        self.argq.add_argument(
+            '--class_name', 
+            type=str,
+            default='*',
+            nargs='*',
+            help='The name/s of the shape classes to render.')
+
+    def add_more_args(self):
+        
+        self.argq.add_argument(
+            '--module', 
+            type=str,
+            default=None,
+            help='The python module to be loaded.')
+        
+        self.argq.add_argument(
             '--list_shapes', 
             action='store_true',
             default=False,
             help=('List Shape class names.'))
         
-        self.argq = argq
-        self.add_more_args()
-        if do_exit_on_completion is None:
-            self.do_exit_on_completion = (not hasattr(sys, 'ps1')) or sys.flags.interactive
-        else:
-            self.do_exit_on_completion = do_exit_on_completion
-        self.parse()
-    
-    def add_more_args(self):
-        pass
-        
     def parse(self):
-        self.argp = self.argq.parse_args(self.args)
+        self.argp, argv = self.argq.parse_known_args(self.args)
+        if argv:
+            self.status = 1
+            raise InvalidParametersException(
+                f'Parameters provided were not parsed: {str(argv)}')
         self.options = RenderOptions(
             render_attributes=ModelAttributes(),
             level=self.argp.level,
@@ -2152,6 +2253,9 @@ class ExampleCommandLineRenderer():
         self.set_mkdir = set()
         self.counts = (0, 0)
         self.status = 1
+        
+    def reconstruct(self, **kwds):
+        return self.argq.reconstruct(self.argp, overrides=kwds)
         
     def _load_anchorcad_module(self, module):
         if module:
