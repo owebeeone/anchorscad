@@ -26,7 +26,6 @@ class BoxCylinder(an.CompositeShape):
     cylinder_cage_of_node: an.Node=an.Node(an.cageof, prefix='cylinder_cage_')
     
     EXAMPLE_SHAPE_ARGS=an.args(fn=32,
-                               size=(3.3, 12, 24.5),
                                box_cage_as_cage=False,
                                cylinder_cage_as_cage=False)
     EXAMPLE_ANCHORS=(
