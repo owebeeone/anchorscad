@@ -26,10 +26,13 @@ class ScrewTab(ad.CompositeShape):
     box_cyl_node: ad.Node=ad.ShapeNode(BoxCylinder, {})
     
     EXAMPLE_SHAPE_ARGS=ad.args(fn=32)
-    EXAMPLE_ANCHORS=(ad.surface_args('face_corner', 0, 0),)
+    EXAMPLE_ANCHORS=(
+        ad.surface_args('side'),
+        ad.surface_args('face_corner', 0, 0),
+        ad.surface_args('round_top'),)
     
     def __post_init__(self):
-        tab = self.box_cyl_node((self.depth, self.width, self.h))
+        tab = self.box_cyl_node((self.width, self.depth, self.h))
         max_outer_dia = (
             self.width 
             if self.width < self.depth * 2 
@@ -45,13 +48,17 @@ class ScrewTab(ad.CompositeShape):
         
         maker = tab.solid('tab').at('face_corner', 0, 0)
         maker.add_at(screw.composite('screw').at('top'), 
-                     'cylinder', 'top')
+                     'round_top')
         
         self.set_maker(maker)
 
     @ad.anchor('Mounting point.')
-    def side(self, *args, **kwds):
-        return self.maker.at('face_edge', *args, **kwds)
+    def side(self, face='back', edge=2):
+        return self.maker.at('face_edge', face, edge)
 
+
+# Uncomment the line below to default to writing OpenSCAD files
+# when anchorscad_main is run with no --write or --no-write options.
+MAIN_DEFAULT=ad.ModuleDefault(True)
 if __name__ == '__main__':
     ad.anchorscad_main(False)

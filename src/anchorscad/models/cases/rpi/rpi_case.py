@@ -289,7 +289,7 @@ class RaspberryPiCase(core.CompositeShape):
             for i, a in enumerate(tab_anchors):
                 maker.add_at(tab_shape
                         .composite(('tab', i))
-                        .at('face_edge', 0, 0),
+                        .at('side'),
                         post=a.apply(maker) * tab_trans)
         
         top_maker = maker.solid('main').at('centre')
