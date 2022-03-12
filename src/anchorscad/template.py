@@ -14,7 +14,7 @@ class ShapeName(ad.CompositeShape):
     <description>
     '''
     
-    size: tuple=(1, 2, 3)
+    size: tuple=ad.dtfield((1, 2, 3), 'The (x,y,z) size of ShapeName')
     
     EXAMPLE_SHAPE_ARGS=ad.args(size=(10, 20, 30))
     EXAMPLE_ANCHORS=(
