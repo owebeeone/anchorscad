@@ -20,7 +20,8 @@ import traceback
 from frozendict import frozendict
 
 from anchorscad import linear as l
-from anchorscad.datatree import Node, BoundNode, datatree
+from anchorscad.datatree import Node, BoundNode, datatree, dtfield,\
+                                METADATA_DOCS_NAME
 import numpy as np
 import pythonopenscad as posc
 
@@ -56,6 +57,7 @@ class IllegalStateException(CoreEception):
 
 class MustImplementBuild(CoreEception):
     '''Must implement build() function returning a Maker.'''
+    
 
 class ShapeNode(Node):
     '''A datatree Node that by default preserves the names of the
@@ -165,6 +167,18 @@ class Colour(object):
         object.__setattr__(
             self, 'value', tuple(posc.VECTOR3OR4_FLOAT(value)))
 
+def fn_field(fn=None):
+    return dtfield(fn, 'fixed number of segments. Overrides fa and fs')
+
+def fa_field(fa=None):
+    return dtfield(fa, 'minimum angle (in degrees) of each segment')
+
+def fs_field(fs=None):
+    return dtfield(fs, 'minimum length of each segment')
+
+FN_FIELD=fn_field()
+FS_FIELD=fs_field()
+FA_FIELD=fa_field()
 
 @dataclass(frozen=True)
 class ModelAttributes(object):
@@ -1267,6 +1281,16 @@ class AnchorsBuilder():
     def build(self):
         return Anchors(name=self.name, level=self.level, anchors=frozendict(self.anchors))
 
+def _build_args_doc(clz, init_only=True):
+    fields = getattr(clz, '__dataclass_fields__', None)
+    if fields is None:
+        return None
+    return '\n'.join(f'    {n}: {f.metadata[METADATA_DOCS_NAME].get_doc()}'
+                     for n, f in fields.items()
+                     if f.metadata 
+                        and METADATA_DOCS_NAME in f.metadata
+                        and (not init_only or f.init)
+                     )
 
 def shape(clazz_or_name=None, /, *, name=None, level=10):
     if isinstance(clazz_or_name, str):
@@ -1285,6 +1309,14 @@ def shape(clazz_or_name=None, /, *, name=None, level=10):
                 continue
             builder.add(func_name, func, func.__anchor_spec__)
         clazz.anchorscad = builder.build()
+        
+        # Add field documentation.
+        args_doc = _build_args_doc(clazz)
+        if args_doc:
+            curr_doc = clazz.__doc__
+            curr_doc = (curr_doc + '\n') if curr_doc else ''
+            clazz.__doc__ = curr_doc + 'Args:\n' + args_doc
+            
         return clazz
     if clazz_or_name is None:
         return decorator
@@ -1314,8 +1346,12 @@ def fabricator(clazz=None, /, *, level=10):
 @shape('anchorscad/core/box')
 @dataclass
 class Box(Shape):
-    '''Generates rectangular prisms (cubes where l=w=h).'''
-    size: l.GVector
+    '''Generates rectangular prisms (cubes where x=y=z).
+    Anchor functions have a 'face' parameter which are 'front', 'back',
+    'left', 'right', 'base' and 'top'. The 'front' face's plane is 
+    perpendicular with the y axis.
+    '''
+    size: l.GVector=dtfield(doc='(x,y,z) size of Box')
     
     # Orientation of the 6 faces.
     ORIENTATION = (
@@ -1350,7 +1386,8 @@ class Box(Shape):
         for face in COORDINATES_CORNERS[0:3])
     
     EXAMPLE_ANCHORS=tuple(
-        (surface_args('face_corner', f, c)) for f in (0, 3) for c in range(4)
+        (surface_args('face_corner', f, c)) 
+            for f in ('front', 'back') for c in range(4)
         ) + tuple(surface_args('face_edge', f, c) for f in (1, 3) for c in range(4)
         ) + tuple(surface_args('face_centre', f) for f in 
                   ('front', 'back', 'left', 'right', 'base', 'top')
@@ -1509,17 +1546,24 @@ def fill_params(
 @datatree
 class Text(Shape):
     '''Generates 3D text.'''
-    text: posc.str_strict=None
-    size: float=10.0
-    depth: float=1.0
-    font: posc.str_strict=None
-    halign: posc.of_set('left', 'center', 'right')='left'
-    valign: posc.of_set('top', 'center', 'baseline' 'bottom')='bottom'
-    spacing: float=1.0
-    direction: posc.of_set('ltr', 'rtl', 'ttb', 'btt')='ltr'
-    language: posc.str_strict=None
-    script: posc.str_strict=None
-    fn: int=None
+    text: posc.str_strict=dtfield(None, 'Text string to render.')
+    size: float=dtfield(10.0, 'Height of text')
+    depth: float=dtfield(1.0, 'Depth of text')
+    font: posc.str_strict=dtfield(None, 'Font name for rendering.')
+    halign: posc.of_set('left', 'center', 'centre', 'right')=dtfield(
+        'left', 'Horizontal alignment, left, center, centre or right')
+    valign: posc.of_set(
+            'top', 'center', 'centre', 'baseline' 'bottom')=dtfield(
+        'bottom', 
+        'Vertical alignment. top, center, centre, baseline or bottom')
+    spacing: float=dtfield(1.0, 'Character spacing.')
+    direction: posc.of_set('ltr', 'rtl', 'ttb', 'btt')=dtfield(
+        'ltr', 'Direction of rendering, ltr, rtl, ttb or btt')
+    language: posc.str_strict=dtfield(None, 'Language being rendered.')
+    script: posc.str_strict=dtfield(None, 'Script being rendered.')
+    fn: int=FN_FIELD
+    fs: float=FS_FIELD
+    fa: float=FA_FIELD
     text_node: Node=field(default=Node(posc.Text, 
                                        ARGS_REV_XLATION_TABLE, 
                                        expose_all=True), 
@@ -1553,10 +1597,10 @@ ANGLES_TYPE = l.list_of(l.strict_float, len_min_max=(3, 3), fill_to_min=0.0)
 @dataclass
 class Sphere(Shape):
     '''Generates a Sphere.'''
-    r: float=1.0
-    fn: int=None
-    fa: float=None
-    fs: float=None
+    r: float=dtfield(1.0, 'Radius of sphere')
+    fn: int=FN_FIELD
+    fa: float=FA_FIELD
+    fs: float=FS_FIELD
 
     EXAMPLE_ANCHORS=(surface_args('top'),
                      surface_args('base'),
@@ -1605,12 +1649,12 @@ CONE_ARGS_XLATION_TABLE={'r_base': 'r1', 'r_top': 'r2'}
 @dataclass
 class Cone(Shape):
     '''Generates cones or horizontal conical slices and cylinders.'''
-    h: float=1.0
-    r_base: float=1.0
-    r_top: float=0.0
-    fn: int=None
-    fa: float=None
-    fs: float=None
+    h: float=dtfield(1.0, 'Height of cone') 
+    r_base: float=dtfield(1.0, 'Base radius')
+    r_top: float=dtfield(0.0, 'Top radius')
+    fn: int=FN_FIELD
+    fa: float=FA_FIELD
+    fs: float=FS_FIELD
     
     EXAMPLE_ANCHORS=(
         surface_args('base'),
@@ -1676,15 +1720,16 @@ class Cone(Shape):
 @shape('anchorscad/core/cone')
 @dataclass
 class Cylinder(Cone):
-    '''Creates a Cone that has the same top and base radius. (a cylinder)'''
-    h: float=1.0
-    r: float=1.0
+    '''Creates a Cone that has the same top and base radius. 
+    (i.e. a cylinder).'''
+    h: float=dtfield(1.0, 'Length of cylinder.')
+    r: float=dtfield(1.0, 'Radius of cylinder.')
     r_base: float=field(init=False)  # Hide this in the constructor.
     r_top: float=field(init=False)  # Hide this in the constructor.
     # The fields below should be marked kw only (Python 3.10 feature).
-    fn: int=None
-    fa: float=None
-    fs: float=None
+    fn: int=FN_FIELD
+    fa: float=FA_FIELD
+    fs: float=FS_FIELD
     
     EXAMPLE_SHAPE_ARGS=args(h=50, r=30, fn=30)
     
@@ -1761,7 +1806,8 @@ class CompositeShape(Shape):
 @shape('anchorscad/core/arrow')
 @dataclass(frozen=True)
 class Arrow(CompositeShape):
-    r_stem_top: float=1.0
+    ''''arrow' shape with two end to end cones.'''
+    r_stem_top: 1.0
     r_stem_base: float=None # Defaults to r_stem_top
     l_stem: float=6.0
     l_head: float=3

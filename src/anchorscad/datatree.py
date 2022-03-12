@@ -25,6 +25,7 @@ import builtins
 FIELD_FIELD_NAMES=tuple(inspect.signature(field).parameters.keys())
 DATATREE_SENTIENEL_NAME='__datatree_nodes__'
 OVERRIDE_FIELD_NAME='override'
+METADATA_DOCS_NAME='dt_docs'
 
 class ReservedFieldNameException(Exception):
     f'''The name '{OVERRIDE_FIELD_NAME}' is reserved for use by datatree.'''
@@ -41,6 +42,8 @@ class MappedFieldNameNotFound(Exception):
 class DataclassAlreadyApplied(Exception):
     '''The function called in intended to be called before the dataclass decorator.'''
     
+class IllegalMetadataClass(Exception):
+    '''Classes inheriting FieldMetadataBase must override get_doc.'''
 
 def _update_name_map(clz, map, from_name, to_value, description):
     '''Updates the given map but does not allow collision.'''
@@ -83,6 +86,51 @@ class AnnotationDetails:
 def _field_assign(obj, name, value):
     builtins.object.__setattr__(obj, name, value)
 
+
+class FieldMetadataBase:
+    def get_doc(self):
+        raise IllegalMetadataClass(
+            f'Class must override get_doc() {self.__class__.__name__}')
+    
+
+@dataclass(frozen=True)
+class FieldMetadata(FieldMetadataBase):
+    '''Provides a docstring for a field.'''
+    doc: str
+    
+    def get_doc(self):
+        '''Returns the docstring.'''
+        return self.doc
+    
+@dataclass(frozen=True)
+class NodeFieldMetadata(FieldMetadataBase):
+    '''Provides a docstring for a Node field.'''
+    node_doc: str
+    field_metadata: FieldMetadata
+    
+    def get_doc(self):
+        return f'{self.node_doc}: {self.field_metadata.get_doc()}'
+
+def field_docs(obj, field_name):
+    metadata = obj.__dataclass_fields__[field_name].metadata
+    
+    if not metadata:
+        return None
+    
+    doc_metadata = metadata.get(METADATA_DOCS_NAME, None)
+    if doc_metadata is None:
+        return None
+    
+    return doc_metadata.get_doc()
+
+def dtfield(default=MISSING, doc=None, **kwargs):
+    '''Like dataclasses.field but also supports doc parameter.'''
+    metadata = kwargs.get('metadata', {})
+    metadata[METADATA_DOCS_NAME] = FieldMetadata(doc)
+    
+    return field(**kwargs, default=default, metadata=metadata)
+
+
 @dataclass(frozen=True)
 class Node:
     '''A specifier for a datatree node. This allows the specification of how fields
@@ -96,6 +144,7 @@ class Node:
     init_signature: tuple=field(repr=False)
     expose_map: dict=field(repr=False)
     expose_rev_map: dict=field(repr=False)
+    node_doc: str=None
     
     # The default value for the preserve init parameter. Derived classes can override.
     DEFAULT_PRESERVE_SET=frozendict()
@@ -112,7 +161,8 @@ class Node:
                  prefix='', 
                  expose_all=None,
                  expose_if_avail=None,
-                 preserve=None):
+                 preserve=None,
+                 node_doc: str=None):
         '''Args:
             clz_or_func: A class or function for parameter binding.
             *expose_spec: A list of names and dictionaries for mapping. If these
@@ -134,6 +184,7 @@ class Node:
         _field_assign(self, 'suffix', suffix)
         _field_assign(self, 'prefix', prefix)
         _field_assign(self, 'init_signature', inspect.signature(clz_or_func))
+        _field_assign(self, 'node_doc', node_doc)
         
         if preserve is None:
             preserve = self.DEFAULT_PRESERVE_SET
@@ -239,18 +290,30 @@ class Node:
     def get_rev_map(self):
         return self.expose_rev_map
     
-
-    
-def _make_dataclass_field(field_obj, use_default):
+def _make_dataclass_field(field_obj, use_default, node_doc):
     value_map = dict((name, getattr(field_obj, name)) for name in FIELD_FIELD_NAMES)
+    
+    # Fix docs in the metadata.
+    metadata = value_map.get('metadata', None)
+    metadata_docs = (None 
+                     if metadata is None 
+                     else metadata.get(METADATA_DOCS_NAME, None))
+    if metadata_docs:
+        new_metadata = {METADATA_DOCS_NAME: 
+                        NodeFieldMetadata(node_doc, metadata_docs)}
+        new_metadata.update(
+            (k, v) for k, v in metadata.items() if k != METADATA_DOCS_NAME)
+        value_map['metadata'] = new_metadata
+    
     default_val = value_map['default']
     if isinstance(default_val, Node):
         return field(**value_map), default_val
-        
+
     if not use_default:
         value_map.pop('default', None)
         value_map.pop('default_factory', None)
     return field(**value_map), None
+
 
 def _apply_node_fields(clz):
     '''Adds new fields from Node annotations.'''
@@ -280,7 +343,9 @@ def _apply_node_fields(clz):
                     new_annos[rev_map_name] = anno_detail.anno_type
                     if not hasattr(clz, rev_map_name):
                         field_default, node_default = _make_dataclass_field(
-                            anno_detail.field, anno_default.use_defaults)
+                            anno_detail.field, 
+                            anno_default.use_defaults, 
+                            anno_default.node_doc)
                         setattr(clz, rev_map_name, field_default)
                         if node_default:
                             nodes[rev_map_name] = node_default

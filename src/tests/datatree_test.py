@@ -5,7 +5,7 @@ Created on 8 Dec 2021
 '''
 
 import unittest
-from anchorscad.datatree import datatree, dtargs, override, Node
+from anchorscad.datatree import datatree, dtargs, override, Node, dtfield, field_docs
 from dataclasses import dataclass, field
 
 @datatree
@@ -480,6 +480,34 @@ class Test(unittest.TestCase):
         A(f1_node=f2).thing()
         self.assertEqual(s1, [1])  
         self.assertEqual(s2, [3]) 
+        
+    def test_document_field(self):
+        
+        @datatree
+        class A:
+            a: int=dtfield(1, 'the a field')
+            ax: int=dtfield(1, 'the ax field')
+            
+        @datatree
+        class B:
+            b: int=dtfield(1, 'the b field')
+            a_node: Node=Node(A, node_doc='A node doc')
+            a_node2: Node=dtfield(Node(A, node_doc='A node2 doc', prefix='a2_', expose_all=True), 
+                                  'the a_node2 field')
+            
+        b_value = B(a=2, ax=3, b=4)
+        
+        self.assertEqual(b_value.a, 2)
+        self.assertEqual(b_value.ax, 3)
+        self.assertEqual(b_value.b, 4)
+        
+        self.assertEqual(field_docs(b_value, 'a'), 'A node doc: the a field')
+        self.assertEqual(field_docs(b_value, 'ax'), 'A node doc: the ax field')
+        self.assertEqual(field_docs(b_value, 'b'), 'the b field')
+        self.assertEqual(field_docs(b_value, 'a_node'), None)
+        self.assertEqual(field_docs(b_value, 'a2_a'), 'A node2 doc: the a field')
+        self.assertEqual(field_docs(b_value, 'a2_ax'), 'A node2 doc: the ax field')
+        self.assertEqual(field_docs(b_value, 'a_node2'), 'the a_node2 field')
 
 
 if __name__ == "__main__":
