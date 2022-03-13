@@ -3,18 +3,18 @@ Created on 8 Dec 2021
 
 @author: gianni
 
-Extends dataclass functionality with 'Node' fields pulling fields from 
-classes of members. This is useful when composing a class from other
-classes or functions where the fields or constructor or function parameters 
+Wrapper over Python's dataclass adding support for a docstring for each 
+field and 'Node' fields where fields can be injected into a class 
+definition from constructor parameters and bound when nodes are invoked. 
+
+This is particularly useful when composing a class from other classes or 
+functions where the fields or constructor or function parameters 
 become member fields of the composing class. datatree will automate the
 generation of these fields to become dataclass members. datatree will pull 
 constructor field definitions of Node declarations and add annotations to 
 the enclosed datatree class including any default values or other 
-dataclasses.field properties.
-
-Datatree is particularly useful when composing complex object trees that 
-share similar concepts. Especially when constructing complex relationships
-that require the ability to specify a wide range of parameters.
+dataclasses.field properties. This is especially useful when constructing 
+complex relationships that require a large number of parameters.
 '''
 
 from dataclasses import dataclass, field, Field, MISSING
@@ -45,14 +45,14 @@ class DataclassAlreadyApplied(Exception):
 class IllegalMetadataClass(Exception):
     '''Classes inheriting FieldMetadataBase must override get_doc.'''
 
+
 def _update_name_map(clz, map, from_name, to_value, description):
     '''Updates the given map but does not allow collision.'''
     if from_name in map:
         raise NameCollision(
             f'{description} {from_name} specified multiple times in {clz.__name__}')
     map[from_name] = to_value
-    
-        
+
 def _dupes_and_allset(itr):
     '''Returns a tuple containing a set of duplicates and a set of all non 
     duplicated items in itr.'''
@@ -84,10 +84,12 @@ class AnnotationDetails:
         
 
 def _field_assign(obj, name, value):
+    '''Field assignment that works on frozen objects.'''
     builtins.object.__setattr__(obj, name, value)
 
 
 class FieldMetadataBase:
+    '''Datatree metadata object.'''
     def get_doc(self):
         raise IllegalMetadataClass(
             f'Class must override get_doc() {self.__class__.__name__}')
@@ -101,7 +103,8 @@ class FieldMetadata(FieldMetadataBase):
     def get_doc(self):
         '''Returns the docstring.'''
         return self.doc
-    
+
+
 @dataclass(frozen=True)
 class NodeFieldMetadata(FieldMetadataBase):
     '''Provides a docstring for a Node field.'''
@@ -111,7 +114,9 @@ class NodeFieldMetadata(FieldMetadataBase):
     def get_doc(self):
         return f'{self.node_doc}: {self.field_metadata.get_doc()}'
 
+
 def field_docs(obj, field_name):
+    '''Return the documentation for a field. Returns None if not provided.'''
     metadata = obj.__dataclass_fields__[field_name].metadata
     
     if not metadata:
@@ -124,7 +129,12 @@ def field_docs(obj, field_name):
     return doc_metadata.get_doc()
 
 def dtfield(default=MISSING, doc=None, **kwargs):
-    '''Like dataclasses.field but also supports doc parameter.'''
+    '''Like dataclasses.field but also supports doc parameter.
+    Args:
+      default: The default value for the field.
+      doc: A docstring associated with the field.
+      Includes all fields allowed by dataclasses.field().
+    '''
     metadata = kwargs.get('metadata', {})
     metadata[METADATA_DOCS_NAME] = FieldMetadata(doc)
     
@@ -133,8 +143,9 @@ def dtfield(default=MISSING, doc=None, **kwargs):
 
 @dataclass(frozen=True)
 class Node:
-    '''A specifier for a datatree node. This allows the specification of how fields
-    from a class initializer is translated from fields in the parent class.
+    '''A specifier for a datatree node. This specifies how fields
+    from a class initializer (or function) is translated from fields in the
+    composition class.
     '''
     clz_or_func: type
     use_defaults: bool
@@ -289,8 +300,16 @@ class Node:
         
     def get_rev_map(self):
         return self.expose_rev_map
+
     
 def _make_dataclass_field(field_obj, use_default, node_doc):
+    '''Creates a dataclasses Field for the given parameters.
+    Args:
+      field_obj: the current Field object.
+      use_default: If True, the default of the Field is used otherwise the 
+          default is excluded.
+      node_doc: The docstring for the wrapping Node field.
+    '''
     value_map = dict((name, getattr(field_obj, name)) for name in FIELD_FIELD_NAMES)
     
     # Fix docs in the metadata.
@@ -313,7 +332,6 @@ def _make_dataclass_field(field_obj, use_default, node_doc):
         value_map.pop('default', None)
         value_map.pop('default_factory', None)
     return field(**value_map), None
-
 
 def _apply_node_fields(clz):
     '''Adds new fields from Node annotations.'''
@@ -454,10 +472,10 @@ class Args:
     
     def bind_signature(self, signature):
         return signature.bind_partial(*self.arg, **self.kwds).arguments
+
     
 def dtargs(*arg, clazz=None, **kwds):
     return Args(arg, kwds, clazz=clazz)
-
 
 def _initialize_node_instances(clz, instance):
     '''Post dataclass initialization binding of nodes to instance.'''
