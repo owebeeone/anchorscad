@@ -537,8 +537,8 @@ def _process_datatree(clz, init, repr, eq, order, unsafe_hash, frozen,
 def datatree(clz=None, /, *, init=True, repr=True, eq=True, order=False,
               unsafe_hash=False, frozen=False, match_args=True,
               kw_only=False, slots=False, chain_post_init=False):
-    '''Python decorator similar to dataclasses.dataclass providing for relaying
-    parameters deeper inside a tree of objects.
+    '''Python decorator similar to dataclasses.dataclass providing parameter injection,
+    binding and overrides for parameters deeper inside a tree of objects.
     '''
     
     def wrap(clz):
