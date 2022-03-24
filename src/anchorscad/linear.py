@@ -552,12 +552,16 @@ MIRROR_Z = GMatrix([
     [0.0, 0.0, 0.0, 1.0]])
 
 def clean(v, epsilon=1.e-13):
+    '''Clean rounding errors for zeros.'''
     if np.abs(v) < epsilon:
         return 0
     return v
 
 def rotZ(degrees=90, radians=None, sinr_cosr=None):
-    '''Returns a GMatrix that causes a rotation about Z a given number of degrees.'''
+    '''Returns a GMatrix that causes a rotation about Z given an angle
+    either in degrees, radians or a sin/cos pair.
+    Only one of sinr_cosr or radians or degrees is used in the order
+    stated here.'''
     if sinr_cosr:
         return rotZSinCos(clean(sinr_cosr[0]), clean(sinr_cosr[1]))
     if radians is None:
@@ -578,7 +582,11 @@ ROTZ_180 = rotZ(180)
 ROTZ_270 = rotZ(-90)
 
 def rotX(degrees=90, radians=None, sinr_cosr=None):
-    '''Returns a GMatrix that causes a rotation about X a given number of degrees.'''
+    '''Returns a GMatrix that causes a rotation about X given an angle
+    either in degrees, radians or a sin/cos pair.
+    Only one of sinr_cosr or radians or degrees is used in the order
+    stated here.
+    '''
     if sinr_cosr:
         return rotXSinCos(clean(sinr_cosr[0]), clean(sinr_cosr[1]))
     if radians is None:
@@ -588,6 +596,7 @@ def rotX(degrees=90, radians=None, sinr_cosr=None):
     return rotXSinCos(sinr, cosr)
     
 def rotXSinCos(sinr, cosr):
+    '''Returns a Gmatrix for a rotation about the X axis given a sin/cos pair.'''
     return GMatrix(np.matrix([[1.0, 0, 0, 0], 
                               [0, cosr, -sinr, 0], 
                               [0, sinr, cosr, 0], 
@@ -597,6 +606,10 @@ ROTX_180 = rotX(180)
 ROTX_270 = rotX(-90)
     
 def rotY(degrees=90, radians=None, sinr_cosr=None):
+    '''Returns a GMatrix that causes a rotation about Y given an angle
+    either in degrees, radians or a sin/cos pair.
+    Only one of sinr_cosr or radians or degrees is used in the order
+    stated here.'''
     if sinr_cosr:
         return rotYSinCos(clean(sinr_cosr[0]), clean(sinr_cosr[1]))
     '''Returns a GMatrix that causes a rotation about Y a given number of degrees.'''
@@ -617,14 +630,14 @@ ROTY_270 = rotY(-90)
     
 
 def normalize(v):
-    '''Returns a normalalised v.'''
+    '''Returns the normalised value of vector v.'''
     if not isinstance(v, GVector):
         v = GVector(v)
     return v.N
 
 def rotVSinCos(v, sinr, cosr):
-    '''Returns a GMatrix that causes a rotation about an axis vector v a given the sin and cos
-    of rotation angle.'''
+    '''Returns a GMatrix that causes a rotation about an axis vector v the 
+    given sin and cos of the rotation angle.'''
     u = normalize(v)
     ux = u.x
     uy = u.y
@@ -644,7 +657,10 @@ def rotVSinCos(v, sinr, cosr):
          [0.0, 0, 0, 1]]))
 
 def rotV(v, degrees=90, radians=None, sinr_cosr=None):
-    '''Returns a GMatrix that causes a rotation about an axis vector V a given number of degrees.'''
+    '''Returns a GMatrix that causes a rotation about the vector v given 
+    an angle either in degrees, radians or a sin/cos pair.
+    Only one of sinr_cosr or radians or degrees is used in the order
+    stated here.'''
     if sinr_cosr:
         return rotVSinCos(clean(sinr_cosr[0]), clean(sinr_cosr[1]))
     if radians is None:
@@ -676,7 +692,7 @@ def scale(s):
         np.matrix([[v[0], 0.0, 0, 0], [0, v[1], 0, 0], [0, 0, v[2], 0], [0, 0, 0, 1]]))
 
 def translate(v):
-    '''Returns GMatrix that scales by the given vector.'''
+    '''Returns GMatrix that translates by the given vector.'''
     if not isinstance(v, GVector):
         v = GVector(v)
     return GMatrix(np.matrix(
@@ -692,7 +708,8 @@ def tranZ(v):
     return translate([0, 0, v])
 
 def rot_to_V(from_v, to_v):
-    '''Computes the rotation so that transformation from from_v becomes parallel to to_v'''
+    '''Computes the rotation so that transformation from from_v becomes 
+    parallel to to_v'''
     if not isinstance(from_v, GVector):
         from_v = GVector(from_v)
     if not isinstance(to_v, GVector):

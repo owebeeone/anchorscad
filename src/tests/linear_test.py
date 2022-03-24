@@ -4,7 +4,7 @@
 import unittest
 
 from anchorscad import linear
-from anchorscad.test_tools import iterable_assert
+from tests.test_tools import iterable_assert
 import numpy as np
 
 
