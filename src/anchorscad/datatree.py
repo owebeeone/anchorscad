@@ -19,6 +19,7 @@ complex relationships that require a large number of parameters.
 
 from dataclasses import dataclass, field, Field, MISSING
 from frozendict import frozendict
+from types import FunctionType
 import inspect
 import builtins
 
@@ -44,6 +45,9 @@ class DataclassAlreadyApplied(Exception):
     
 class IllegalMetadataClass(Exception):
     '''Classes inheriting FieldMetadataBase must override get_doc.'''
+    
+class SpecifiedMultipleDefaults(Exception):
+    '''Attempting to specify default and self_default parameters.'''
 
 
 def _update_name_map(clz, map, from_name, to_value, description):
@@ -115,6 +119,17 @@ class NodeFieldMetadata(FieldMetadataBase):
         return f'{self.node_doc}: {self.field_metadata.get_doc()}'
 
 
+@dataclass(frozen=True, repr=False)
+class BindingField:
+    '''Like a default_factoty field but called once the regular __init__
+    function is finished and with the class instance (self) as the first
+    parameter.'''
+    self_default: FunctionType
+
+    def __repr__(self):
+        return f'{self.__class__.__name__}({inspect.getsource(self.self_default).strip()})'
+
+
 def field_docs(obj, field_name):
     '''Return the documentation for a field. Returns None if not provided.'''
     metadata = obj.__dataclass_fields__[field_name].metadata
@@ -128,15 +143,21 @@ def field_docs(obj, field_name):
     
     return doc_metadata.get_doc()
 
-def dtfield(default=MISSING, doc=None, **kwargs):
+def dtfield(default=MISSING, doc=None, self_default=None, **kwargs):
     '''Like dataclasses.field but also supports doc parameter.
     Args:
       default: The default value for the field.
       doc: A docstring associated with the field.
+      self_default: A default factory taking a self parameter. 
       Includes all fields allowed by dataclasses.field().
     '''
     metadata = kwargs.get('metadata', {})
     metadata[METADATA_DOCS_NAME] = FieldMetadata(doc)
+    if self_default:
+        if not default is MISSING:
+            raise SpecifiedMultipleDefaults(
+                'Cannot specify default and self_default.')
+        default=BindingField(self_default)
     
     return field(**kwargs, default=default, metadata=metadata)
 
@@ -367,6 +388,8 @@ def _apply_node_fields(clz):
                         setattr(clz, rev_map_name, field_default)
                         if node_default:
                             nodes[rev_map_name] = node_default
+        elif isinstance(anno_default, BindingField):
+            nodes[name] = anno_default
 
     clz.__annotations__ = new_annos
     
@@ -485,14 +508,16 @@ def _initialize_node_instances(clz, instance):
         # The cur-value may contain args specifically for this node.
         cur_value = getattr(instance, name)
         if isinstance(cur_value, BoundNode):
-            bound_node = cur_value.chain(instance, node)
+            field_value = cur_value.chain(instance, node)
         elif isinstance(cur_value, Node):
-            bound_node = BoundNode(instance, name, node, cur_value)
+            field_value = BoundNode(instance, name, node, cur_value)
+        elif isinstance(cur_value, BindingField):
+            field_value = cur_value.self_default(instance)
         else:
             # Parent node has passed something other than a Node or a chained BoundNode.
             # Assume they just want to have it called.
-            return
-        setattr(instance, name, bound_node)
+            continue
+        setattr(instance, name, field_value)
 
 # Provide dataclass compatiability post python 3.8.
 # Default values for the dataclass function post Python 3.8.

@@ -482,7 +482,6 @@ class Test(unittest.TestCase):
         self.assertEqual(s2, [3]) 
         
     def test_document_field(self):
-        
         @datatree
         class A:
             a: int=dtfield(1, 'the a field')
@@ -508,6 +507,46 @@ class Test(unittest.TestCase):
         self.assertEqual(field_docs(b_value, 'a2_a'), 'A node2 doc: the a field')
         self.assertEqual(field_docs(b_value, 'a2_ax'), 'A node2 doc: the ax field')
         self.assertEqual(field_docs(b_value, 'a_node2'), 'the a_node2 field')
+        
+    def test_binding_field(self):
+        @datatree
+        class A:
+            a: int=1
+            c: int=dtfield(self_default=lambda s: s.a + s.b)
+            b: int=2
+
+        self.assertEqual(A().c, 3)
+        self.assertEqual(A(a=3).c, 5)
+        self.assertEqual(A(a=3, b=4).c, 7)
+        self.assertEqual(A(c=77).c, 77)
+        
+    def test_inherited_binding_field(self):
+        @datatree
+        class A:
+            a: int=1
+            c: int=dtfield(self_default=lambda s: s.a + s.b)
+            b: int=2
+
+        @datatree
+        class B(A):
+            a: int=2
+        self.assertEqual(B().c, 4)
+                
+    def test_injected_binding_field(self):
+        @datatree
+        class A:
+            a: int=1
+            c: int=dtfield(self_default=lambda s: s.a + s.b)
+            b: int=2
+
+        @datatree
+        class B(A):
+            a: int=3
+            node: Node=Node(A)
+
+        self.assertEqual(B().c, 5)
+        self.assertEqual(B().node().c, 5)
+        self.assertEqual(B(c=44).node().c, 44)
 
 
 if __name__ == "__main__":
