@@ -22,6 +22,7 @@ from frozendict import frozendict
 from types import FunctionType
 import inspect
 import builtins
+import re
 
 FIELD_FIELD_NAMES=tuple(inspect.signature(field).parameters.keys())
 DATATREE_SENTIENEL_NAME='__datatree_nodes__'
@@ -118,16 +119,26 @@ class NodeFieldMetadata(FieldMetadataBase):
     def get_doc(self):
         return f'{self.node_doc}: {self.field_metadata.get_doc()}'
 
+CLEANER_REGEX=re.compile('(\n?[ \t][ \t]+)+')
+
+def _get_abbreviated_source(func, max_size=75):
+    '''Returns stripped abbreviated source of a function (or lambda).'''
+    src = inspect.getsource(func).strip()
+    # Remove interspersed white space chunks.
+    src = ' '.join(s.strip() for s in CLEANER_REGEX.split(src) if s.strip())
+    return (src[:max_size] + '...') if len(src) > max_size else src
+
 
 @dataclass(frozen=True, repr=False)
 class BindingField:
-    '''Like a default_factoty field but called once the regular __init__
-    function is finished and with the class instance (self) as the first
-    parameter.'''
+    '''Like the dataclass field default_factory parameter but called after 
+    the regular __init__ function is finished and with the class instance 
+    (self) as the first parameter.'''
     self_default: FunctionType
 
     def __repr__(self):
-        return f'{self.__class__.__name__}({inspect.getsource(self.self_default).strip()})'
+        return (f'{self.__class__.__name__}'
+                f'({_get_abbreviated_source(self.self_default)})')
 
 
 def field_docs(obj, field_name):
