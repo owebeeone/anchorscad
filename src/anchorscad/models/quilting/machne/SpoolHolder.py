@@ -4,7 +4,7 @@ Created on 30 Sep 2021
 @author: gianni
 '''
 
-from anchorscad import Box, Cone, Cylinder, Maker, core, \
+from anchorscad import Box, Cone, Cylinder, Maker, core, cageof,\
                        datatree, Node, ShapeNode, l, dtfield
 
 
@@ -15,65 +15,93 @@ class SpoolHolder(core.CompositeShape):
     A Gammill quilting machine spool holder taking a 6mm rod.
     Allows for bobbins to be placed on the spool holder.
     '''
-    h: float=28.6
-    shaft_r: float=6.5 / 2
-    shaft_node_cage: Node=ShapeNode(Cylinder, 'h', {'r': 'shaft_r'})
-    shaft_node: Node=ShapeNode(Cylinder, 'h', {'r': 'shaft_r'})
-    shaft_hole_h: float=dtfield(self_default=lambda s: s.h + 2 * s.epsilon)
-    shaft_hole_r: float=dtfield(self_default=lambda s: s.shaft_r + s.shrink_r)
-    shaft_hole_node: Node=ShapeNode(Cylinder, prefix='shaft_hole_')
-    rod_r: float=6.0 / 2
-    rod_hole_base_r: float=5.9 / 2
-    rod_node: Node=ShapeNode(Cylinder, 'h', {'r': 'rod_r'})
-    shrink_r: float=0.15 / 2
-    holder_r: float=19 / 2
-    holder_node: Node=ShapeNode(Cylinder, 'h', {'r': 'holder_r'})
-    holder_cut: float=1.5
-    top_r_delta: float=0.04 / 2
-    rod_sup_h: float=25
-    rod_sup_r_top: float=12 / 2
-    rod_sup_r_base: float=19 / 2
-    rod_sup_node: Node=ShapeNode(Cone, prefix='rod_sup_')
-    rod_sup_hole_node: Node=ShapeNode(Cone, {})
-    rod_angle: float=0.75  # Degrees
+    h: float=dtfield(28.6, 'Height of holder')
+    shaft_r: float=dtfield(6.5 / 2, 'Radius of vertical shaft (bolt).')
     
+    shaft_node_cage: Node=dtfield(
+        ShapeNode(Cylinder, 'h', {'r': 'shaft_r'}),
+        'Cage shape for main vertical shaft (for bolt)')
+    shaft_cage_of_node: Node=Node(cageof, prefix='shaft_cage_')
+    shaft_hole_h: float=dtfield(
+        self_default=lambda s: s.h + 2 * s.epsilon,
+        doc='Shaft hole overall height. Computed default h + 2 * epsilon.')
+    shaft_hole_r: float=dtfield(
+        self_default=lambda s: s.shaft_r + s.shrink_r,
+        doc='Shaft hole radius.  Computed default shaft_r + shrink_r')
+    shaft_hole_node: Node=dtfield(
+        ShapeNode(Cylinder, prefix='shaft_hole_'),
+        'Shaft hole shape factory node.')
     
-    epsilon: float=0.001
-    fn: int=64
+    rod_r: float=dtfield(6.0 / 2, 'Spool holder rod radius.')
+    rod_hole_base_r: float=dtfield(5.9 / 2, 'Rod base radius. Should cause interference.')
+    rod_node: Node=dtfield(
+        ShapeNode(Cylinder, 'h', {'r': 'rod_r'}), 'Rod hole shape node.')
     
-    EXAMPLE_SHAPE_ARGS=core.args()
+    shrink_r: float=dtfield(
+        0.15 / 2, 'Radius compensation size. Compensates for 3D printer overshoot.')
+    
+    holder_r: float=dtfield(19 / 2, 'Holder overall radius.')
+    holder_node: Node=dtfield(
+        ShapeNode(Cylinder, 'h', {'r': 'holder_r'}), 'Main holder cylinder shape.')
+    
+    rod_sup_h: float=dtfield(25, 'Rod support cone length.')
+    rod_sup_r_top: float=dtfield(12 / 2, 'Rod support cone outer radius.')
+    rod_sup_r_base: float=dtfield(19 / 2, 'Rod support cone inner radius.')
+    rod_sup_node: Node=dtfield(
+        ShapeNode(Cone, prefix='rod_sup_'), 'Rod support cone shape.')
+    
+    rod_sup_hole_h: float=dtfield(
+        self_default=lambda s: s.rod_sup_h + 2 * s.epsilon,
+        doc='Support rod hole.')
+    rod_sup_hole_r_top: float=dtfield(
+        self_default=lambda s: s.rod_r + s.shrink_r,
+        doc='Support rod top radius')
+    rod_sup_hole_r_base: float=dtfield(
+        self_default=lambda s: s.rod_hole_base_r + s.shrink_r,
+        doc='Support rod base radius')
+    rod_sup_hole_node: Node=dtfield(ShapeNode(Cone, prefix='rod_sup_hole_'),
+                                    'Rod support hole shape.')
+    rod_angle: float=dtfield(0.75, 'Rod up slant in degrees.')
+    
+    holder_cut: float=dtfield(1.5, 'Holder cut size to allow for bed adhesion.')
+    cut_box_size: tuple=dtfield(
+        self_default=lambda s: (
+             s.holder_r * 2, s.holder_cut, s.h + 2 * s.epsilon),
+        doc='Size of cut box hole.')
+    cut_box_node: Node=dtfield(
+        ShapeNode(Box, prefix='cut_box_'), 'Box for cutting flat surface on shaft.')
+    
+    epsilon: float=dtfield(
+        0.001, 'Added to holes to eliminate floating point noise aliasing.')
+    
+    EXAMPLE_SHAPE_ARGS=core.args(fn=64)
     NOEXAMPLE_ANCHORS=(core.surface_args('base'),)
     
     def build(self) -> Maker:
-        maker = self.shaft_node_cage().cage('shaft_cage').at('base')
+        maker = self.shaft_cage_of_node(self.shaft_node_cage()).at('base')
             
-        epsi2 = 2 * self.epsilon
         shaft_hole = self.shaft_hole_node().hole('shaft_hole').at('centre')    
         maker.add_at(shaft_hole, 'centre')
         
         holder = self.holder_node().solid('holder').at('centre')    
         maker.add_at(holder, 'centre')
         
+        # Cut the rod support cone extending beyond the end of the holder.
         holder_cutter = self.holder_node(h=self.rod_sup_r_base / 2).hole(
             'holder_cutter').at('base') 
         maker. add_at(holder_cutter, 'base', h=-self.epsilon, rh=1)
         
-        rod_suppoort_shape = self.rod_sup_node().solid(
+        rod_support_shape = self.rod_sup_node().solid(
             'rod_support').colour([0, 1, 0, 1]).at('base')
-        maker.add_at(rod_suppoort_shape, 'base', rh=0.71, 
+        maker.add_at(rod_support_shape, 'base', rh=0.71, 
                      post=l.rotX(90 - self.rod_angle))
         
-        holder = self.rod_sup_hole_node(
-            h=self.rod_sup_h + epsi2,  
-            r_top=self.rod_r + self.shrink_r, 
-            r_base=self.rod_hole_base_r + self.shrink_r).hole(
+        holder = self.rod_sup_hole_node().hole(
             'rod_hole').at('centre')    
         maker.add_at(holder, 'rod_support', 'centre')
         
-        cut_box = core.Box([self.holder_r * 2, self.holder_cut, self.h + epsi2]
-                           ).hole('cut_box').at('face_edge', 3, 0)
-        
-        maker.add_at(cut_box, 'holder', 'surface', 0, 90)
+        cut_box = self.cut_box_node().hole('cut_box').at('face_centre', 3)
+        maker.add_at(cut_box, 'holder', 'surface', 0, 90, rh=0.5)
         
         return maker
 
@@ -151,11 +179,10 @@ class SpoolHolderCap(core.CompositeShape):
     
     epsilon: float=dtfield(
         0.001, 
-        'A small number used as a hole extender for aliasing reduction from '
+        'A small number used as a hole extender for eliminating aliasing from '
         'floating point noise.')
-    fn: int=64
     
-    EXAMPLE_SHAPE_ARGS=core.args()
+    EXAMPLE_SHAPE_ARGS=core.args(fn=64)
     NOEXAMPLE_ANCHORS=(core.surface_args('base'),)
     
     def build(self) -> Maker:
@@ -189,4 +216,3 @@ class SpoolHolderCap(core.CompositeShape):
 
 if __name__ == '__main__':
     core.anchorscad_main(False)
-    help(SpoolHolderCap)

@@ -1285,12 +1285,20 @@ def _build_args_doc(clz, init_only=True):
     fields = getattr(clz, '__dataclass_fields__', None)
     if fields is None:
         return None
-    return '\n'.join(f'    {n}: {f.metadata[METADATA_DOCS_NAME].get_doc()}'
+    with_docs = '\n'.join(f'    {n}: {f.metadata[METADATA_DOCS_NAME].get_doc()}'
                      for n, f in fields.items()
                      if f.metadata 
                         and METADATA_DOCS_NAME in f.metadata
                         and (not init_only or f.init)
                      )
+    
+    wo_docs = ', '.join(f'{n}'
+                     for n, f in fields.items()
+                     if not (f.metadata 
+                        and METADATA_DOCS_NAME in f.metadata)
+                        and (not init_only or f.init)
+                     )
+    return with_docs, wo_docs
 
 def shape(clazz_or_name=None, /, *, name=None, level=10):
     if isinstance(clazz_or_name, str):
@@ -1311,11 +1319,16 @@ def shape(clazz_or_name=None, /, *, name=None, level=10):
         clazz.anchorscad = builder.build()
         
         # Add field documentation.
-        args_doc = _build_args_doc(clazz)
+        args_doc, args_no_doc = _build_args_doc(clazz)
         if args_doc:
             curr_doc = clazz.__doc__
             curr_doc = (curr_doc + '\n') if curr_doc else ''
             clazz.__doc__ = curr_doc + 'Args:\n' + args_doc
+            
+        if args_no_doc:
+            curr_doc = clazz.__doc__
+            curr_doc = (curr_doc + '\n') if curr_doc else ''
+            clazz.__doc__ = curr_doc + 'Other args:\n    ' + args_no_doc
             
         return clazz
     if clazz_or_name is None:

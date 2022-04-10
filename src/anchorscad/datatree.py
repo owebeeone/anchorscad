@@ -126,7 +126,7 @@ def _get_abbreviated_source(func, max_size=75):
     src = inspect.getsource(func).strip()
     # Remove interspersed white space chunks.
     src = ' '.join(s.strip() for s in CLEANER_REGEX.split(src) if s.strip())
-    return (src[:max_size] + '...') if len(src) > max_size else src
+    return (src[:max_size] + '...') if len(src) > (3 + max_size) else src
 
 
 @dataclass(frozen=True, repr=False)
