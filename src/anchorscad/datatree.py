@@ -173,6 +173,14 @@ def dtfield(default=MISSING, doc=None, self_default=None, **kwargs):
     return field(**kwargs, default=default, metadata=metadata)
 
 
+@dataclass(frozen=True, repr=False)
+class _ClzOrFuncWrapper:
+    clz_or_func: type
+    
+    def __repr__(self):
+        return self.clz_or_func.__name__
+    
+
 @dataclass(frozen=True)
 class Node:
     '''A specifier for a datatree node. This specifies how fields
@@ -220,7 +228,7 @@ class Node:
             expose_if_avail: The set of field to expose if they're available.
             preserve: A set of names that are not prefixed or suffixed.
         '''
-        _field_assign(self, 'clz_or_func', clz_or_func)
+        _field_assign(self, 'clz_or_func', _ClzOrFuncWrapper(clz_or_func))
         _field_assign(self, 'use_defaults', use_defaults)
         expose_all = not expose_spec if expose_all is None else expose_all
         _field_assign(self, 'expose_all', expose_all)
@@ -428,7 +436,7 @@ class BoundNode:
         return BoundNode(new_parent, self.name, self.node, node, self)
 
     def __call__(self, *args, **kwds):
-        return self._invoke(self, self.node.clz_or_func, args, kwds)
+        return self._invoke(self, self.node.clz_or_func.clz_or_func, args, kwds)
 
     def call_with(self, clz_or_func, *args, **kwds):
         return self._invoke(self, clz_or_func, args, kwds)
