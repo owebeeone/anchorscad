@@ -12,8 +12,8 @@ from linear import *
 >>> rotX(90) * GVector([1, 2, 3])
 GVector([1.0, -3.0, 2.0, 1.0])
 
-# Because we're dealing with floating point numbers, there is an is_approx_equal function
-# to handle the resulting small inexactness.
+# Because floating point numbers are imprecise, there is an 
+# is_approx_equal function to handle the resulting small inexactness.
 # Rotation by 90, 3 times is the same as rotating back 90.
 >>> (rotX(90) * rotX(90) * rotX(90)).is_approx_equal(rotX(-90))
 True

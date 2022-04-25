@@ -187,19 +187,30 @@ class Node:
     from a class initializer (or function) is translated from fields in the
     composition class.
     '''
-    clz_or_func: type
-    use_defaults: bool
-    suffix: str
-    prefix: str
-    expose_all: bool
+    clz_or_func: type=dtfield(
+        doc='A class or function for parameter binding.')
+    use_defaults: bool=dtfield(
+        doc='Allows use of defaults otherwise defaults should be '
+            'specified elsewhere.')
+    suffix: str=dtfield(
+        doc='Suffix to apply to injected field names.')
+    prefix: str=dtfield(
+        doc='Prefix to apply to injected field names.')
+    expose_all: bool=dtfield(
+        doc='Forces the mapping of all fields even if the expose_spec '
+            ' excluded the class or function parameter name.')
     init_signature: tuple=field(repr=False)
     expose_map: dict=field(repr=False)
     expose_rev_map: dict=field(repr=False)
-    node_doc: str=None
+    node_doc: str=dtfield(None,
+        doc='Field documentation.')
     
     # The default value for the preserve init parameter. Derived classes can override.
+    # This allows for application specific Node types that have a set of
+    # field names that should be preserved from prefix and suffix mapping.
     DEFAULT_PRESERVE_SET=frozendict()
     # The default value for the expose_if_avail init parameter. Derived classes can override.
+    # Similar to DEFAULT_PRESERVE_SET, allows for application specific Node type.
     DEFAULT_EXPOSE_IF_AVAIL=frozendict()
     
     ALT_DEFAULT_ALLOW_SET=None
@@ -221,12 +232,13 @@ class Node:
               set.
             use_defaults: Allows use of defaults otherwise defaults should be
               specified elsewhere.
-            suffix: The suffix to apply to field names.
-            prefix: the prefix to apply to field names.
+            suffix: Suffix to apply to injected field names.
+            prefix: Prefix to apply to injected field names.
             expose_all: Forces the mapping of all fields even if the expose_spec
-              excluded the field name.
+              excluded the class or function parameter name.
             expose_if_avail: The set of field to expose if they're available.
             preserve: A set of names that are not prefixed or suffixed.
+            node_doc: Documentation for the node field.
         '''
         _field_assign(self, 'clz_or_func', _ClzOrFuncWrapper(clz_or_func))
         _field_assign(self, 'use_defaults', use_defaults)
