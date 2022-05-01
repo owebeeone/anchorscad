@@ -6,11 +6,12 @@ Created on 8 Jan 2021
 
 from dataclasses import dataclass
 from unittest import TestCase
+import unittest
 
 import anchorscad.extrude as extrude
 import anchorscad.linear as l
 from anchorscad.renderer import render
-from anchorscad.test_tools import iterable_assert
+from .test_tools import iterable_assert
 import numpy as np
 
 
@@ -218,8 +219,8 @@ class ExtrudeTest(TestCase):
                            [2.        , 0.        ],
                            [2.        , 1.        ],
                            [1.        , 2.        ]]), 
-                           ((1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12), 
-                            (13, 14, 15))))
+                           ((0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 0),
+                            (12, 13, 14, 15, 12))))
         
         # Try rotating the path.
         new_path = path.transform(l.rotZ(90))

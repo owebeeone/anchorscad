@@ -13,6 +13,14 @@ class InvalidNumberOfSides(Exception):
 
 
 def regular_polygon(nsides: int=3, r: float=1.0, ellipse_radius: tuple=None):
+    '''Returns an anchorscad.Path containing a N sided regular polygon or
+    points on a ellipse if ellipse_radius tuple (xr, yr) is provided.
+    Args:
+      nsides: Number of sides of regular prism.
+      r: Prism edges lie on circle with radius r.
+      ellipse_radius: If provided, overrides r and corresponds to ellipse
+          (x, y) radius.
+    '''
     if nsides <= 2:
         raise InvalidNumberOfSides(f'Needs more than 2 sides, provided={nsides}')
     
@@ -27,17 +35,15 @@ def regular_polygon(nsides: int=3, r: float=1.0, ellipse_radius: tuple=None):
     for i in range(1, nsides + 1):
         pos = (-xr * np.cos(angle * i), yr * np.sin(angle * i))
         builder.line(pos, ('side', i - 1))
-    
-    
-    return builder.build()
 
+    return builder.build()
 
 
 @ad.shape()
 @ad.datatree
 class RegularPrism(ad.CompositeShape):
     '''
-    A regular prism.
+    A regular N sided prism.
     '''
     nsides: int=ad.dtfield(3, 'Number of sides of regular prism')
     r: float=ad.dtfield(1.0, 'Prism edges lie on circle with radius r.')
@@ -71,22 +77,19 @@ class RegularPrism(ad.CompositeShape):
         'example3': ad.ExampleParams(
             shape_args=ad.args(
                 nsides=32, 
-                ellipse_radius=(30, 25),
+                ellipse_radius=(30, 30),
                 h=50,
                 ),
             anchors=(
                 ad.surface_args('base'),
                 ad.surface_args('top'),
                 ad.surface_args('side', 0, rh=0.5),
-                ad.surface_args('side', 4, rh=0.5),
+                ad.surface_args('side', 2, rh=0.5),
                 )),
         }
 
     def build(self) -> ad.Maker:
-        
-        maker = self.extrude_node().solid('prism').at('centre', post=ad.ROTX_270)
-
-        return maker
+        return self.extrude_node().solid('prism').at('centre', post=ad.ROTX_270)
 
     @ad.anchor('Base of prism')
     def base(self, h=0, rh=None):

@@ -367,6 +367,7 @@ class Path():
         return builder
             
     def transform(self, m):
+        '''Returns a new Path but transformed by m.'''
         return self.transform_to_builder(m).build()
 
 
@@ -575,7 +576,7 @@ class CircularArc:
         return result
     
     def extents(self):
-        extentsof(self.extremes())
+        return extentsof(self.extremes())
 
     def evaluate(self, t):
         angle = t * self.sweep_angle + self.start_angle
@@ -1022,8 +1023,7 @@ class PathBuilder():
         return self.add_op(self._ArcTo(
             last, centre, path_direction, 
             prev_op=self.last_op(), name=name, meta_data=metadata))
-        
-    
+
     def arc_centre_sweep(self,
                          centre, 
                          sweep_angle_degrees=0,
