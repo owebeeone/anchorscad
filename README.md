@@ -35,6 +35,7 @@ AnchorSCAD provides tools to wrap your creations in its own Shape class but the 
 This code above demonstrates how to compose models as holes and solids but AnchorSCAD also supports the other OpenSCAD compositions like intersection, unions, hull etc..
 
 Things to note from this example:
+
  * To compose a shape it must be given a name and a composition mode. In this case we have two shapes named ‘box’ and ‘hole’ and the compositions are solid() and hole().
  * Once a shape is named it is also given a frame of reference and this becomes a builder object which can have more shapes added. Note that once a builder is added to another builder it is copied, hence subsequent changes to the added builder will not be reflected in the final composition.
 
