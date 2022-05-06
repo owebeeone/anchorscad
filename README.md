@@ -204,4 +204,4 @@ Below is an image of the resulting OpenSCAD render (including EXAMPLE_ANCHORS).
 
 [See the source document for images.](https://docs.google.com/document/d/1p-qAE5oR-BQ2jcotNhv5IGMNw_UzNxbYEiZat76aUy4/edit#heading=h.tmi9129nbyll)
 
-
+[See how to keep holes when composing shapes.](https://docs.google.com/document/d/1dzWQPXcKU3TKnAUiqt6m0hTi0N4WW7o3GempQX9IVjQ/edit?usp=sharing)
