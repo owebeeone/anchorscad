@@ -15,14 +15,14 @@ pipelines:
           script:
             - if [ -f src/anchorscad/requirements.txt ]; then pip install -r src/anchorscad/requirements.txt; fi
             - git clone https://bitbucket.org/owebeeone/pythonopenscad.git
+            - cd src && ln -s ../pythonopenscad/src/pythonopenscad pythonopenscad
             - pip install pytest
-            - env PYTHONPATH="./src:./pythonopenscad/src" echo "xx$PYTHONPATH:xx"
-            - env PYTHONPATH="./src:./pythonopenscad/src" pytest -v src/tests/* --junitxml=test-reports/report.xml
+            - cd src && pytest -v tests/* --junitxml=test-reports/report.xml
       - step:
           name: Lint code
           script:
             # Enforce style consistency across Python projects https://flake8.pycqa.org/en/latest/manpage.html
             - pip install flake8
             - git clone https://bitbucket.org/owebeeone/pythonopenscad.git
-            - env PYTHONPATH="./src:./pythonopenscad/src" echo "xx$PYTHONPATH:xx"
-            - env PYTHONPATH="./src:./pythonopenscad/src" flake8 . --extend-exclude=dist,build --show-source --statistics
+            - cd src && ln -s ../pythonopenscad/src/pythonopenscad pythonopenscad
+            - flake8 . --extend-exclude=dist,build --show-source --statistics
