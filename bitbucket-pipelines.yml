@@ -15,9 +15,9 @@ pipelines:
           script:
             - if [ -f src/anchorscad/requirements.txt ]; then pip install -r src/anchorscad/requirements.txt; fi
             - git clone https://bitbucket.org/owebeeone/pythonopenscad.git
-            - cd src && ln -s ../pythonopenscad/src/pythonopenscad pythonopenscad
+            - (cd src && ln -s ../pythonopenscad/src/pythonopenscad pythonopenscad)
             - pip install pytest
-            - cd src && pytest -v tests/* --junitxml=test-reports/report.xml
+            - (cd src && pytest -v tests/* --junitxml=test-reports/report.xml)
       - step:
           name: Lint code
           script:
