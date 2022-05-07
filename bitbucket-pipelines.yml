@@ -16,13 +16,13 @@ pipelines:
             - if [ -f src/anchorscad/requirements.txt ]; then pip install -r src/anchorscad/requirements.txt; fi
             - git clone https://bitbucket.org/owebeeone/pythonopenscad.git
             - pip install pytest
-            - PYTHONPATH="$PWD/src:$PWD/pythonopenscad/src" echo "xx$PYTHONPATH:xx"
-            - PYTHONPATH="$PWD/src:$PWD/pythonopenscad/src" pytest -v src/tests/* --junitxml=test-reports/report.xml
+            - export PYTHONPATH="$PWD/src:$PWD/pythonopenscad/src" echo "xx$PYTHONPATH:xx"
+            - export PYTHONPATH="$PWD/src:$PWD/pythonopenscad/src" pytest -v src/tests/* --junitxml=test-reports/report.xml
       - step:
           name: Lint code
           script:
             # Enforce style consistency across Python projects https://flake8.pycqa.org/en/latest/manpage.html
             - pip install flake8
             - git clone https://bitbucket.org/owebeeone/pythonopenscad.git
-            - PYTHONPATH="$PWD/src:$PWD/pythonopenscad/src" echo "xx$PYTHONPATH:xx"
-            - PYTHONPATH="$PWD/src:$PWD/pythonopenscad/src" flake8 . --extend-exclude=dist,build --show-source --statistics
+            - export PYTHONPATH="$PWD/src:$PWD/pythonopenscad/src" echo "xx$PYTHONPATH:xx"
+            - export PYTHONPATH="$PWD/src:$PWD/pythonopenscad/src" flake8 . --extend-exclude=dist,build --show-source --statistics
