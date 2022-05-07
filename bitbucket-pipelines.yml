@@ -14,7 +14,7 @@ pipelines:
             - pip
           script:
             - if [ -f src/anchorscad/requirements.txt ]; then pip install -r src/anchorscad/requirements.txt; fi
-            - git clone git@bitbucket.org:owebeeone/pythonopenscad.git
+            - git clone bitbucket.org:owebeeone/pythonopenscad.git
             - pip install pytest
             - echo "$PYTHONPATH"
             - PYTHONPATH="$PWD/src:$PWD/pythonopenscad/src:$PYTHONPATH" pytest -v src/tests/* --junitxml=test-reports/report.xml
@@ -23,6 +23,6 @@ pipelines:
           script:
             # Enforce style consistency across Python projects https://flake8.pycqa.org/en/latest/manpage.html
             - pip install flake8
-            - git clone git@bitbucket.org:owebeeone/pythonopenscad.git
+            - git clone bitbucket.org:owebeeone/pythonopenscad.git
             - echo "$PYTHONPATH"
             - PYTHONPATH="$PWD/src:$PWD/pythonopenscad/src:$PYTHONPATH" flake8 . --extend-exclude=dist,build --show-source --statistics
