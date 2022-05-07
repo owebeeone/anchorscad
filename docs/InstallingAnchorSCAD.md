@@ -1,10 +1,10 @@
 ﻿# Installing AnchorSCAD
 
-AnchorSCAD can be downloaded using Git from the [AnchorSCAD BitBucket Git](https://bitbucket.org/owebeeone/anchorscad/src/master/) repository. It will also require the [PythonOpenScad Git](https://bitbucket.org/owebeeone/pythonopenscad/src/master/) repository and a number of other easily downloadable tools.
+AnchorSCAD can be downloaded using Git from the [AnchorSCAD Github](https://github.com/owebeeone/anchorscad.git) repository. It will also require the [PythonOpenScad Git](https://github.com/owebeeone/pythonopenscad.git) repository and a number of other easily downloadable tools.
 
 This software is provided under the terms of the LGPL V2.1 license. See the [License](#_f2cn9t1bbfvs) section in this document for more information.
 # Requirements
-All the required PIP packages are provided in the [requirements.txt](https://bitbucket.org/owebeeone/anchorscad/src/dev/src/anchorscad/requirements.txt) in the [AnchorSCAD BitBucket](https://bitbucket.org/owebeeone/anchorscad/src/master/) repository.
+All the required PIP packages are provided in the [requirements.txt](https://github.com/owebeeone/anchorscad/blob/master/src/anchorscad/requirements.txt) in the [AnchorSCAD Github](https://github.com/owebeeone/anchorscad.git) repository.
 
 Non [PyPi PIP](https://pypi.org/project/pip/) packages required are:
 
@@ -23,9 +23,9 @@ On Linux (Debian, Ubuntu, Raspberry Pi etc based distros), the following command
 	sudo apt install openscad graphviz python3 git
 	mkdir -p ~/git
 	cd ~/git
-	git clone https://owebeeone@bitbucket.org/owebeeone/anchorscad.git
+	git clone https://github.com/owebeeone/anchorscad.git
 	cd anchorscad
-	git clone https://owebeeone@bitbucket.org/owebeeone/pythonopenscad.git
+	git clone https://github.com/owebeeone/pythonopenscad.git
  pip3 install -r src/anchorscad/requirements.txt
 
 ## Windows
@@ -40,9 +40,9 @@ After installing those packages, start a new “cmd” shell terminal and run th
 	cd %USERPROFILE%
 	mkdir git   # Don’t run if the git directory already exists.
 	cd git
-	git clone https://owebeeone@bitbucket.org/owebeeone/anchorscad.git
+	git clone https://github.com/owebeeone/anchorscad.git
 	cd anchorscad
-	git clone https://owebeeone@bitbucket.org/owebeeone/pythonopenscad.git
+	git clone https://github.com/owebeeone/pythonopenscad.git
 	pip3 install -r src/anchorscad/requirements.txt
  
 ## Testing The Installation
@@ -65,11 +65,11 @@ You can also use the “python3 src/anchorscad/run.py” command to run Python m
 You can now check out the [Quick Start](https://docs.google.com/document/u/0/d/1p-qAE5oR-BQ2jcotNhv5IGMNw_UzNxbYEiZat76aUy4/edit) instructions to start building your models.
 
 # License
-[AnchorSCAD](https://bitbucket.org/owebeeone/anchorscad/src/master/) is available under the terms of the [GNU LESSER GENERAL PUBLIC LICENSE](https://www.gnu.org/licenses/old-licenses/lgpl-2.1.en.html#SEC1).
+[AnchorSCAD](https://github.com/owebeeone/anchorscad.git) is available under the terms of the [GNU LESSER GENERAL PUBLIC LICENSE](https://www.gnu.org/licenses/old-licenses/lgpl-2.1.en.html#SEC1).
 
 Copyright (C) 2022 Gianni Mariani
 
-[AnchorSCAD](https://bitbucket.org/owebeeone/anchorscad/src/master/) and [PythonOpenScad](https://bitbucket.org/owebeeone/pythonopenscad/src/master/) is free software; you can redistribute it and/or modify it under the terms of the GNU Lesser General Public License as published by the Free Software Foundation; either version 2.1 of the License, or (at your option) any later version.
+[AnchorSCAD](https://github.com/owebeeone/anchorscad.git) and [PythonOpenScad](https://github.com/owebeeone/pythonopenscad.git) is free software; you can redistribute it and/or modify it under the terms of the GNU Lesser General Public License as published by the Free Software Foundation; either version 2.1 of the License, or (at your option) any later version.
 
 This library is distributed in the hope that it will be useful, but WITHOUT ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU Lesser General Public License for more details.
 
