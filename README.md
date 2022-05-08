@@ -1,3 +1,6 @@
+# anchorscad
+A Python 3D modelling API for generating [OpenSCAD](http://www.openscad.org/) source code. This library simplifies the creating of 3D models and contains a suite of completed models including Raspberry Pi cases and other models.
+
 # AnchorSCAD Quick Start
 Gianni Mariani	 Mar-2022
 
