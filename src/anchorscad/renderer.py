@@ -6,7 +6,6 @@ Created on 4 Jan 2021
 
 import copy
 from dataclasses import dataclass
-from pygments.lexers import graph
 
 from anchorscad import core, graph_model
 from anchorscad import linear as l
