@@ -130,7 +130,7 @@ def _get_abbreviated_source(func, max_size=75):
 
 
 @dataclass(frozen=True, repr=False)
-class BindingField:
+class BindingDefault:
     '''Like the dataclass field default_factory parameter but called after 
     the regular __init__ function is finished and with the class instance 
     (self) as the first parameter.'''
@@ -168,7 +168,7 @@ def dtfield(default=MISSING, doc=None, self_default=None, **kwargs):
         if not default is MISSING:
             raise SpecifiedMultipleDefaults(
                 'Cannot specify default and self_default.')
-        default=BindingField(self_default)
+        default=BindingDefault(self_default)
     
     return field(**kwargs, default=default, metadata=metadata)
 
@@ -419,7 +419,7 @@ def _apply_node_fields(clz):
                         setattr(clz, rev_map_name, field_default)
                         if node_default:
                             nodes[rev_map_name] = node_default
-        elif isinstance(anno_default, BindingField):
+        elif isinstance(anno_default, BindingDefault):
             nodes[name] = anno_default
 
     clz.__annotations__ = new_annos
@@ -542,7 +542,7 @@ def _initialize_node_instances(clz, instance):
             field_value = cur_value.chain(instance, node)
         elif isinstance(cur_value, Node):
             field_value = BoundNode(instance, name, node, cur_value)
-        elif isinstance(cur_value, BindingField):
+        elif isinstance(cur_value, BindingDefault):
             field_value = cur_value.self_default(instance)
         else:
             # Parent node has passed something other than a Node or a chained BoundNode.

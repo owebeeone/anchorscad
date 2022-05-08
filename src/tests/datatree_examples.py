@@ -24,7 +24,7 @@ def doc(msg):
     print('---' + msg)
 
 
-from anchorscad.datatrees import datatree, Node, BindingField, dtfield, field, \
+from anchorscad.datatrees import datatree, Node, BindingDefault, dtfield, field, \
                                  dtargs, override
 
 
@@ -95,7 +95,7 @@ class Bind:
     '''Demonstrates the use of a computed default value.
     Often a value used in nodes should be computed with other parameters
     provided to this instance.'''
-    v1: int=BindingField(lambda s: s.v2 + s.v3)
+    v1: int=BindingDefault(lambda s: s.v2 + s.v3)
     a_node: Node=Node(A) # Injects v2, V3 and v4.
 
 describe(Bind)
@@ -107,7 +107,7 @@ class BindComputed:
     '''Demonstrates the use of a computed default value.'''
     v1: int=1
     a_node: Node=Node(A) # Injects v2, V3 and v4.
-    computed: int=BindingField(lambda s: s.v2 + s.v3)
+    computed: int=BindingDefault(lambda s: s.v2 + s.v3)
 
 describe(lambda: BindComputed(v2=10).computed)
 
@@ -135,7 +135,7 @@ class C:
     a_node: Node=field(default=Node(A, prefix='a_'), repr=False)
     b_v1: int=12
     b_node: Node=field(default=Node(A, prefix='b_'), repr=False)
-    computed: int=BindingField(lambda s: s.a_v2 + s.b_v2)
+    computed: int=BindingDefault(lambda s: s.a_v2 + s.b_v2)
     
     def __post_init__(self):
         pass # Called after initialization is complete.
@@ -165,7 +165,7 @@ describe(lambda: D().a_node())
     
 @datatree
 class E:
-    '''Using the dtfield() function to create a BindingField entry.'''
+    '''Using the dtfield() function to create a BindingDefault entry.'''
     v1: int=1
     v2: int=2
     v_computed: Node=dtfield(self_default=lambda s: s.v1 + s.v2)
