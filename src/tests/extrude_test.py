@@ -11,7 +11,7 @@ import unittest
 import anchorscad.extrude as extrude
 import anchorscad.linear as l
 from anchorscad.renderer import render
-from .test_tools import iterable_assert
+from test_tools import iterable_assert
 import numpy as np
 
 

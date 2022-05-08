@@ -5,7 +5,7 @@ Created on 8 Dec 2021
 '''
 
 import unittest
-from anchorscad.datatree import datatree, dtargs, override, Node, dtfield, field_docs
+from anchorscad.datatrees import datatree, dtargs, override, Node, dtfield, field_docs
 from dataclasses import dataclass, field
 
 @datatree

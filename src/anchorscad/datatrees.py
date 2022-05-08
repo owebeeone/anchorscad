@@ -558,8 +558,10 @@ def _process_datatree(clz, init, repr, eq, order, unsafe_hash, frozen,
                    match_args, kw_only, slots, chain_post_init):
 
     if OVERRIDE_FIELD_NAME in clz.__annotations__:
-        raise ReservedFieldNameException(
-            f'Reserved field name {OVERRIDE_FIELD_NAME} used by class {clz.__name__}')
+        if clz.__annotations__['override'] != Overrides:
+            raise ReservedFieldNameException(
+                f'Reserved field name {OVERRIDE_FIELD_NAME} used by class '
+                f'{clz.__name__}')
     clz.__annotations__['override'] = Overrides
     setattr(clz, OVERRIDE_FIELD_NAME, field(default=None, repr=False))
     

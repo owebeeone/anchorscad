@@ -24,8 +24,8 @@ def doc(msg):
     print('---' + msg)
 
 
-from anchorscad.datatree import datatree, Node, BindingField, dtfield, field, \
-                                dtargs, override
+from anchorscad.datatrees import datatree, Node, BindingField, dtfield, field, \
+                                 dtargs, override
 
 
 @datatree
@@ -203,4 +203,6 @@ describe(lambda: O(
     
 
 if __name__ == "__main__":
-    pass #main()
+    # #main()
+    import sys
+    sys.exit(0)

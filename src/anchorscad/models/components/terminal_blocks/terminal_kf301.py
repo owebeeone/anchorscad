@@ -7,7 +7,7 @@ Created on 12 Jan 2022
 from dataclasses import dataclass
 import anchorscad.core as core
 import anchorscad.extrude as e 
-from anchorscad.datatree import datatree, Node
+from anchorscad.datatrees import datatree, Node
 import anchorscad.linear as l
 
 EPSILON=0.001

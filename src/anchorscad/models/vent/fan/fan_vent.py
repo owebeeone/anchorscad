@@ -6,7 +6,7 @@ Created on 28 Sep 2021
 
 from dataclasses import dataclass
 import anchorscad.core as core
-from anchorscad.datatree import datatree, Node
+from anchorscad.datatrees import datatree, Node
 import anchorscad.linear as l
 from anchorscad.models.basic.pipe import Pipe
 from anchorscad.models.screws.dims import holeMetricDims 

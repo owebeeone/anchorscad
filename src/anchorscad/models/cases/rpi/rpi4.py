@@ -4,7 +4,7 @@ Created on 25 Jan 2021
 @author: gianni
 '''
 
-from anchorscad.datatree import datatree, Node
+from anchorscad.datatrees import datatree, Node
 
 import anchorscad.core as core
 from anchorscad.models.cases.rpi.rpi4_outline import RaspberryPi4Outline

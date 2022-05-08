@@ -5,7 +5,7 @@ Created on 14 Feb 2022
 '''
 
 import anchorscad.core as core
-from anchorscad.datatree import datatree, Node
+from anchorscad.datatrees import datatree, Node
 import anchorscad.extrude as e
 import anchorscad.linear as l
 

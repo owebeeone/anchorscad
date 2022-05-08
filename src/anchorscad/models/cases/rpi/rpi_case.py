@@ -6,7 +6,7 @@ Created on 16 Nov 2021
 @author: gianni
 '''
 
-from anchorscad.datatree import datatree, Node
+from anchorscad.datatrees import datatree, Node
 
 import anchorscad.core as core
 from anchorscad.linear import tranY, tranZ, ROTX_180, ROTX_270, \

@@ -20,8 +20,8 @@ import traceback
 from frozendict import frozendict
 
 from anchorscad import linear as l
-from anchorscad.datatree import Node, BoundNode, datatree, dtfield,\
-                                METADATA_DOCS_NAME
+from anchorscad.datatrees import Node, BoundNode, datatree, dtfield,\
+                                 METADATA_DOCS_NAME, _field_assign
 import numpy as np
 import pythonopenscad as posc
 
@@ -1820,7 +1820,7 @@ class CompositeShape(Shape):
 @dataclass(frozen=True)
 class Arrow(CompositeShape):
     ''''arrow' shape with two end to end cones.'''
-    r_stem_top: 1.0
+    r_stem_top: float=1.0
     r_stem_base: float=None # Defaults to r_stem_top
     l_stem: float=6.0
     l_head: float=3
@@ -1839,7 +1839,7 @@ class Arrow(CompositeShape):
     
     def build(self) -> Maker:
         if self.r_stem_base is None:
-            self.r_stem_base = self.r_stem_top
+            _field_assign(self, 'r_stem_base', self.r_stem_top)
             
         f_args = non_defaults_dict(self, include=ARGS_XLATION_TABLE)
         

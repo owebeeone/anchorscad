@@ -6,7 +6,7 @@ Created on 6 Jan 2022
 
 import numpy as np
 import anchorscad.core as core
-from anchorscad.datatree import datatree, Node
+from anchorscad.datatrees import datatree, Node
 import anchorscad.extrude as extrude
 import anchorscad.linear as l
 
