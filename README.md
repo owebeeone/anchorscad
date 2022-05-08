@@ -14,7 +14,7 @@ For more information about why [AnchorSCAD](https://docs.google.com/document/u/0
 
 ### How do I get set up? ###
 
-You can follow the [installation instructions](https://docs.google.com/document/u/0/d/1XcfrQDSVpsVBAdtZX8ADrhiarEk2Av6aNnuu5oxCoNw/edit) to install AnchorSCAD and the prerequisite software.
+You can follow the [installation instructions](https://github.com/owebeeone/anchorscad/blob/master/docs/InstallingAnchorSCAD.md) to install AnchorSCAD and the prerequisite software.
 # Simple Shape
 AnchorSCAD provides tools to wrap your creations in its own Shape class but the example below is simplified purely to show how shapes are composed in AnchorSCAD.  The code below will print text of an OpenSCAD script to standard output that will render a box tube.
 
