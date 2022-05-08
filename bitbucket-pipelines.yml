@@ -1,0 +1,28 @@
+#  Template python-build
+
+#  This template allows you to validate your python code.
+#  The workflow allows running tests and code linting on the default branch.
+
+image: python:3.8
+
+pipelines:
+  default:
+    - parallel:
+      - step:
+          name: Test
+          caches:
+            - pip
+          script:
+            - if [ -f src/anchorscad/requirements.txt ]; then pip install -r src/anchorscad/requirements.txt; fi
+            - git clone https://bitbucket.org/owebeeone/pythonopenscad.git
+            - (cd src && ln -s ../pythonopenscad/src/pythonopenscad pythonopenscad)
+            - pip install pytest
+            - (cd src && pytest -v tests/* --junitxml=test-reports/report.xml)
+      - step:
+          name: Lint code
+          script:
+            # Enforce style consistency across Python projects https://flake8.pycqa.org/en/latest/manpage.html
+            - pip install flake8
+            - git clone https://bitbucket.org/owebeeone/pythonopenscad.git
+            - cd src && ln -s ../pythonopenscad/src/pythonopenscad pythonopenscad
+            - flake8 . --extend-exclude=dist,build --show-source --statistics
