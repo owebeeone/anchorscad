@@ -18,5 +18,7 @@ class RaspberryPi4Case(RaspberryPiCase):
     do_versioned_example: bool=False
     outline_model_class: Node=Node(RaspberryPi4Outline)
     
+#MAIN_DEFAULT=core.ModuleDefault(True)
+
 if __name__ == "__main__":
     core.anchorscad_main(False)

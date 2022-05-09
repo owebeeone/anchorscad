@@ -63,7 +63,7 @@ class RaspberryPiCase(core.CompositeShape):
         size=5, 
         depth=0.3 if wall_thickness > 0.5 else wall_thickness * 0.5)
     do_versioned_example: bool=False
-    split_box_delta: float=0
+    split_box_delta: float=0.01
     screw_tab_node: Node=core.ShapeNode(ScrewTab, prefix='screw_tab')
     cageof_node: Node=Node(core.cageof, prefix='rpi_cage_')
     rpi_cage_properties: core.CageOfProperties=core.CageOfProperties(
@@ -135,10 +135,14 @@ class RaspberryPiCase(core.CompositeShape):
         'shell', 'face_edge', 1, 1, 0.15, post=translate([0, 2, epsilon]))
     
     EXAMPLES_EXTENDED={'bottom': core.ExampleParams(
-                            shape_args=core.args(fn=36)),
+                            shape_args=core.args(
+                                show_cut_box=False, 
+                                fn=36)),
                        'top': core.ExampleParams(
-                            core.args(make_case_top=True, 
-                                      fn=36),
+                            shape_args=core.args(
+                                make_case_top=True,
+                                show_cut_box=False,
+                                fn=36),
                             anchors=(),
                             base_anchor=core.surface_args(
                                 'main', 'face_centre', 4, post=ROTX_180))}
@@ -357,6 +361,8 @@ class RaspberryPiCase(core.CompositeShape):
 
     def get_example_version(self):
         return self.version.text if self.do_versioned_example else None
+
+#MAIN_DEFAULT=core.ModuleDefault(True)
 
 if __name__ == "__main__":
     core.anchorscad_main(False)

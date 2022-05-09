@@ -7,7 +7,7 @@ Created on 29 Jan 2022
 import inspect
 import sys
 from anchorscad.runner.process_manager import ProcessManager, ProcessManagerEntry
-import anchorscad.linear as l
+
 
 def get_fabricator_class(module, name):
     '''Gets the named Fabricator class if it is decorated as @fabricator.

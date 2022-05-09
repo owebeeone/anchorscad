@@ -5,7 +5,6 @@ Created on 11 Apr 2022
 '''
 import inspect
 import re
-from types import FunctionType
 
 SP='[ \n\t]'
 CLEANER_REGEX=re.compile(

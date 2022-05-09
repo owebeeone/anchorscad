@@ -38,6 +38,7 @@ class RaspberryPi3Case(RaspberryPiCase):
         'outline', ('rj45', 'outer'), 'face_edge', 1, 0, 0)
     BOUND_LINES = (USBA2_A2, USBA3_A1, ETH_A1, USBA2_A3)
     
+#MAIN_DEFAULT=core.ModuleDefault(True)
 
 if __name__ == "__main__":
     core.anchorscad_main(False)

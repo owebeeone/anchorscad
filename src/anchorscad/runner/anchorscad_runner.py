@@ -23,7 +23,7 @@ import pickle
 from anchorscad.runner.opendscad_finder import openscad_exe_location
 from anchorscad.runner.process_manager import ProcessManager, ProcessManagerEntry
 
-GENERATE_STL = False
+GENERATE_STL = True
 
 ENVIRON_NAME = '__ANCHORSCAD_RUNNER_KEY__'
 
