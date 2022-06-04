@@ -39,6 +39,13 @@ FAN_30x7_TYPE2=FanVentScrewHoleParams(
     screw_centres=(28.52 + 19.41) / 2,
     curl_inner_angle=-30)
 
+FAN_30x7_TYPE3=FanVentScrewHoleParams(
+    size=(30, 30, 7.8),
+    screw_support_dia=4.6,
+    screw_support_depth=2.75,
+    screw_centres=(28.6 + 19.37) / 2,
+    curl_inner_angle=-30)
+
 
 @shape('anchorscad.models.vent.fan.fan_vent')
 @datatree

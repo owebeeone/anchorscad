@@ -547,6 +547,16 @@ class Test(unittest.TestCase):
         self.assertEqual(B().c, 5)
         self.assertEqual(B().node().c, 5)
         self.assertEqual(B(c=44).node().c, 44)
+                   
+    def test_injected_binding_field_init_false(self):
+        @datatree
+        class A:
+            a: int=1
+            c: int=dtfield(self_default=lambda s: s.a + s.b, init=False)
+            b: int=2
+
+
+        self.assertEqual(A().c, 3)
 
 
 if __name__ == "__main__":
