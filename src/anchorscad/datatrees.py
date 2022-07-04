@@ -535,6 +535,7 @@ def _initialize_node_instances(clz, instance):
     '''Post dataclass initialization binding of nodes to instance.'''
     nodes = getattr(clz, DATATREE_SENTIENEL_NAME)
     
+    bindings = []
     for name, node in nodes.items():
         # The cur-value may contain args specifically for this node.
         cur_value = getattr(instance, name)
@@ -543,12 +544,22 @@ def _initialize_node_instances(clz, instance):
         elif isinstance(cur_value, Node):
             field_value = BoundNode(instance, name, node, cur_value)
         elif isinstance(cur_value, BindingDefault):
-            field_value = cur_value.self_default(instance)
+            # Evaluate the default value after all BoundNode initializations.
+            bindings.append((name, cur_value))
+            continue
         else:
             # Parent node has passed something other than a Node or a chained BoundNode.
             # Assume they just want to have it called.
             continue
         setattr(instance, name, field_value)
+    
+    # Evaluate any default values after all BoundNode initializations.
+    # This allows binding functions to reference any Node fields as
+    # long as the Node fields do not use bindings that not evaluated yet.
+    for name, cur_value in bindings:
+        field_value = cur_value.self_default(instance)
+        setattr(instance, name, field_value)
+        
 
 # Provide dataclass compatiability post python 3.8.
 # Default values for the dataclass function post Python 3.8.
