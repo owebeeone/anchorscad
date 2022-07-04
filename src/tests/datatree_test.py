@@ -555,8 +555,16 @@ class Test(unittest.TestCase):
             c: int=dtfield(self_default=lambda s: s.a + s.b, init=False)
             b: int=2
 
-
         self.assertEqual(A().c, 3)
+        
+    def test_bound_node_self_default_order(self):
+        @datatree
+        class A:
+            a: int=7
+            c: int=dtfield(self_default=lambda s: s.b(), init=False)
+            b: Node=Node(lambda a: a * 2)
+
+        self.assertEqual(A().c, 14)
 
 
 if __name__ == "__main__":
