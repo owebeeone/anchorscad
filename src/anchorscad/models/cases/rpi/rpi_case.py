@@ -6,12 +6,14 @@ Created on 16 Nov 2021
 @author: gianni
 '''
 
-from anchorscad.datatrees import datatree, Node
-
 import anchorscad.core as core
 from anchorscad import tranY, tranZ, ROTX_180, ROTX_270, \
     ROTX_90, ROTY_270, ROTY_180, translate, GVector, IDENTITY, \
-    plane_line_intersect, dtfield, shape
+    plane_line_intersect, dtfield, shape, Maker, datatree, Node, \
+    Shape, CompositeShape, surface_args, ModuleDefault, ShapeNode, \
+    Text, CageOfProperties, cageof, ExampleParams, args, anchorscad_main, \
+    non_defaults_dict, Box, ModeShapeFrame
+
 import anchorscad.models.basic.box_side_bevels as bbox
 from anchorscad.models.basic.TriangularPrism import TriangularPrism
 from anchorscad.models.grille.case_vent.basic import RectangularGrilleHoles
@@ -30,9 +32,9 @@ DELTA=ot.DELTA
 
 @shape
 @datatree(chain_post_init=True)
-class RaspberryPiCase(core.CompositeShape):
+class RaspberryPiCase(CompositeShape):
     '''A Generic Raspberry Pi Case.'''
-    outline_model: core.Shape=dtfield(
+    outline_model: Shape=dtfield(
         self_default=lambda s: s.outline_model_class())
     outline_model_class: Node=Node(RaspberryPi4Outline)
     inner_size_delta: tuple=(3, 2, 22)
@@ -51,122 +53,123 @@ class RaspberryPiCase(core.CompositeShape):
     make_case_top: bool=False
     rhs_grille_size: float=9
     rhs_grille_y_offs: float=4
-    fastener_side: core.Shape=Snap(size=(15, 9.5, 3))
-    fastener_rear: core.Shape=Snap(size=(15, 9.5, 4))
+    fastener_side: Shape=Snap(size=(15, 9.5, 3))
+    fastener_rear: Shape=Snap(size=(15, 9.5, 4))
     snap_pry_hole_size: tuple=(10, wall_thickness * 0.75, 1.7)
     
     epsilon: float=0.01
     fan_vent_as_cutout: bool=True
     fan_vent_vent_thickness: float=wall_thickness + epsilon
     fan_vent_screw_hole_extension: float=wall_thickness - 0.5
-    upper_fan_node: Node=core.ShapeNode(FanVent, prefix='fan_vent_')
+    upper_fan_node: Node=ShapeNode(FanVent, prefix='fan_vent_')
     
-    version: object=core.Text(
+    version: object=Text(
         text=f'-{int(time())-MODEL_V0:X}', 
         size=5, 
         depth=0.3 if wall_thickness > 0.5 else wall_thickness * 0.5)
     do_versioned_example: bool=False
     split_box_delta: float=0.01
-    screw_tab_node: Node=core.ShapeNode(ScrewTab, prefix='screw_tab')
-    cageof_node: Node=Node(core.cageof, prefix='rpi_cage_')
-    rpi_cage_properties: core.CageOfProperties=core.CageOfProperties(
+    screw_tab_node: Node=ShapeNode(ScrewTab, prefix='screw_tab')
+    cageof_node: Node=Node(cageof, prefix='rpi_cage_')
+    rpi_cage_properties: CageOfProperties=CageOfProperties(
         name='split_box_cage')
     fn: int=None
     fa: float=None
     fs: float=None
     
-    EXAMPLE_ANCHORS=(core.surface_args('shell', 'face_centre', 1),
-                     core.surface_args(
+    EXAMPLE_ANCHORS=(surface_args('shell', 'face_centre', 1),
+                     surface_args(
                          'main', 'fan', 'grille', ('spoke', 7), ('inner', 'mid', 0), 0),)
-    EXAMPLE_SHAPE_ARGS=core.args(fn=36, make_case_top=True, rpi_cage_as_cage=True)
+    EXAMPLE_SHAPE_ARGS=args(fn=36, make_case_top=True, rpi_cage_as_cage=True)
     
     # Some anchor locations for locating flange position and sizes.
-    USBA2_A2 = core.surface_args(
+    USBA2_A2 = surface_args(
         'outline', ('usbA2', 'outer'), 'face_edge', 1, 0, 0)
-    USBA3_A1 = core.surface_args(
+    USBA3_A1 = surface_args(
         'outline', ('usbA3', 'outer'), 'face_edge', 1, 0, 1)
-    USBA3_A2 = core.surface_args(
+    USBA3_A2 = surface_args(
         'outline', ('usbA3', 'outer'), 'face_edge', 1, 0, 0)
-    ETH_A1 = core.surface_args(
+    ETH_A1 = surface_args(
         'outline', ('rj45', 'outer'), 'face_edge', 1, 0, 1)
     BOUND_LINES = (USBA2_A2, USBA3_A1, USBA3_A2, ETH_A1)
     
-    BOX_TOP = core.surface_args('inner', 'face_centre', 4)
-    CUT_PLANE = core.surface_args('outline', 'audio', 'base', post=ROTX_270)
+    BOX_TOP = surface_args('inner', 'face_centre', 4)
+    CUT_PLANE = surface_args('outline', 'audio', 'base', post=ROTX_270)
     
     
-    HEADER_CORNER = core.surface_args(
+    HEADER_CORNER = surface_args(
         'outline', 'header100', 'face_edge', 3, 0, 0.5,
         post=translate([0, -rhs_grille_y_offs, 0]))
     
-    BOX_RHS = core.surface_args('shell_centre', 'face_centre', 3)
-    BOX_LHS = core.surface_args('shell_centre', 'face_centre', 0)
+    BOX_RHS = surface_args('shell_centre', 'face_centre', 3)
+    BOX_LHS = surface_args('shell_centre', 'face_centre', 0)
     
-    SNAP_RHS = core.surface_args(
+    SNAP_RHS = surface_args(
         'shell_centre', 'face_edge', 3, 0, 0.88)
-    SNAP_LHS = core.surface_args(
+    SNAP_LHS = surface_args(
         'shell_centre', 'face_edge', 0, 2, 1 - 0.88)
-    SNAP_REAR_LHS = core.surface_args(
+    SNAP_REAR_LHS = surface_args(
         'shell_centre', 'face_edge', 2, 2, 0.19)
-    SNAP_REAR_RHS = core.surface_args(
+    SNAP_REAR_RHS = surface_args(
         'shell_centre', 'face_edge', 2, 2, 1 - 0.19)
-    SNAP_ANCHOR=core.surface_args('snap', post=translate((0, -1, -0.3)))
+    SNAP_ANCHOR=surface_args('snap', post=translate((0, -1, -0.3)))
     
-    FAN_FIXING_PLANE=core.surface_args(
+    FAN_FIXING_PLANE=surface_args(
         'shell_centre', 'face_centre', 4)
     
-    PRY_RHS = core.surface_args(
+    PRY_RHS = surface_args(
         'shell', 'face_edge', 3, 0, 0.7, post=tranZ(epsilon) * ROTY_180)
-    PRY_REAR = core.surface_args(
+    PRY_REAR = surface_args(
         'shell', 'face_edge', 2, 2, 0.5, post=tranZ(epsilon) * ROTY_180)
     
-    FAN_POSITION=core.surface_args(
+    FAN_POSITION=surface_args(
         'outline', 'cpu', 'face_centre', 1, post=translate([-6, -2, 0]))
     
-    TAB_RHS = core.surface_args(
+    TAB_RHS = surface_args(
         'shell', 'face_edge', 3, 2, 1 - 0.8)
-    TAB_LHS = core.surface_args(
+    TAB_LHS = surface_args(
         'shell', 'face_edge', 0, 0, 0.8)
-    TAB_REAR_LHS = core.surface_args(
+    TAB_REAR_LHS = surface_args(
         'shell', 'face_edge', 2, 0, 0.2)
-    TAB_REAR_RHS = core.surface_args(
+    TAB_REAR_RHS = surface_args(
         'shell', 'face_edge', 2, 0, 0.8)
     
-    VERS_UPPER = core.surface_args(
+    VERS_UPPER = surface_args(
         'shell', 'face_edge', 4, 1, 0.15, post=translate([0, 2, epsilon]))
-    VERS_LOWER = core.surface_args(
+    VERS_LOWER = surface_args(
         'shell', 'face_edge', 1, 1, 0.15, post=translate([0, 2, epsilon]))
     
-    EXAMPLES_EXTENDED={'bottom': core.ExampleParams(
-                            shape_args=core.args(
+    EXAMPLES_EXTENDED={'bottom': ExampleParams(
+                            shape_args=args(
                                 show_cut_box=False, 
                                 fn=36)),
-                       'top': core.ExampleParams(
-                            shape_args=core.args(
+                       'top': ExampleParams(
+                            shape_args=args(
                                 make_case_top=True,
                                 show_cut_box=False,
                                 fn=36),
                             anchors=(),
-                            base_anchor=core.surface_args(
+                            base_anchor=surface_args(
                                 'main', 'face_centre', 4, post=ROTX_180))}
 
-    def build(self):
-        params = core.non_defaults_dict(self, include=('fn', 'fa', 'fs'))
+    def build(self) -> Maker:
+        params = non_defaults_dict(self, include=('fn', 'fa', 'fs'))
         inner_size = GVector(self.inner_size_delta) + GVector(self.outline_model.board_size)
         outer_size = (inner_size + (self.wall_thickness * 2,) * 3).A[0:3]
         bevel_radius = self.inner_bevel_radius + self.wall_thickness
-        maker = bbox.BoxShell(
+        shell_shape = bbox.BoxShell(
             size=outer_size, 
             bevel_radius=bevel_radius, 
             shell_size=self.wall_thickness, 
-            **params).solid('shell').at('face_centre', 4)
+            **params)
+        maker = shell_shape.solid('shell').at('face_centre', 4)
         
         maker.add_at(self.outline_model.hole('outline').at('face_corner', 5, 0),
                      'inner', 'face_corner', 5, 0, pre=translate(self.inner_offset))
 
-        split_box_cage = self.cageof_node(core.Box(outer_size)).at('centre')
+        split_box_cage = self.cageof_node(Box(outer_size)).at('centre')
         split_box_size = outer_size + self.split_box_delta
-        split_box = core.Box(split_box_size).solid('split_box').at('centre')
+        split_box = Box(split_box_size).solid('split_box').at('centre')
         split_box_cage.add(split_box)
         
         cut_point = (ROTX_90 * maker.at('outline', 'audio', 'base')).get_translation()
@@ -175,7 +178,7 @@ class RaspberryPiCase(core.CompositeShape):
         
         cut_xform = IDENTITY if self.make_case_top else ROTX_180 
             
-        cut_box_mode = core.ModeShapeFrame.HOLE if self.show_cut_box else core.ModeShapeFrame.HOLE
+        cut_box_mode = ModeShapeFrame.HOLE if self.show_cut_box else ModeShapeFrame.HOLE
         
         maker.add_at(
             split_box_cage
@@ -264,7 +267,7 @@ class RaspberryPiCase(core.CompositeShape):
         
         # Add screw holes.
         
-        params = core.non_defaults_dict(self, include=('fn', 'fa', 'fs'))
+        params = non_defaults_dict(self, include=('fn', 'fa', 'fs'))
 
         for i, t in enumerate(self.outline_model.HOLE_POSITIONS):
             board_screw_hole = t.spec.screw_hole(
@@ -303,9 +306,9 @@ class RaspberryPiCase(core.CompositeShape):
                 'main', 'outline', 'centre')
             
         # Add fasteners.
-        fastener_mode = (core.ModeShapeFrame.SOLID 
+        fastener_mode = (ModeShapeFrame.SOLID 
                          if self.make_case_top 
-                         else core.ModeShapeFrame.HOLE)
+                         else ModeShapeFrame.HOLE)
         
         clip_anchors = ((self.fastener_side, self.SNAP_RHS), 
                         (self.fastener_side, self.SNAP_LHS), 
@@ -320,7 +323,7 @@ class RaspberryPiCase(core.CompositeShape):
                     post=a.apply(top_maker) * -cut_trans)
         
         # Add pry holes
-        pry_shape = core.Box(self.snap_pry_hole_size)
+        pry_shape = Box(self.snap_pry_hole_size)
         pry_anchors = (self.PRY_RHS, self.PRY_REAR)
         for i, a in enumerate(pry_anchors):
             top_maker.add_at(pry_shape
@@ -345,7 +348,6 @@ class RaspberryPiCase(core.CompositeShape):
             height,
             width])    
         
-    
     def find_all_intersect(self, maker, plane_anchor, *line_anchors):
         return tuple(self.find_intersection(maker, plane_anchor, la) 
                      for la in line_anchors)
@@ -358,7 +360,7 @@ class RaspberryPiCase(core.CompositeShape):
     def get_example_version(self):
         return self.version.text if self.do_versioned_example else None
 
-MAIN_DEFAULT=core.ModuleDefault(True)
+#MAIN_DEFAULT=ModuleDefault(True)
 
 if __name__ == "__main__":
-    core.anchorscad_main(False)
+    anchorscad_main(False)

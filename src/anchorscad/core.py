@@ -18,6 +18,7 @@ import textwrap
 import traceback
 
 from frozendict import frozendict
+from abc import abstractmethod
 
 from anchorscad import linear as l
 from anchorscad.datatrees import Node, BoundNode, datatree, dtfield,\
@@ -428,7 +429,7 @@ class NamedShape(NamedShapeBase):
            pre: l.GMatrix=None, 
            args=None,
            anchor=None, 
-           **kwds):
+           **kwds) -> l.GMatrix:
         '''Creates a shape containing the nominated shape at the reference frame given.
         *args, **kwds: Parameters for the shape given. If none is provided then IDENTITY is used.
         pre: The pre multiplied transform.
@@ -467,6 +468,7 @@ class NamedShape(NamedShapeBase):
             attributes=self.attributes)
 
 class ShapeNamer:
+    @abstractmethod
     def named_shape(self, name, mode_shape_frame):
         assert False, 'This method needs to be overridden in child classes.'
         
@@ -706,7 +708,7 @@ class Shape(ShapeNamer, ShapeMaker):
     def anchor_names(self):
         return tuple(self.anchorscad.anchors.keys())
     
-    def at(self, *args, anchor=None, **kwds):
+    def at(self, *args, anchor=None, **kwds) -> l.GMatrix:
         if anchor and (args or kwds):
             raise IncorrectAnchorArgs(
                 'Must not provide any other args when anchor parameter specified')
@@ -1174,7 +1176,7 @@ class Maker(Shape):
     def anchor_names(self):
         return self.reference_shape.shape().anchor_names() + tuple(self.entries.keys()) 
     
-    def at(self, *args, anchor=None, **kwds):
+    def at(self, *args, anchor=None, **kwds) -> l.GMatrix:
         if anchor and (args or kwds):
             raise IncorrectAnchorArgs(
                 'Must not provide any other args when anchor parameter specified')
@@ -1779,7 +1781,7 @@ class CompositeShape(Shape):
     def anchor_names(self):
         return tuple(self.anchorscad.anchors.keys()) + self.maker.anchor_names()
     
-    def at(self, anchor_name, *args, **kwds):
+    def at(self, anchor_name, *args, **kwds) -> l.GMatrix:
         spec = self.anchorscad.get(anchor_name)
         if spec:
             func = spec[0]
