@@ -7,6 +7,8 @@ Tools for building outlines and access holes.
 '''
 
 from dataclasses import dataclass
+
+from anchorscad.datatrees import datatree
 from anchorscad.linear import tranX, tranY, tranZ, ROTX_180, \
                                    ROTY_180, translate, GVector
 import anchorscad.core as core
@@ -178,16 +180,19 @@ class OutlineHolePos:
     p: tuple
     
 
-@dataclass
+@datatree
 class BaseOutline(core.CompositeShape):
     '''
     A generic board outline.
     '''
-    board_size: tuple
-    bevel_radius: float
-    fn: int=None
-    fa: float=None
-    fs: float=None
+    board_size: tuple=core.dtfield(None, 'The board size in mm')
+    bevel_radius: float=core.dtfield(None, 'The bevel radius in mm')
+    box_node: core.Node=core.dtfield(
+        core.ShapeNode(bbox.BoxSideBevels,
+                       'bevel_radius',
+                       {'size': 'board_size'}),
+        doc='The board shape node',
+        init=False)
     
     HOLE_POSITIONS=()
     
@@ -216,14 +221,10 @@ class BaseOutline(core.CompositeShape):
                       for i in range(len(cls.HOLE_POSITIONS))
                 ) + cls.make_access_anchors(cls.ALL_ACCESS_ITEMS))
 
-    def __post_init__(self):
-        maker = bbox.BoxSideBevels(
-            size=self.board_size, 
-            bevel_radius=self.bevel_radius, 
-            fn=self.fn).solid('board').at('face_centre', 4)
-        
-        self.set_maker(maker)
-        
+    def build(self) -> core.Maker:
+        board_shape = self.box_node()
+        maker = board_shape.solid('board').at('face_centre', 'top')
+
         params = core.non_defaults_dict_include(self, include=('fn', 'fa', 'fs'))
 
         for i, t in enumerate(self.HOLE_POSITIONS):
@@ -246,4 +247,5 @@ class BaseOutline(core.CompositeShape):
                 # Add the outer hole.
                 model.expander(maker, name, model.anchor2, shape)
 
+        return maker
 

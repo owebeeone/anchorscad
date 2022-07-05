@@ -22,9 +22,9 @@ class RaspberryPi3Outline(ot.BaseOutline):
     
     HOLE_POSITIONS=tuple(
         ot.OutlineHolePos(ot.OutlineHoleSpec(
-            2.7/2, 
-            5.5/2, 
-            core.surface_args('face_corner', 4, 0)), 
+                2.7/2, 
+                5.5/2, 
+                core.surface_args('face_corner', 4, 0)), 
             pos)
         for pos in
             ((3.5, 3.5), (3.5, 3.5 + 49), (3.5 + 58, 3.5), (3.5 + 58, 3.5 + 49)))
@@ -55,6 +55,8 @@ class RaspberryPi3Outline(ot.BaseOutline):
 
     EXAMPLE_SHAPE_ARGS=core.args(fn=32)
 
+
+MAIN_DEFAULT=core.ModuleDefault(True)
 
 if __name__ == "__main__":
     core.anchorscad_main(False)

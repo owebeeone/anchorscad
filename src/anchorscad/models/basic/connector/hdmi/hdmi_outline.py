@@ -4,16 +4,15 @@ Created on 2 Oct 2021
 @author: gianni
 '''
 
-from dataclasses import dataclass
-import anchorscad.core as core
-import anchorscad.linear as l
-import anchorscad.extrude as e
+from anchorscad import args, datatree, dtfield, CompositeShape, \
+    shape, surface_args, PathBuilder, LinearExtrude, Box, Shape, \
+    anchorscad_main, ShapeNode, Maker, ROTX_270, Node
 import numpy as np
 
 
-@core.shape('anchorscad.models.basic.connector.hdmi.hdmi_outline')
-@dataclass
-class HdmiOutline(core.CompositeShape):
+@shape
+@datatree
+class HdmiOutline(CompositeShape):
     '''
     Hole cut out for HDMI Type A.
     '''
@@ -27,16 +26,16 @@ class HdmiOutline(core.CompositeShape):
     tolerance:float=0.4
     show_cage: bool=False
         
-    EXAMPLE_SHAPE_ARGS=core.args()
+    EXAMPLE_SHAPE_ARGS=args(show_cage=True)
     NOEXAMPLE_ANCHORS=(
-        core.surface_args('face_edge', 0, 0),
-        )
+        surface_args('face_edge', 0, 0),)
     
-    def __post_init__(self):
-        maker = self.cage_shape().at('centre')
+    def build(self) -> Maker:
+        shape = self.cage_shape()
+        maker = shape.at('centre')
         y1 = self.size[2] - self.h3
         y2 = self.size[2] - self.h2
-        path = (e.PathBuilder()
+        path = (PathBuilder()
             .move([0, 0])
             .line([-self.w3 / 2, 0], 'base_lhs')
             .line([-self.w2 / 2, y1], 'side_l_lhs')
@@ -50,43 +49,45 @@ class HdmiOutline(core.CompositeShape):
             .line([0, 0], 'base_rhs')
             .build())
         
-        shape = e.LinearExtrude(path, self.size[1])
+        shape = LinearExtrude(path, self.size[1])
         
         maker.add_at(shape.solid('hdmi').at('base_lhs', 0),
-                     'face_edge', 0, 0, post=l.ROTX_270)
+                     'face_edge', 0, 0, post=ROTX_270)
         
-        self.set_maker(maker)
+        return maker
 
     def cage_shape(self):
-        shape = core.Box(self.size)
+        shape = Box(self.size)
         if self.show_cage:
             return shape.solid(
                 'cage').transparent(1).colour([0, 1, 0, 0.5])
-        else:
-            return shape.cage('cage')
-        
+
         return shape.cage('cage')
 
 
-@core.shape('anchorscad.models.basic.connector.hdmi.hdmi_outline_test')
-@dataclass
-class HdmiOutlineTest(core.CompositeShape):
-    outline: core.CompositeShape=HdmiOutline()
+@shape
+@datatree
+class HdmiOutlineTest(CompositeShape):
+    outline: Shape=HdmiOutline()
     w: float = 2.0
+    size: tuple=dtfield(
+            self_default=lambda s: (
+                s.outline.size[0] + 2 * s.w, 
+                s.outline.size[1] / 3,
+                s.outline.size[2] + 2 * s.w), 
+            doc='The (x,y,z) size of HdmiOutlineTest')
+    box_node: Node=dtfield(ShapeNode(Box), init=False)
     
-    EXAMPLE_SHAPE_ARGS=core.args()
+    EXAMPLE_SHAPE_ARGS=args()
     
-    def __post_init__(self):
-        size = (self.outline.size[0] + 2 * self.w, 
-                self.outline.size[1] / 3,
-                self.outline.size[2] + 2 * self.w)
-        shape = core.Box(size)
+    def build(self) -> Maker:
+        shape = self.box_node()
         maker = shape.solid('test').at()
         
         maker.add_at(self.outline.hole('outline').at('centre'),
                      'centre')
-        self.set_maker(maker)
+        return maker
 
 
 if __name__ == '__main__':
-    core.anchorscad_main(False)
+    anchorscad_main(False)

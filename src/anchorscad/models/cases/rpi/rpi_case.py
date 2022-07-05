@@ -9,9 +9,9 @@ Created on 16 Nov 2021
 from anchorscad.datatrees import datatree, Node
 
 import anchorscad.core as core
-from anchorscad.linear import tranY, tranZ, ROTX_180, ROTX_270, \
+from anchorscad import tranY, tranZ, ROTX_180, ROTX_270, \
     ROTX_90, ROTY_270, ROTY_180, translate, GVector, IDENTITY, \
-    plane_line_intersect
+    plane_line_intersect, dtfield, shape
 import anchorscad.models.basic.box_side_bevels as bbox
 from anchorscad.models.basic.TriangularPrism import TriangularPrism
 from anchorscad.models.grille.case_vent.basic import RectangularGrilleHoles
@@ -28,16 +28,19 @@ MODEL_V0=1632924118
 DELTA=ot.DELTA
 
 
-@core.shape('anchorscad/models/cases/rpi_case')
+@shape
 @datatree(chain_post_init=True)
 class RaspberryPiCase(core.CompositeShape):
     '''A Generic Raspberry Pi Case.'''
-    outline_model: core.Shape=None
+    outline_model: core.Shape=dtfield(
+        self_default=lambda s: s.outline_model_class())
     outline_model_class: Node=Node(RaspberryPi4Outline)
     inner_size_delta: tuple=(3, 2, 22)
     inner_offset: tuple=(-1.5, 1, 3)
     wall_thickness: float=2
-    inner_bevel_radius: float=None
+    inner_bevel_radius: float=dtfield(self_default=lambda s:
+                s.outline_model.bevel_radius
+                    + (-s.inner_offset[0] - s.inner_offset[1]) / 2)
     screw_clearannce: float=0.2
     board_screw_min_len: float=6
     board_screw_size: float=2.6
@@ -149,12 +152,6 @@ class RaspberryPiCase(core.CompositeShape):
 
     def build(self):
         params = core.non_defaults_dict(self, include=('fn', 'fa', 'fs'))
-        if self.outline_model is None:
-            self.outline_model = self.outline_model_class()
-        if self.inner_bevel_radius is None:
-            self.inner_bevel_radius = (
-                self.outline_model.bevel_radius 
-                + (-self.inner_offset[0] - self.inner_offset[1]) / 2)
         inner_size = GVector(self.inner_size_delta) + GVector(self.outline_model.board_size)
         outer_size = (inner_size + (self.wall_thickness * 2,) * 3).A[0:3]
         bevel_radius = self.inner_bevel_radius + self.wall_thickness
@@ -163,7 +160,6 @@ class RaspberryPiCase(core.CompositeShape):
             bevel_radius=bevel_radius, 
             shell_size=self.wall_thickness, 
             **params).solid('shell').at('face_centre', 4)
-        
         
         maker.add_at(self.outline_model.hole('outline').at('face_corner', 5, 0),
                      'inner', 'face_corner', 5, 0, pre=translate(self.inner_offset))
@@ -362,7 +358,7 @@ class RaspberryPiCase(core.CompositeShape):
     def get_example_version(self):
         return self.version.text if self.do_versioned_example else None
 
-#MAIN_DEFAULT=core.ModuleDefault(True)
+MAIN_DEFAULT=core.ModuleDefault(True)
 
 if __name__ == "__main__":
     core.anchorscad_main(False)
