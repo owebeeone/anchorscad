@@ -8,7 +8,6 @@ from anchorscad import args, shape, tranX, tranY, translate, datatree, \
     surface_args, anchorscad_main, ModuleDefault
 
 import anchorscad.models.cases.outline_tools as ot 
-from time import time
 
 DELTA=ot.DELTA
 

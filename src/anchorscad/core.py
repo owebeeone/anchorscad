@@ -359,6 +359,7 @@ def find_all_intersect(maker, plane_anchor, *line_anchors):
     return tuple(find_intersection(maker, plane_anchor, la) 
                  for la in line_anchors)
 
+
 @dataclass(frozen=True)
 class NamedShapeBase(object):
     shape: object  # Shape or Maker or LazyShape
