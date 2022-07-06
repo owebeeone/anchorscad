@@ -6,7 +6,6 @@ Created on 16 Nov 2021
 @author: gianni
 '''
 
-import anchorscad.core as core
 from anchorscad import tranY, tranZ, ROTX_180, ROTX_270, \
     ROTX_90, ROTY_270, ROTY_180, translate, GVector, IDENTITY, \
     plane_line_intersect, dtfield, shape, Maker, datatree, Node, \
@@ -21,8 +20,9 @@ from anchorscad.models.fastners.snaps import Snap
 from anchorscad.models.vent.fan.fan_vent import FanVent
 from anchorscad.models.screws.screw_tab import ScrewTab
 import anchorscad.models.cases.outline_tools as ot 
-from time import time
 from anchorscad.models.cases.rpi.rpi4_outline import RaspberryPi4Outline
+
+from time import time
 
 # The time of life.
 MODEL_V0=1632924118
@@ -36,7 +36,7 @@ class RaspberryPiCase(CompositeShape):
     '''A Generic Raspberry Pi Case.'''
     outline_model: Shape=dtfield(
         self_default=lambda s: s.outline_model_class())
-    outline_model_class: Node=Node(RaspberryPi4Outline)
+    outline_model_class: Node=ShapeNode(RaspberryPi4Outline, prefix='outline_')
     inner_size_delta: tuple=(3, 2, 22)
     inner_offset: tuple=(-1.5, 1, 3)
     inner_size: GVector=dtfield(
