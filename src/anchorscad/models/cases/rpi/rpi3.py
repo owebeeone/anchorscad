@@ -4,7 +4,8 @@ Created on 25 Jan 2021
 @author: gianni
 '''
 
-from anchorscad import datatree, Node, surface_args, anchorscad_main, shape
+from anchorscad import datatree, Node, surface_args, anchorscad_main, shape, \
+        ShapeNode, ModuleDefault
 
 from anchorscad.models.cases.rpi.rpi3_outline import RaspberryPi3Outline
 from anchorscad.models.cases.rpi.rpi_case import RaspberryPiCase
@@ -19,7 +20,7 @@ class RaspberryPi3Case(RaspberryPiCase):
     inner_offset: tuple=(-0.5, 1, 3)
     rhs_grille_y_offs: float=5
     do_versioned_example: bool=False
-    outline_model_class: Node=Node(RaspberryPi3Outline)
+    outline_model_node: Node=ShapeNode(RaspberryPi3Outline)
     fn: int=None
     
     HEADER_CORNER = surface_args(
@@ -37,7 +38,7 @@ class RaspberryPi3Case(RaspberryPiCase):
         'outline', ('rj45', 'outer'), 'face_edge', 1, 0, 0)
     BOUND_LINES = (USBA2_A2, USBA3_A1, ETH_A1, USBA2_A3)
     
-#MAIN_DEFAULT=ModuleDefault(True)
+MAIN_DEFAULT=ModuleDefault(True)
 
 if __name__ == "__main__":
     anchorscad_main(False)

@@ -17,7 +17,7 @@ from anchorscad.models.vent.fan.fan_vent import FanVentScrewHoleParams, FAN_30x7
 class RaspberryPi4Case(RaspberryPiCase):
     '''A Raspberry Pi 4 Case.'''
     do_versioned_example: bool=False
-    outline_model_class: Node=Node(RaspberryPi4Outline)
+    outline_model_node: Node=Node(RaspberryPi4Outline)
 
 
 @core.shape
@@ -26,7 +26,7 @@ class RaspberryPi4CaseFanType3(RaspberryPiCase):
     '''A Raspberry Pi 4 Case.'''
     do_versioned_example: bool=False
     fan_vent_screw_params: FanVentScrewHoleParams=FAN_30x7_TYPE3
-    outline_model_class: Node=Node(RaspberryPi4Outline)
+    outline_model_node: Node=Node(RaspberryPi4Outline)
     
 MAIN_DEFAULT=core.ModuleDefault(True)
 
