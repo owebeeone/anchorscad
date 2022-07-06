@@ -224,6 +224,7 @@ class Node:
                  expose_all=None,
                  expose_if_avail=None,
                  preserve=None,
+                 exclude=(),
                  node_doc: str=None):
         '''Args:
             clz_or_func: A class or function for parameter binding.
@@ -238,6 +239,7 @@ class Node:
               excluded the class or function parameter name.
             expose_if_avail: The set of field to expose if they're available.
             preserve: A set of names that are not prefixed or suffixed.
+            exclude: A set of field names to exclude otherwise would be included by expose_all.
             node_doc: Documentation for the node field.
         '''
         _field_assign(self, 'clz_or_func', _ClzOrFuncWrapper(clz_or_func))
@@ -268,7 +270,7 @@ class Node:
             # Add all the fields not already specified.
             all_fields = set(name 
                              for name in init_fields
-                             if name != OVERRIDE_FIELD_NAME)
+                             if name != OVERRIDE_FIELD_NAME and not name in exclude)
             fields_specified = set(fields_specified).union(all_fields - all_specified)
         elif expose_if_avail:
             all_fields = set(name 
