@@ -11,7 +11,7 @@ from anchorscad.models.cases.rpi.rpi_case import RaspberryPiCase
 from anchorscad.linear import translate
 
 
-@shape('anchorscad/models/cases/rpi3_case')
+@shape
 @datatree(chain_post_init=True)
 class RaspberryPi3Case(RaspberryPiCase):
     '''A Raspberry Pi 3 Case.'''

@@ -31,8 +31,8 @@ class HdmiOutline(CompositeShape):
         surface_args('face_edge', 0, 0),)
     
     def build(self) -> Maker:
-        shape = self.cage_shape()
-        maker = shape.at('centre')
+        cage_shape = self.cage_shape()
+        maker = cage_shape.at('centre')
         y1 = self.size[2] - self.h3
         y2 = self.size[2] - self.h2
         path = (PathBuilder()
@@ -49,14 +49,13 @@ class HdmiOutline(CompositeShape):
             .line([0, 0], 'base_rhs')
             .build())
         
-        shape = LinearExtrude(path, self.size[1])
+        extruded_shape = LinearExtrude(path, self.size[1])
         
-        maker.add_at(shape.solid('hdmi').at('base_lhs', 0),
+        maker.add_at(extruded_shape.solid('hdmi').at('base_lhs', 0),
                      'face_edge', 0, 0, post=ROTX_270)
-        
         return maker
 
-    def cage_shape(self):
+    def cage_shape(self) -> Shape:
         shape = Box(self.size)
         if self.show_cage:
             return shape.solid(
@@ -69,7 +68,7 @@ class HdmiOutline(CompositeShape):
 @datatree
 class HdmiOutlineTest(CompositeShape):
     outline: Shape=HdmiOutline()
-    w: float = 2.0
+    w: float = dtfield(2.0, 'Width of the test walls.')
     size: tuple=dtfield(
             self_default=lambda s: (
                 s.outline.size[0] + 2 * s.w, 

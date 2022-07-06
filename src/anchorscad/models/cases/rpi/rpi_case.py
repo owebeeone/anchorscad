@@ -39,10 +39,21 @@ class RaspberryPiCase(CompositeShape):
     outline_model_class: Node=Node(RaspberryPi4Outline)
     inner_size_delta: tuple=(3, 2, 22)
     inner_offset: tuple=(-1.5, 1, 3)
+    inner_size: GVector=dtfield(
+        self_default=lambda s: GVector(s.inner_size_delta) + GVector(s.outline_model.board_size))
     wall_thickness: float=2
+    outer_size: tuple = dtfield(
+        self_default=lambda s: (s.inner_size + (s.wall_thickness * 2,) * 3).A[0:3])
     inner_bevel_radius: float=dtfield(self_default=lambda s:
                 s.outline_model.bevel_radius
                     + (-s.inner_offset[0] - s.inner_offset[1]) / 2)
+    outer_bevel_radius: float =dtfield(self_default=lambda s: s.inner_bevel_radius + s.wall_thickness)
+    shell_shape_node: Node=dtfield(
+        ShapeNode(bbox.BoxShell, 
+            {'size': 'outer_size', 
+             'bevel_radius': 'outer_bevel_radius', 
+             'shell_size': 'wall_thickness'}),
+        'Shape node of outer shell')
     screw_clearannce: float=0.2
     board_screw_min_len: float=6
     board_screw_size: float=2.6
@@ -68,7 +79,11 @@ class RaspberryPiCase(CompositeShape):
         size=5, 
         depth=0.3 if wall_thickness > 0.5 else wall_thickness * 0.5)
     do_versioned_example: bool=False
+    split_box_cage_node: Node=dtfield(ShapeNode(Box, prefix='outer_'))
     split_box_delta: float=0.01
+    split_box_size: tuple=dtfield(
+        self_default=lambda s : s.outer_size + s.split_box_delta)
+    split_box_node: Node=dtfield(ShapeNode(Box, prefix='split_box_'))
     screw_tab_node: Node=ShapeNode(ScrewTab, prefix='screw_tab')
     cageof_node: Node=Node(cageof, prefix='rpi_cage_')
     rpi_cage_properties: CageOfProperties=CageOfProperties(
@@ -80,7 +95,10 @@ class RaspberryPiCase(CompositeShape):
     EXAMPLE_ANCHORS=(surface_args('shell', 'face_centre', 1),
                      surface_args(
                          'main', 'fan', 'grille', ('spoke', 7), ('inner', 'mid', 0), 0),)
-    EXAMPLE_SHAPE_ARGS=args(fn=36, make_case_top=True, rpi_cage_as_cage=True)
+    EXAMPLE_SHAPE_ARGS=args(fn=36, 
+                            make_case_top=True, 
+                            rpi_cage_as_cage=True, 
+                            show_cut_box=False)
     
     # Some anchor locations for locating flange position and sizes.
     USBA2_A2 = surface_args(
@@ -153,23 +171,14 @@ class RaspberryPiCase(CompositeShape):
                                 'main', 'face_centre', 4, post=ROTX_180))}
 
     def build(self) -> Maker:
-        params = non_defaults_dict(self, include=('fn', 'fa', 'fs'))
-        inner_size = GVector(self.inner_size_delta) + GVector(self.outline_model.board_size)
-        outer_size = (inner_size + (self.wall_thickness * 2,) * 3).A[0:3]
-        bevel_radius = self.inner_bevel_radius + self.wall_thickness
-        shell_shape = bbox.BoxShell(
-            size=outer_size, 
-            bevel_radius=bevel_radius, 
-            shell_size=self.wall_thickness, 
-            **params)
+        shell_shape = self.shell_shape_node()
         maker = shell_shape.solid('shell').at('face_centre', 4)
         
         maker.add_at(self.outline_model.hole('outline').at('face_corner', 5, 0),
                      'inner', 'face_corner', 5, 0, pre=translate(self.inner_offset))
 
-        split_box_cage = self.cageof_node(Box(outer_size)).at('centre')
-        split_box_size = outer_size + self.split_box_delta
-        split_box = Box(split_box_size).solid('split_box').at('centre')
+        split_box_cage = self.cageof_node(self.split_box_cage_node()).at('centre')
+        split_box = self.split_box_node().solid('split_box').at('centre')
         split_box_cage.add(split_box)
         
         cut_point = (ROTX_90 * maker.at('outline', 'audio', 'base')).get_translation()
@@ -178,7 +187,7 @@ class RaspberryPiCase(CompositeShape):
         
         cut_xform = IDENTITY if self.make_case_top else ROTX_180 
             
-        cut_box_mode = ModeShapeFrame.HOLE if self.show_cut_box else ModeShapeFrame.HOLE
+        cut_box_mode = ModeShapeFrame.SOLID if self.show_cut_box else ModeShapeFrame.HOLE
         
         maker.add_at(
             split_box_cage
