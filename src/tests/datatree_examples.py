@@ -94,8 +94,8 @@ class Bind:
     '''Demonstrates the use of a computed default value.
     Often a value used in nodes should be computed with other parameters
     provided to this instance.'''
-    v1: int=BindingDefault(lambda s: s.v2 + s.v3)
-    a_node: Node=Node(A) # Injects v2, V3 and v4.
+    v1: int=dtfield(self_default=lambda s: s.v2 + s.v3)  
+    a_node: Node=field(default=Node(A), repr=False, init=False) # Injects v2, V3 and v4.
 
 describe(Bind)
 describe(lambda: Bind(v2=10))
