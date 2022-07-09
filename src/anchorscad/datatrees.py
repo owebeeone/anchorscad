@@ -553,14 +553,14 @@ def _initialize_node_instances(clz, instance):
             # Parent node has passed something other than a Node or a chained BoundNode.
             # Assume they just want to have it called.
             continue
-        setattr(instance, name, field_value)
+        _field_assign(instance, name, field_value)
     
     # Evaluate any default values after all BoundNode initializations.
     # This allows binding functions to reference any Node fields as
     # long as the Node fields do not use bindings that not evaluated yet.
     for name, cur_value in bindings:
         field_value = cur_value.self_default(instance)
-        setattr(instance, name, field_value)
+        _field_assign(instance, name, field_value)
         
 
 # Provide dataclass compatiability post python 3.8.
