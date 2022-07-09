@@ -1,4 +1,3 @@
-
 # Datatrees Proposal
 
 Building complex hierarchical data objects using 
@@ -18,7 +17,7 @@ complex 3D models.
 * `self` factory default
 
 The [`datatrees`](https://github.com/owebeeone/anchorscad/blob/master/src/anchorscad/datatrees.py) link points to a working implementation including a dubious `override`
-feature that is seldom used and only in debugging situations only.
+feature that is seldom used and only in debugging situations.
 
 # Field injection and Field binding
 
@@ -346,6 +345,14 @@ surfaces. This is a feature of the `anchorscad.ShapeNode` subclass of `datatrees
 
 
 ### From: [`hole_guage`](https://github.com/owebeeone/anchorscad/blob/master/src/anchorscad/models/tools/hole_gauge.py)
+
+The code below is a 3D model using AnchorSCAD that generates a plate of holes.
+The `SingleHoleGauge` class generates a single row of holes with radii specified by the 
+hole_rs parameter and the thickness of the plate specified by the `h` parameter. The 
+`HoleGauge` class is similar but generates a grid of holes specified by a tuple of tuples of hole radii via parameter `hole_rss`.
+
+`HoleGauge` generates a number of `SingleHoleGauge` shapes and stitches them together
+but also creates an overall plate sized to contain all the `SingleHoleGauge` shapes  in a single ‘assembly’ plate.
 
 ```
 import anchorscad as ad

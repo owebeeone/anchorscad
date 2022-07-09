@@ -142,6 +142,7 @@ class C:
     def make_stuff(self):
         return self.a_node(v2=22), self.b_node(), self.computed
 
+#help(C) 
 describe(lambda: C())
 describe(lambda: C(b_v2=44).computed)
 describe(lambda: C().a_node())
