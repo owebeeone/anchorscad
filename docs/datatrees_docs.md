@@ -10,7 +10,7 @@ complex 3D models.
 
 # Introducing datatrees
 
-[`datatrees`](https://github.com/owebeeone/anchorscad/blob/master/src/anchorscad/datatrees.py) extends (as a wrapper over `datatrees.datatree`) to include:
+[`datatrees`](https://github.com/owebeeone/anchorscad/blob/master/src/anchorscad/datatrees.py) extends (as a wrapper over `datatlasses.dataclass`) to include:
 
 * Field injection
 * Field binding
