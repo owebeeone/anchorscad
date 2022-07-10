@@ -1,4 +1,4 @@
-# Datatrees Proposal
+# Datatrees
 
 Building complex hierarchical data objects using 
 [`dataclasses`](https://docs.python.org/library/dataclasses.html) reduces
@@ -33,7 +33,7 @@ individual hole would be specific to that hole. Such a model can be found here
 
 # Datatree Wraps Dataclass
 
-`
+```
 @datatree
 class A:
     '''Demonstrates Python dataclasses default value
@@ -45,22 +45,25 @@ class A:
     v2: int=2
     v3: int=field(default=3)
     v4: int=field(default_factory=lambda: 7 - 3)
-`
+```
 
 Construct with v1 provided..
 
-`
+```
 A(v1=1)
   -> A(v1=1, v2=2, v3=3, v4=4)
-`
+```
 
 Comparison of two different instances with the same value.
+
+```
 A(v1=2) == A(v1=2)
   -> True
+```
 
 ## Help for Class A
 
-`
+```
 class A(builtins.object)
  |  A(v1: int, v2: int = 2, v3: int = 3, v4: int = <factory>, override: anchorscad.datatrees.Overrides = None) -> None
  |
@@ -69,11 +72,11 @@ class A(builtins.object)
  |  example only uses the base Python @dataclass
  |  functionality.
  | …
-`
+```
 
 ## Datatree Inject and Bind
 
-`
+```
 @datatree
 class Anode:
     '''Injects fields from class A and provides a
@@ -83,7 +86,7 @@ class Anode:
     '''
     v1: int=55
     a_node: Node=Node(A)  # Inject field names from A
-`
+```
 
 ### Injected Fields
 
