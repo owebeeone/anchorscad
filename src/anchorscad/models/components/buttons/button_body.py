@@ -8,7 +8,7 @@ Created on 9 Jan 2022
 from anchorscad import args, anchor, shape, surface_args, datatree, CompositeShape, \
     Node, EMPTY_ATTRS, ShapeNode, CageOfNode, Cylinder, ModeShapeFrame, anchorscad_main, \
     RotateExtrude, Path, PathBuilder, ROTX_90, ROTX_180, ROTY_180, ROTZ_90, ROTZ_180, \
-    tranZ
+    tranZ, ModuleDefault
 
 import anchorscad.models.components.switches.tactile_tl1105 as tactile_switches
 import anchorscad.models.components.buttons.button_cap as button_cap
@@ -234,5 +234,6 @@ class ButtonAssemblyTest(CompositeShape):
         self.set_maker(maker)
 
 
+MAIN_DEFAULT=ModuleDefault(True)
 if __name__ == '__main__':
     anchorscad_main(False)

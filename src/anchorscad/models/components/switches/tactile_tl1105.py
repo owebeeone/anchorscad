@@ -6,6 +6,7 @@ Created on 7 Jan 2022
 
 import anchorscad.core as core
 import anchorscad.extrude as e
+import anchorscad as ad
 from anchorscad.datatrees import datatree, Node
 import anchorscad.linear as l
 import numpy as np
@@ -327,5 +328,6 @@ class TactileSwitchOutline(core.CompositeShape):
         self.set_maker(maker)
 
 
+MAIN_DEFAULT=ad.ModuleDefault(True)
 if __name__ == '__main__':
     core.anchorscad_main(False)
