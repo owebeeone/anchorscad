@@ -323,7 +323,8 @@ can be shared. It also demonstrates how `self_default` bindings can be used in c
 with `BoundNode` factories.
 
 
-To demonstrate the doc field attribute, the following is the `pydoc` generated for `HoleGuage`. Note the fields `fn`, fa` and `fs` are used in AnchorSCAD and it’s desirable
+To demonstrate the doc field attribute, the following is the `pydoc` generated for 
+`HoleGuage`. Note the fields `fn`, `fa` and `fs` are used in AnchorSCAD and it’s desirable
 to pass these attributes to constructors of contained classes as these are used by the 
 rendering engine to determine the complexity of the polyhedrons approximations of curved 
 surfaces. This is a feature of the `anchorscad.ShapeNode` subclass of `datatrees.Node`.
