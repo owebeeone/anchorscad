@@ -19,7 +19,7 @@ extends (as a wrapper over `datatlasses.dataclass`) to include:
 * `self` factory default
 
 [`datatrees`](https://github.com/owebeeone/anchorscad/blob/master/src/anchorscad/datatrees.py)
-has reduced the overall boilerplate code. However, one still needs to be careful
+can dramatically reduce the overall boilerplate code, however, one still needs to be careful
 that the datatrees bindings produce the desired outcomes particularly when
 a multiple classes being injected may cause undesriable name collission.
 
@@ -137,14 +137,15 @@ Anode().a_node(v3=33)
 # Binding Parameters In `self default` Fields
 
 `dataclasses.field` provides field attributes `default` and `factory_default` parameters, the
-latter being evaluated at object initialization. datatree.dtfield wraps `field` additionally
+latter being evaluated at object initialization. datatree.dtfield wraps `dataclasses.field`
 providing a `self_default` parameter that takes a function object with a single parameter. 
 At class initialization, these functions are evaluated with the object instance as its value.
 
-The order of evaluation is the order in which they are declared in the class but after all the
-Node fields have been bound (transformed into BoundNode factories). This allows fields
-specified with a `self_default` attribute to use any field specified with `Node` as long as
-the BoundNodes do not attempt to access self_default fields that are not yet initialised.
+The order of evaluation is the order in which they are declared in the class additionally they
+are evaluated after all the `Node` fields have been bound (transformed into BoundNode factories). 
+This allows fields specified with a `self_default` attribute to use any field specified with `Node` 
+as long as invoking `BoundNodes` factories (bindings) do not attempt to access `self_default` 
+fields that are not yet evaluated.
 
 # Injecting Computed Defaults
 
@@ -164,8 +165,8 @@ class Bind:
 The default value of `class Bind` is `Bind(v1=5, v2=2, v4=4, v3=3)`. Note the value of
 `v1` being the specified sum.
 
-This demonstrates the value of `v1` is performed with the values of `v2` and `v2` passed 
-into the constructor.
+This demonstrates the value of `v1` is evaluated with the values of `v2` and `v2` that are
+provided in the constructor.
 
 ```
 Bind(v2=10)
