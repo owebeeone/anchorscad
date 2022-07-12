@@ -1,23 +1,27 @@
-# Datatrees Proposal
+# Datatrees
 
 Building complex hierarchical data objects using 
 [`dataclasses`](https://docs.python.org/library/dataclasses.html) reduces
-much of the needed boilerplate code. This obviously being the point of 
+much of the otherwise needed boilerplate code. This obviously being the point of 
 [`dataclasses`](https://docs.python.org/library/dataclasses.html). While 
-using it to develop [AnchorSCAD](https://github.com/owebeeone/anchorscad)
-I found it to be still a very verbose and repetitive when building 
-complex 3D models.
+using [`dataclasses`](https://docs.python.org/library/dataclasses.html)
+to develop [AnchorSCAD](https://github.com/owebeeone/anchorscad)
+I found it to be still a very verbose and repetitive and subsequently
+fragile when building complex 3D models.
 
 # Introducing datatrees
 
-[`datatrees`](https://github.com/owebeeone/anchorscad/blob/master/src/anchorscad/datatrees.py) extends (as a wrapper over `datatlasses.dataclass`) to include:
+[`datatrees`](https://github.com/owebeeone/anchorscad/blob/master/src/anchorscad/datatrees.py) 
+extends (as a wrapper over `datatlasses.dataclass`) to include:
 
 * Field injection
 * Field binding
 * `self` factory default
 
-The [`datatrees`](https://github.com/owebeeone/anchorscad/blob/master/src/anchorscad/datatrees.py) link points to a working implementation including a dubious `override`
-feature that is seldom used and only in debugging situations.
+[`datatrees`](https://github.com/owebeeone/anchorscad/blob/master/src/anchorscad/datatrees.py)
+can dramatically reduce the overall boilerplate code, however, one still needs to be careful
+that the datatrees bindings produce the desired outcomes particularly when
+a multiple classes being injected may cause undesriable name collission.
 
 # Field injection and Field binding
 
@@ -33,7 +37,7 @@ individual hole would be specific to that hole. Such a model can be found here
 
 # Datatree Wraps Dataclass
 
-`
+```
 @datatree
 class A:
     '''Demonstrates Python dataclasses default value
@@ -45,22 +49,25 @@ class A:
     v2: int=2
     v3: int=field(default=3)
     v4: int=field(default_factory=lambda: 7 - 3)
-`
+```
 
 Construct with v1 provided..
 
-`
+```
 A(v1=1)
   -> A(v1=1, v2=2, v3=3, v4=4)
-`
+```
 
 Comparison of two different instances with the same value.
+
+```
 A(v1=2) == A(v1=2)
   -> True
+```
 
 ## Help for Class A
 
-`
+```
 class A(builtins.object)
  |  A(v1: int, v2: int = 2, v3: int = 3, v4: int = <factory>, override: anchorscad.datatrees.Overrides = None) -> None
  |
@@ -69,11 +76,11 @@ class A(builtins.object)
  |  example only uses the base Python @dataclass
  |  functionality.
  | …
-`
+```
 
 ## Datatree Inject and Bind
 
-`
+```
 @datatree
 class Anode:
     '''Injects fields from class A and provides a
@@ -83,7 +90,7 @@ class Anode:
     '''
     v1: int=55
     a_node: Node=Node(A)  # Inject field names from A
-`
+```
 
 ### Injected Fields
 
@@ -130,14 +137,15 @@ Anode().a_node(v3=33)
 # Binding Parameters In `self default` Fields
 
 `dataclasses.field` provides field attributes `default` and `factory_default` parameters, the
-latter being evaluated at object initialization. datatree.dtfield wraps `field` additionally
+latter being evaluated at object initialization. datatree.dtfield wraps `dataclasses.field`
 providing a `self_default` parameter that takes a function object with a single parameter. 
 At class initialization, these functions are evaluated with the object instance as its value.
 
-The order of evaluation is the order in which they are declared in the class but after all the
-Node fields have been bound (transformed into BoundNode factories). This allows fields
-specified with a `self_default` attribute to use any field specified with `Node` as long as
-the BoundNodes do not attempt to access self_default fields that are not yet initialised.
+The order of evaluation is the order in which they are declared in the class additionally they
+are evaluated after all the `Node` fields have been bound (transformed into BoundNode factories). 
+This allows fields specified with a `self_default` attribute to use any field specified with `Node` 
+as long as invoking `BoundNodes` factories (bindings) do not attempt to access `self_default` 
+fields that are not yet evaluated.
 
 # Injecting Computed Defaults
 
@@ -157,8 +165,8 @@ class Bind:
 The default value of `class Bind` is `Bind(v1=5, v2=2, v4=4, v3=3)`. Note the value of
 `v1` being the specified sum.
 
-This demonstrates the value of `v1` is performed with the values of `v2` and `v2` passed 
-into the constructor.
+This demonstrates the value of `v1` is evaluated with the values of `v2` and `v2` that are
+provided in the constructor.
 
 ```
 Bind(v2=10)
@@ -320,7 +328,8 @@ can be shared. It also demonstrates how `self_default` bindings can be used in c
 with `BoundNode` factories.
 
 
-To demonstrate the doc field attribute, the following is the `pydoc` generated for `HoleGuage`. Note the fields `fn`, fa` and `fs` are used in AnchorSCAD and it’s desirable
+To demonstrate the doc field attribute, the following is the `pydoc` generated for 
+`HoleGuage`. Note the fields `fn`, `fa` and `fs` are used in AnchorSCAD and it’s desirable
 to pass these attributes to constructors of contained classes as these are used by the 
 rendering engine to determine the complexity of the polyhedrons approximations of curved 
 surfaces. This is a feature of the `anchorscad.ShapeNode` subclass of `datatrees.Node`.
