@@ -1973,6 +1973,29 @@ class AnnotatedCoordinates(CompositeShape):
         return l.IDENTITY
 
     
+def make_intersection_or_hole(as_hole, 
+                              base_shape, 
+                              base_anchor, 
+                              other_shape, 
+                              other_anchor,
+                              name='result'):
+    '''Returns either an intersection or difference between two given shapes.
+    Args: 
+        as_hole: returns a difference if True, intersection if False
+        base_shape: the solid shape
+        base_anchor: the reference anchor for base_shape
+        base_shape: the shape being differenced or intersected
+        base_anchor: the reference anchor for other_shape
+        name: the name applied to the resulting shape
+    '''
+    maker = base_shape.solid('base').at(anchor=base_anchor)
+    mode = ModeShapeFrame.HOLE if as_hole else ModeShapeFrame.SOLID
+    maker.add_at(other_shape.named_shape('other', mode)
+                 .at(anchor=other_anchor))
+    final_mode = ModeShapeFrame.SOLID if as_hole else ModeShapeFrame.INTERSECT
+   
+    return maker.named_shape(name, final_mode).at()
+ 
 def get_shape_class(module, name):
     mv = getattr(module, name)
     if not isinstance(mv, type):

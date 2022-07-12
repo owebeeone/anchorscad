@@ -190,7 +190,7 @@ class Hinge3XTestPrint(ad.CompositeShape):
                                            expose_all=True)
     hinge_bar_shape: ad.Shape=ad.dtfield(
             self_default=lambda s: s.bar_node(), init=False)
-    sleeve_ends_node: ad.Node=ad.ShapeNode(HingeBar3XEndHoles, 
+    sleeves_node: ad.Node=ad.ShapeNode(HingeBar3XEndHoles, 
                                            {'as_cage': 'bar_ends_as_cage'},
                                            expose_all=True)
     sleeve_middle_node: ad.Node=ad.ShapeNode(HingeBar3XMiddleHole, 
@@ -225,7 +225,7 @@ class Hinge3XTestPrint(ad.CompositeShape):
         maker = self.cage_of_node(cage_shape).at('face_centre', 'base')
 
         etched_plate_ends = plate_shape.solid('plate_1').colour((1,0,0)).at()
-        sleeve_ends = self.sleeve_ends_node()
+        sleeve_ends = self.sleeves_node()
         etched_plate_ends.add_at(
             sleeve_ends.hole('sleeve_ends')
             .at('centre', post=ad.ROTY_90), 
@@ -247,6 +247,168 @@ class Hinge3XTestPrint(ad.CompositeShape):
         
         maker.add_at(self.hinge_bar_shape.composite('bar').at('centre'), 
                      'plate_1', 'sleeve_ends', 'centre')
+        return maker
+    
+    
+@ad.shape
+@ad.datatree
+class HingeBar(ad.CompositeShape):
+    '''
+    <description>
+    '''
+    epsilon: float=ad.dtfield(0.001, doc='Fudge factor')
+    hole_node: ad.Node=ad.ShapeNode(HingeHole)
+    hole_shape: ad.Shape=ad.dtfield(
+            doc='Shape object for field computation',
+            self_default=lambda s: s.hole_node(),
+            init=False)
+    bar_r: float=ad.dtfield(
+            doc='Radius of hinge bar',
+            self_default=lambda s: s.hole_shape.cage_r - s.epsilon,
+            init=False)
+    bar_h: float=ad.dtfield(30, doc='Height of hinge bar')
+    cyl_node: ad.Node=ad.dtfield(ad.ShapeNode(ad.Cylinder, prefix='bar_'), init=False)
+    seg_count: int=ad.dtfield(7, 'Number of segments in hinge bar')
+
+    sleeve_r: float=ad.dtfield(
+            doc='Radius of sleeve',
+            self_default=lambda s: s.bar_r + s.sep,
+            init=False)
+    cyl_sleeve_node: ad.Node=ad.dtfield(ad.ShapeNode(
+            ad.Cylinder, prefix='sleeve_', exclude=('h',)), init=False)
+    
+    EXAMPLE_SHAPE_ARGS=ad.args(fn=32)
+    EXAMPLE_ANCHORS=()
+    
+    def build(self) -> ad.Maker:
+        shape = self.cyl_node()
+        maker = shape.solid('bar').at('centre')
+        
+        segment_size = self.bar_h / (self.seg_count + 1)
+        for i in range(self.seg_count):
+            joint_offset = (1 + i) * segment_size
+            maker.add_at(self.hole_shape.hole(('hole', i)).at('base'), 
+                         'top', post=ad.tranZ(-joint_offset))
+        return maker
+    
+    def gen_sleeve(self, h):
+        return self.cyl_sleeve_node(h=h)
+
+
+@ad.shape
+@ad.datatree
+class HingeBarSleeveHoles(ad.CompositeShape):
+    '''
+    <description>
+    '''
+    hinge_bar_shape: HingeBar
+    cage_of_node: ad.Node=ad.CageOfNode()
+    side: int=ad.dtfield(
+            0, '0 or 1 for left or right sides of hinge bar')
+    
+    EXAMPLE_SHAPE_ARGS=ad.args(HingeBar(fn=32, seg_count=10, bar_h=50), 
+                               side=0, 
+                               as_cage=False)
+    EXAMPLE_ANCHORS=(ad.surface_args('base', scale_anchor=0.4),
+                     ad.surface_args(('hole', 0), 'base', scale_anchor=0.4))
+    
+    def build(self) -> ad.Maker:
+        maker = self.cage_of_node(self.hinge_bar_shape).at()
+        
+        for i in range(self.side, 
+                       self.hinge_bar_shape.seg_count + 1, 
+                       2):
+        
+            maker.add_between(
+                target_from=self.anchor_for(i - 1), 
+                target_to=self.anchor_for(i,
+                                   post=ad.tranZ(-self.hinge_bar_shape.sep)),
+                lazy_named_shape=
+                    ad.lazy_shape(self.hinge_bar_shape.gen_sleeve, 'h')
+                    .solid(('sleeve', i)),
+                shape_from=ad.at_spec('top'),
+                shape_to=ad.at_spec('base'),
+                align_axis=ad.Y_AXIS,
+                align_plane=ad.X_AXIS)
+        
+        return maker
+    
+    def anchor_for(self, i, *args, **kwds):
+        if i == -1:
+            return ad.at_spec('top')
+        elif i == self.hinge_bar_shape.seg_count:
+            return ad.at_spec('top', rh=1)
+        return ad.at_spec(('hole', i), 'base', *args, **kwds)
+    
+
+   
+
+@ad.shape
+@ad.datatree
+class HingeTestPrint(ad.CompositeShape):
+    '''
+    <description>
+    '''
+    bar_node: ad.Node=ad.ShapeNode(HingeBar,  
+                                           {'as_cage': 'bar_cage_as_cage'},
+                                           expose_all=True)
+    hinge_bar_shape: ad.Shape=ad.dtfield(
+            self_default=lambda s: s.bar_node(), init=False)
+    sleeves_node: ad.Node=ad.ShapeNode(
+        HingeBarSleeveHoles, 
+        {'as_cage': 'bar_ends_as_cage'},
+        exclude=('side',),
+        expose_all=True)
+    
+    cage_size: tuple=ad.dtfield(
+            self_default=lambda s: (s.bar_h,
+                       s.bar_h * 2,
+                       s.hinge_bar_shape.bar_r * 2,), 
+            doc='Size of cage')
+    cage_node: ad.Node=ad.ShapeNode(ad.Box, prefix='cage_')
+    cage_of_node: ad.Node=ad.CageOfNode()
+    
+    plate_size: tuple=ad.dtfield(
+            self_default=lambda s: (s.bar_h,
+                       s.cage_size[1] / 2,
+                       s.hinge_bar_shape.bar_r,), 
+            doc='Size of plate')
+    plate_node: ad.Node=ad.ShapeNode(ad.Box, prefix='plate_')
+    
+    EXAMPLE_SHAPE_ARGS=ad.args(as_cage=True,
+                               sep=0.15,
+                               seg_count=7,
+                               fn=128)
+    EXAMPLE_ANCHORS=()
+    
+    def build(self) -> ad.Maker:
+        cage_shape = self.cage_node()
+        plate_shape = self.plate_node()
+        maker = self.cage_of_node(cage_shape).at('face_centre', 'base')
+
+        etched_plate_evens = plate_shape.solid('plate_evens').colour((1,0,0)).at()
+        sleeve_evens = self.sleeves_node(side=0)
+        etched_plate_evens.add_at(
+            sleeve_evens.hole('sleeve_evens')
+            .at('centre', post=ad.ROTY_90), 
+            'face_edge', 'top', 0)
+
+        etched_plate_odds = plate_shape.solid('plate_odds').colour((0,0,1)).at()
+        sleeve_odds = self.sleeves_node(side=1)
+        etched_plate_odds.add_at(
+            sleeve_odds.hole('sleeve_odds')
+            .at('centre', post=ad.ROTY_270), 
+            'face_edge', 'top', 0)
+        
+        maker.add_at(etched_plate_evens.solid('plate_evens')
+                     .at('face_edge', 'base', 0), 
+                     'face_edge', 'base', 0)
+        maker.add_at(etched_plate_odds.solid('plate_odds')
+                     .at('face_edge', 'base', 0), 
+                     'face_edge', 'base', 2)
+        
+        maker.add_at(self.hinge_bar_shape.composite('bar').at('centre'), 
+                     'plate_evens', 'sleeve_evens', 'centre')
         return maker
     
     
