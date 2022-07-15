@@ -4,6 +4,7 @@ Created on 7 Jul 2022
 '''
 
 import anchorscad as ad
+from anchorscad.models.basic.sleeve import Sleeve
 
 @ad.datatree
 class HingeHolePath:
@@ -275,7 +276,7 @@ class HingeBar(ad.CompositeShape):
             self_default=lambda s: s.bar_r + s.sep,
             init=False)
     cyl_sleeve_node: ad.Node=ad.dtfield(ad.ShapeNode(
-            ad.Cylinder, prefix='sleeve_', exclude=('h',)), init=False)
+            Sleeve, prefix='sleeve_', exclude=('h',)), init=False)
     
     EXAMPLE_SHAPE_ARGS=ad.args(fn=32)
     EXAMPLE_ANCHORS=()
@@ -291,8 +292,16 @@ class HingeBar(ad.CompositeShape):
                          'top', post=ad.tranZ(-joint_offset))
         return maker
     
-    def gen_sleeve(self, h):
-        return self.cyl_sleeve_node(h=h)
+    def gen_sleeve(self, h, ir=None):
+        inside_r = self.bar_r if ir is None else ir
+        return self.cyl_sleeve_node(h=h, 
+                                    inside_r=inside_r,
+                                    outside_r=self.sleeve_r,
+                                    start_degrees=0, 
+                                    end_degrees=180)
+    
+    def gen_end(self, h):
+        return self.gen_sleeve(h, 0)
 
 
 @ad.shape
@@ -306,42 +315,109 @@ class HingeBarSleeveHoles(ad.CompositeShape):
     side: int=ad.dtfield(
             0, '0 or 1 for left or right sides of hinge bar')
     
-    EXAMPLE_SHAPE_ARGS=ad.args(HingeBar(fn=32, seg_count=10, bar_h=50), 
-                               side=0, 
+    EXAMPLE_SHAPE_ARGS=ad.args(HingeBar(fn=8, seg_count=7, bar_h=50), 
+                               side=1, 
                                as_cage=False)
     EXAMPLE_ANCHORS=(ad.surface_args('base', scale_anchor=0.4),
                      ad.surface_args(('hole', 0), 'base', scale_anchor=0.4))
     
     def build(self) -> ad.Maker:
         maker = self.cage_of_node(self.hinge_bar_shape).at()
+        sep = self.hinge_bar_shape.sep
+        seg_count = self.hinge_bar_shape.seg_count
         
         for i in range(self.side, 
-                       self.hinge_bar_shape.seg_count + 1, 
+                       seg_count + 1, 
                        2):
-        
-            maker.add_between(
-                target_from=self.anchor_for(i - 1), 
+            
+            target_from=self.anchor_for(i - 1)
+            length = self.length_between(
+                maker,
+                target_from=target_from, 
                 target_to=self.anchor_for(i,
-                                   post=ad.tranZ(-self.hinge_bar_shape.sep)),
-                lazy_named_shape=
-                    ad.lazy_shape(self.hinge_bar_shape.gen_sleeve, 'h')
-                    .solid(('sleeve', i)),
-                shape_from=ad.at_spec('top'),
-                shape_to=ad.at_spec('base'),
-                align_axis=ad.Y_AXIS,
-                align_plane=ad.X_AXIS)
+                        post=ad.tranZ(-sep)))
+            
+            sleeve = self.hinge_bar_shape.gen_sleeve(length)
+            
+            maker.add_at(sleeve.solid(('sleeve', i))
+                         .at('base'),
+                         anchor=target_from)
+            
+        if not self.side:
+            end = self.hinge_bar_shape.gen_end(sep)
+            target_from = self.anchor_for(-1)
+            maker.add_at(end.solid('sleeve_base').at('base'),
+                         anchor=target_from,
+                         post=ad.tranZ(sep))
+            
+        if self.side == seg_count % 2:
+            end = self.hinge_bar_shape.gen_end(sep)
+            target_from = self.anchor_for(seg_count)
+            maker.add_at(end.solid('sleeve_top').at('base'),
+                         anchor=target_from)        
         
         return maker
     
+    def length_between(self, source_maker, target_from, target_to):
+        '''Returns the length between the two anchors'''
+    
+        # Get start and end points.
+        from_vec = target_from.apply(source_maker).get_translation()
+        to_vec = target_to.apply(source_maker).get_translation()
+        
+        # Need the diff vector to align to.
+        diff_vector = from_vec - to_vec
+        
+        # The length allows us to build the shape now.
+        length = diff_vector.length()
+        return length
+    
     def anchor_for(self, i, *args, **kwds):
         if i == -1:
-            return ad.at_spec('top')
+            return ad.surface_args('top')
         elif i == self.hinge_bar_shape.seg_count:
-            return ad.at_spec('top', rh=1)
-        return ad.at_spec(('hole', i), 'base', *args, **kwds)
+            return ad.surface_args('top', rh=1)
+        return ad.surface_args(('hole', i), 'base', *args, **kwds)
     
 
-   
+@ad.shape
+@ad.datatree
+class Hinge(ad.CompositeShape):
+    '''
+    <description>
+    '''
+    bar_node: ad.Node=ad.ShapeNode(HingeBar,  
+                                           {'as_cage': 'bar_cage_as_cage'},
+                                           expose_all=True)
+    hinge_bar_shape: ad.Shape=ad.dtfield(
+            self_default=lambda s: s.bar_node(), init=False)
+    sleeves_node: ad.Node=ad.ShapeNode(
+        HingeBarSleeveHoles, 
+        {'as_cage': 'bar_ends_as_cage'},
+        exclude=('side',),
+        expose_all=True)    
+    
+    EXAMPLE_SHAPE_ARGS=ad.args(sep=0.5,
+                               seg_count=14,
+                               bar_h=80,
+                               fn=32)
+    EXAMPLE_ANCHORS=()
+    
+    def build(self) -> ad.Maker:
+        maker = self.hinge_bar_shape.composite('bar').at('centre')
+        
+        sleeve_evens = self.sleeves_node(side=0)
+        maker.add_at(
+            sleeve_evens.hole('sleeve_evens')
+            .at('centre'), 
+            'centre')        
+        sleeve_odds = self.sleeves_node(side=1)
+        maker.add_at(
+            sleeve_odds.hole('sleeve_odds')
+            .at('centre', post=ad.ROTZ_180), 
+            'centre')
+        return maker
+    
 
 @ad.shape
 @ad.datatree
@@ -369,16 +445,16 @@ class HingeTestPrint(ad.CompositeShape):
     cage_of_node: ad.Node=ad.CageOfNode()
     
     plate_size: tuple=ad.dtfield(
-            self_default=lambda s: (s.bar_h,
+            self_default=lambda s: (s.bar_h + 3,
                        s.cage_size[1] / 2,
                        s.hinge_bar_shape.bar_r,), 
             doc='Size of plate')
     plate_node: ad.Node=ad.ShapeNode(ad.Box, prefix='plate_')
     
     EXAMPLE_SHAPE_ARGS=ad.args(as_cage=True,
-                               sep=0.15,
+                               sep=0.5,
                                seg_count=7,
-                               fn=128)
+                               fn=8)
     EXAMPLE_ANCHORS=()
     
     def build(self) -> ad.Maker:

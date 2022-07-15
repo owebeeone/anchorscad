@@ -54,7 +54,7 @@ class IntersectShape(ad.CompositeShape):
             ad.surface_args('centre'),
             self.box_node(),
             ad.surface_args('face_corner', 'front', 0),
-            'foo')
+            name='foo')
 
 
 # Uncomment the line below to default to writing OpenSCAD files

@@ -1041,8 +1041,8 @@ def cageof(shape: Shape=None,
 
 class CageOfNode(Node):
 
-    def __init__(self, *args_, prefix=''):
-        super().__init__(cageof, 'as_cage', *args_, prefix=prefix)
+    def __init__(self, *args_, **kwds_):
+        super().__init__(cageof, 'as_cage', *args_, **kwds_)
 
 @dataclass
 class Maker(Shape):
@@ -1978,6 +1978,7 @@ def make_intersection_or_hole(as_hole,
                               base_anchor, 
                               other_shape, 
                               other_anchor,
+                              other_anchor_intersect=None,
                               name='result'):
     '''Returns either an intersection or difference between two given shapes.
     Args: 
@@ -1986,12 +1987,17 @@ def make_intersection_or_hole(as_hole,
         base_anchor: the reference anchor for base_shape
         base_shape: the shape being differenced or intersected
         base_anchor: the reference anchor for other_shape
+        other_anchor_intersect: anchor to use for intersection
         name: the name applied to the resulting shape
     '''
+    
     maker = base_shape.solid('base').at(anchor=base_anchor)
     mode = ModeShapeFrame.HOLE if as_hole else ModeShapeFrame.SOLID
+    other_anchor_in_use = other_anchor
+    if not other_anchor_intersect is None and not as_hole:
+        other_anchor_in_use = other_anchor_intersect
     maker.add_at(other_shape.named_shape('other', mode)
-                 .at(anchor=other_anchor))
+                 .at(anchor=other_anchor_in_use))
     final_mode = ModeShapeFrame.SOLID if as_hole else ModeShapeFrame.INTERSECT
    
     return maker.named_shape(name, final_mode).at()
