@@ -8,6 +8,7 @@ import anchorscad as ad
 from anchorscad.core import Cylinder
 from anchorscad.models.screws.CountersunkScrew import FlatSunkScrew
 from anchorscad.models.hinges.Hinge import Hinge
+from anchorscad.models.basic.TriangularPrism import TriangularPrism
 
 @ad.datatree
 class LidPath:
@@ -94,9 +95,24 @@ class LidWithScrewHoles(ad.CompositeShape):
             doc='Y translation factor')
     z_fac: float=ad.dtfield(-8, 'Z translation factor')
     
+    wedge_size: tuple=ad.dtfield(
+            self_default=lambda s: (
+                s.h * 0.75,
+                s.h * 1,
+                50),
+            doc='Size of wedge removed big lid at lips')
+    wedge_node: ad.Node=ad.dtfield(
+            ad.ShapeNode(TriangularPrism, prefix='wedge_'),
+            init=False)
+    
+    epsilon: float=0.01
     
     EXAMPLE_SHAPE_ARGS=ad.args(lid_fn=128, screw_as_solid=False)
-    EXAMPLE_ANCHORS=(ad.surface_args('sh2', 'top'),)
+    EXAMPLE_ANCHORS=(ad.surface_args('sh2', 'top'),
+                     ad.surface_args('lip_lhs', 1),
+                     ad.surface_args('lip_rhs', 0),
+                     ad.surface_args('wedge_rhs', 'face_centre', 'front'),
+                     ad.surface_args('wedge_rhs', 'face_centre', 'base'))
     
     def build(self) -> ad.Maker:
         screwhole = self.screw_screw_node()
@@ -114,6 +130,18 @@ class LidWithScrewHoles(ad.CompositeShape):
         
         maker.add_at(screwhole_assembly,
                      'small_lid_arc', 0.5, rh=1)
+        
+        wedge_shape = self.wedge_node()
+        maker.add_at(wedge_shape.hole('wedge_lhs')
+                     .at('face_edge', 'front', 3, 0), 
+                     'lip_lhs', 1, post=ad.ROTY_180 * ad.translate((0, 
+                                                      -self.epsilon, 
+                                                      self.epsilon)))
+        maker.add_at(wedge_shape.hole('wedge_rhs')
+                     .at('face_edge', 'front', 3, 1), 
+                     'lip_rhs', 0, post=ad.ROTY_180 * ad.translate((0, 
+                                                      -self.epsilon, 
+                                                      self.epsilon)))
         return maker
     
     

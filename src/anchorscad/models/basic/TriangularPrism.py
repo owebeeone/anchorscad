@@ -45,6 +45,11 @@ class TriangularPrism(core.CompositeShape):
     @core.anchor('Base of the prism.')
     def base(self, *args, **kwds):
         return self.maker.at('prism', 'face3', 1, *args, **kwds)
+    
+    
+# Uncomment the line below to default to writing OpenSCAD files
+# when anchorscad_main is run with no --write or --no-write options.
+MAIN_DEFAULT=core.ModuleDefault(True)
 
 if __name__ == '__main__':
     core.anchorscad_main(False)
