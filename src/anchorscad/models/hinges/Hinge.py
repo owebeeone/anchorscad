@@ -4,7 +4,7 @@ Created on 7 Jul 2022
 '''
 
 import anchorscad as ad
-from anchorscad.models.basic.sleeve import Sleeve
+from anchorscad.models.basic.sleeve import Sleeve, SleeveAndKeyway
 
 @ad.datatree
 class HingeHolePath:
@@ -277,6 +277,8 @@ class HingeBar(ad.CompositeShape):
             init=False)
     cyl_sleeve_node: ad.Node=ad.dtfield(ad.ShapeNode(
             Sleeve, prefix='sleeve_', exclude=('h',)), init=False)
+    cyl_sleeve_with_key_node: ad.Node=ad.dtfield(ad.ShapeNode(
+            SleeveAndKeyway, prefix='sleeve_', exclude=('h',)), init=False)
     
     EXAMPLE_SHAPE_ARGS=ad.args(fn=32)
     EXAMPLE_ANCHORS=()
@@ -292,16 +294,31 @@ class HingeBar(ad.CompositeShape):
                          'top', post=ad.tranZ(-joint_offset))
         return maker
     
-    def gen_sleeve(self, h, ir=None):
-        inside_r = self.bar_r if ir is None else ir
+    def gen_sleeve(self, h, side):
+        inside_r = self.bar_r
+        
+        if side:
+            keyway_start_degrees=120
+            keyway_end_degrees=180
+        else:
+            keyway_start_degrees=0
+            keyway_end_degrees=60
+        return self.cyl_sleeve_with_key_node(
+                h=h, 
+                inside_r=inside_r,
+                outside_r=self.sleeve_r,
+                start_degrees=0, 
+                end_degrees=180,
+                keyway_start_degrees=keyway_start_degrees,
+                keyway_end_degrees=keyway_end_degrees)
+    
+    def gen_end(self, h):
+        inside_r = 0
         return self.cyl_sleeve_node(h=h, 
                                     inside_r=inside_r,
                                     outside_r=self.sleeve_r,
                                     start_degrees=0, 
                                     end_degrees=180)
-    
-    def gen_end(self, h):
-        return self.gen_sleeve(h, 0)
 
 
 @ad.shape
@@ -315,11 +332,21 @@ class HingeBarSleeveHoles(ad.CompositeShape):
     side: int=ad.dtfield(
             0, '0 or 1 for left or right sides of hinge bar')
     
-    EXAMPLE_SHAPE_ARGS=ad.args(HingeBar(fn=8, seg_count=7, bar_h=50), 
-                               side=1, 
+    EXAMPLE_SHAPE_ARGS=ad.args(HingeBar(fn=16, seg_count=7, bar_h=50), 
+                               side=0, 
                                as_cage=False)
     EXAMPLE_ANCHORS=(ad.surface_args('base', scale_anchor=0.4),
                      ad.surface_args(('hole', 0), 'base', scale_anchor=0.4))
+    
+    
+    EXAMPLES_EXTENDED={
+        'example2': ad.ExampleParams(
+                shape_args=ad.args(
+                        HingeBar(fn=16, seg_count=7, bar_h=50), 
+                        side=1, 
+                        as_cage=False),
+                anchors=())
+        }
     
     def build(self) -> ad.Maker:
         maker = self.cage_of_node(self.hinge_bar_shape).at()
@@ -337,7 +364,7 @@ class HingeBarSleeveHoles(ad.CompositeShape):
                 target_to=self.anchor_for(i,
                         post=ad.tranZ(-sep)))
             
-            sleeve = self.hinge_bar_shape.gen_sleeve(length)
+            sleeve = self.hinge_bar_shape.gen_sleeve(length, self.side)
             
             maker.add_at(sleeve.solid(('sleeve', i))
                          .at('base'),
@@ -346,14 +373,14 @@ class HingeBarSleeveHoles(ad.CompositeShape):
         if not self.side:
             end = self.hinge_bar_shape.gen_end(sep)
             target_from = self.anchor_for(-1)
-            maker.add_at(end.solid('sleeve_base').at('base'),
+            maker.add_at(end.solid('sleeve_base').at('top'),
                          anchor=target_from,
                          post=ad.tranZ(sep))
             
         if self.side == seg_count % 2:
             end = self.hinge_bar_shape.gen_end(sep)
             target_from = self.anchor_for(seg_count)
-            maker.add_at(end.solid('sleeve_top').at('base'),
+            maker.add_at(end.solid('sleeve_top').at('top'),
                          anchor=target_from)        
         
         return maker
@@ -402,6 +429,7 @@ class Hinge(ad.CompositeShape):
                                bar_h=80,
                                fn=32)
     EXAMPLE_ANCHORS=()
+    
     
     def build(self) -> ad.Maker:
         maker = self.hinge_bar_shape.composite('bar').at('centre')

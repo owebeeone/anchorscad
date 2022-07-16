@@ -307,6 +307,11 @@ class GVector(object):
         return self.v.A1[0:3]
     
     @property
+    def A2(self):
+        '''Returns the numpy.array equivalent of this vector's first 2 elements.'''
+        return self.v.A1[0:2]
+    
+    @property
     def x(self):
         '''Returns the x component of this GVector.'''
         return self.v[0, 0]

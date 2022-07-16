@@ -12,9 +12,9 @@ from anchorscad.models.basic.TriangularPrism import TriangularPrism
 
 @ad.datatree
 class LidPath:
-    big_lid_r: float=ad.dtfield(75, 'Radius of big lid')
+    big_lid_r: float=ad.dtfield(80, 'Radius of big lid')
     small_lid_h: float=ad.dtfield(24.7, 'Depth of small lid')
-    big_lid_w: float=ad.dtfield(127.4 / 2, 'Half the width of big lid flat')
+    big_lid_w: float=ad.dtfield(130 / 2, 'Half the width of big lid flat')
     small_lid_w: float=ad.dtfield(103.7 / 2, 'Half the width of small lid flat')
 
     def build(self) -> ad.Path:
@@ -97,8 +97,8 @@ class LidWithScrewHoles(ad.CompositeShape):
     
     wedge_size: tuple=ad.dtfield(
             self_default=lambda s: (
+                s.h * 0.5,
                 s.h * 0.75,
-                s.h * 1,
                 50),
             doc='Size of wedge removed big lid at lips')
     wedge_node: ad.Node=ad.dtfield(
@@ -216,10 +216,10 @@ class HingedLid(ad.CompositeShape):
         'example2': ad.ExampleParams(
                 shape_args=ad.args(
                         sep=0.2,
-                        hinge_seg_count=14,
+                        hinge_seg_count=5,
                         lid_fn=20,
                         screw_fn=3,
-                        fn=8),
+                        fn=16),
                 anchors=())
         }
 
