@@ -160,7 +160,7 @@ class SplitLid(ad.CompositeShape):
             doc='Size of cutbox')
     cut_box_node: ad.Node=ad.ShapeNode(ad.Box, prefix='cut_box_')
     
-    sep: float=ad.dtfield(0.15, 'Separation factor for the two lid parts')
+    sep: float=ad.dtfield(0.2, 'Separation factor for the two lid parts')
     
     epsilon: float=0.01
         
@@ -198,10 +198,18 @@ class HingedLid(ad.CompositeShape):
             init=False)
     
     EXAMPLE_SHAPE_ARGS=ad.args(
+            sep=0.2,
             hinge_seg_count=14,
             lid_fn=512,
             screw_fn=32,
             fn=128)
+        
+    XEXAMPLE_SHAPE_ARGS=ad.args(
+            sep=0.2,
+            hinge_seg_count=14,
+            lid_fn=20,
+            screw_fn=3,
+            fn=8)
     EXAMPLE_ANCHORS=()
     
     def build(self) -> ad.Maker:
