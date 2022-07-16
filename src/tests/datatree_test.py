@@ -5,7 +5,8 @@ Created on 8 Dec 2021
 '''
 
 import unittest
-from anchorscad.datatrees import datatree, dtargs, override, Node, dtfield, field_docs
+from anchorscad.datatrees import datatree, dtargs, override, Node, \
+    dtfield, field_docs, BindingDefault
 from dataclasses import dataclass, field
 
 @datatree
@@ -565,6 +566,22 @@ class Test(unittest.TestCase):
             b: Node=Node(lambda a: a * 2)
 
         self.assertEqual(A().c, 14)
+        
+    def test_self_default_with_injected(self):
+        @datatree
+        class A:
+            a: int=7
+            c: int=dtfield(self_default=lambda s: s.a * 2)
+            
+        @datatree
+        class B:
+            a_node: Node=Node(A, prefix='prefix_')
+            
+        self.assertEqual(B().a_node().c, 14)
+        self.assertEqual(A().c, 14)
+        self.assertEqual(B().prefix_a, 7)
+        self.assertEqual(B().prefix_c.self_default(B().a_node()), 14)
+
 
 
 if __name__ == "__main__":

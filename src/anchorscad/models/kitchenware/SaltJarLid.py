@@ -212,6 +212,19 @@ class HingedLid(ad.CompositeShape):
             fn=8)
     EXAMPLE_ANCHORS=()
     
+    EXAMPLES_EXTENDED={
+        'example2': ad.ExampleParams(
+                shape_args=ad.args(
+                        sep=0.2,
+                        hinge_seg_count=14,
+                        lid_fn=20,
+                        screw_fn=3,
+                        fn=8),
+                anchors=())
+        }
+
+
+    
     def build(self) -> ad.Maker:
         lid_shape = self.lid_node()
         maker = lid_shape.solid('lid').at()
