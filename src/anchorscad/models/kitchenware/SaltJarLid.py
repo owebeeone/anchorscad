@@ -185,6 +185,17 @@ class SplitLid(ad.CompositeShape):
 @ad.shape
 @ad.datatree
 class HingedLid(ad.CompositeShape):  
+    '''Vintage depression glass salt pig lid. 
+    
+    Original lids were wooden and virtually all of them are degraded
+    and unusable. This model is a one piece hinged lid. The washers
+    (wee the model below) are shaped to fit in the hole provided 
+    at the rear of the salt pig.
+    
+    See link below for a similar (if not identical salt pig) this was
+    designed to it.
+    https://www.antiquesnavigator.com/d-225708/vintage-depression-glass-salt-box-salt-pig.html
+    '''
     lid_node: ad.Node=ad.dtfield(
             ad.ShapeNode(SplitLid), init=False)
     
@@ -203,16 +214,12 @@ class HingedLid(ad.CompositeShape):
             lid_fn=512,
             screw_fn=32,
             fn=128)
-        
-    XEXAMPLE_SHAPE_ARGS=ad.args(
-            sep=0.2,
-            hinge_seg_count=14,
-            lid_fn=20,
-            screw_fn=3,
-            fn=8)
+
     EXAMPLE_ANCHORS=()
     
     EXAMPLES_EXTENDED={
+        # This example has minimal complexity making it easier
+        # to inspect the model in OpenSCAD.
         'example2': ad.ExampleParams(
                 shape_args=ad.args(
                         sep=0.2,
@@ -221,10 +228,8 @@ class HingedLid(ad.CompositeShape):
                         screw_fn=3,
                         fn=16),
                 anchors=())
-        }
-
-
-    
+        }  
+      
     def build(self) -> ad.Maker:
         lid_shape = self.lid_node()
         maker = lid_shape.solid('lid').at()
@@ -232,8 +237,56 @@ class HingedLid(ad.CompositeShape):
         maker.add_at(hinge_shape.composite('hinge').at('centre'),
                      'cut_box', 'face_centre', 'top',
                      post=ad.ROTY_90)
-        
         return maker    
+    
+    
+    
+@ad.shape
+@ad.datatree
+class LidScrewWashers(ad.CompositeShape): 
+    '''Washer for "Salt Pig" for lid fastening HingedLid to jar.
+
+    This should be printed in TPU or flexible material. Do not
+    make it a tolerance fit as it's important not to apply forces
+    that cause tension cracks in the glass jar.
+    '''
+    
+    big_cone_r_base: float=ad.dtfield(12.8 / 2 - 0.2, 'Base radius of big cone')
+    big_cone_r_top: float=ad.dtfield(12.1 / 2 - 0.2, 'Top radius of big cone')
+    big_cone_h: float=ad.dtfield(4.6, 'Height of big cone')
+    big_cone_node: ad.Node=ad.dtfield(
+            ad.ShapeNode(ad.Cone, prefix='big_cone_'), init=False)
+    
+    hole_cyl_r: float=ad.dtfield(3 / 2, 'Radius of through hole')
+    hole_cyl_h: float=ad.dtfield(9.4, 'Height of through hole')
+    hole_cyl_node: ad.Node=ad.dtfield(
+            ad.ShapeNode(ad.Cylinder, prefix='hole_cyl_'), init=False)
+    
+    small_cone_r_base: float=ad.dtfield(7.9 / 2 - 0.2, 'Base radius of small cone')
+    small_cone_r_top: float=ad.dtfield(5.9 / 2 - 0.2, 'Top radius of small cone')
+    small_cone_h: float=ad.dtfield(
+            self_default=lambda s: s.hole_cyl_h - s.big_cone_h - s.epsilon,
+            doc='Height of small cone')
+    small_cone_node: ad.Node=ad.dtfield(
+            ad.ShapeNode(ad.Cone, prefix='small_cone_'), init=False)
+    
+    epsilon: float=ad.dtfield(
+            0.01, 
+            'Fudge factor to eliminate tearing in the final model')
+    
+    EXAMPLE_SHAPE_ARGS=ad.args(fn=64)
+    EXAMPLE_ANCHORS=()
+    
+    def build(self) -> ad.Maker:
+        maker = self.big_cone_node().solid('big_cone').at('base')
+        maker.add_at(self.small_cone_node().solid('small_cone')
+                    .at('base'),
+                    'big_cone', 'base', rh=1)
+        maker.add_at(self.hole_cyl_node().hole('hole_cyl')
+                     .at('base', h=self.epsilon / 2), 'base')
+        
+        return maker
+    
 
 
 # Uncomment the line below to default to writing OpenSCAD files
