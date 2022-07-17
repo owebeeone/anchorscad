@@ -240,7 +240,6 @@ class HingedLid(ad.CompositeShape):
         return maker    
     
     
-    
 @ad.shape
 @ad.datatree
 class LidScrewWashers(ad.CompositeShape): 
@@ -287,7 +286,6 @@ class LidScrewWashers(ad.CompositeShape):
         
         return maker
     
-
 
 # Uncomment the line below to default to writing OpenSCAD files
 # when anchorscad_main is run with no --write or --no-write options.
