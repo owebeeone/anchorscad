@@ -1360,7 +1360,7 @@ def fabricator(clazz=None, /, *, level=10):
 
 
 @shape('anchorscad/core/box')
-@dataclass
+@dataclass(frozen=True)
 class Box(Shape):
     '''Generates rectangular prisms (cubes where x=y=z).
     Anchor functions have a 'face' parameter which are 'front', 'back',
@@ -1443,7 +1443,10 @@ class Box(Shape):
         'right': 5})
     
     def __init__(self, size=[1, 1, 1]):
-        self.size = l.GVector(VECTOR3_FLOAT_DEFAULT_1(size))
+        builtins.object.__setattr__(
+            self, 
+            'size',
+            l.GVector(VECTOR3_FLOAT_DEFAULT_1(size)))
 
     def render(self, renderer):
         renderer.add(renderer.model.Cube(self.size.A3))
@@ -1559,7 +1562,7 @@ def fill_params(
 
 
 @shape('anchorscad/core/text')
-@datatree
+@datatree(frozen=True)
 class Text(Shape):
     '''Generates 3D text.'''
     text: posc.str_strict=dtfield(None, 'Text string to render.')
@@ -1610,7 +1613,7 @@ class Text(Shape):
 
 ANGLES_TYPE = l.list_of(l.strict_float, len_min_max=(3, 3), fill_to_min=0.0)
 @shape('anchorscad/core/sphere')
-@dataclass
+@dataclass(frozen=True)
 class Sphere(Shape):
     '''Generates a Sphere.'''
     r: float=dtfield(1.0, 'Radius of sphere')
@@ -1662,7 +1665,7 @@ class Sphere(Shape):
 
 CONE_ARGS_XLATION_TABLE={'r_base': 'r1', 'r_top': 'r2'}
 @shape('anchorscad/core/cone')
-@dataclass
+@dataclass(frozen=True)
 class Cone(Shape):
     '''Generates cones or horizontal conical slices and cylinders.'''
     h: float=dtfield(1.0, 'Height of cone') 
@@ -1734,14 +1737,18 @@ class Cone(Shape):
         return l.rotZ(degrees=degrees, radians=radians) * l.translate([x, 0, h]) * m
     
 @shape('anchorscad/core/cone')
-@dataclass
+@datatree(frozen=True)
 class Cylinder(Cone):
     '''Creates a Cone that has the same top and base radius. 
     (i.e. a cylinder).'''
     h: float=dtfield(1.0, 'Length of cylinder.')
     r: float=dtfield(1.0, 'Radius of cylinder.')
-    r_base: float=field(init=False)  # Hide this in the constructor.
-    r_top: float=field(init=False)  # Hide this in the constructor.
+    r_base: float=dtfield(
+        self_default=lambda s : s.r,
+        init=False)     # Hide this in the constructor.
+    r_top: float=dtfield(
+        self_default=lambda s : s.r,
+        init=False)     # Hide this in the constructor.
     # The fields below should be marked kw only (Python 3.10 feature).
     fn: int=FN_FIELD
     fa: float=FA_FIELD
@@ -1750,14 +1757,6 @@ class Cylinder(Cone):
     EXAMPLE_SHAPE_ARGS=args(h=50, r=30, fn=30)
     
     def __post_init__(self):
-        if self.r is None:
-            if self.r_base is None:
-                self.r = 1.0
-            else:
-                self.r = self.r_base
-        self.r_base = self.r
-        self.r_top = self.r
-            
         Cone.__post_init__(self)
 
 class CompositeShape(Shape):
@@ -1891,7 +1890,7 @@ class CoordinatesCage(Shape):
     
 
 @shape('anchorscad/core/coordinates')
-@dataclass
+@dataclass(frozen=True)
 class Coordinates(CompositeShape):
     
     overlap: float=3.0
@@ -1910,7 +1909,7 @@ class Coordinates(CompositeShape):
     
     def build(self) -> Maker:
         if self.r_stem_base is None:
-            self.r_stem_base = self.r_stem_top
+            builtins.object.__setattr__(self, 'r_stem_base', self.r_stem_top)
         exclude=('overlap', 'colour_x', 'colour_y', 'colour_z', )
         arrow = Arrow(**non_defaults_dict(self, exclude=exclude))
         maker = CoordinatesCage().cage('origin').at('origin')
@@ -1932,13 +1931,14 @@ class Coordinates(CompositeShape):
     @anchor('Access to inner elements of this shape.')
     def within(self, *args, **kwds):
         return self.maker.at(*args, **kwds)
-    
+
+DEFAULT_ANNOTATED_LABELS=frozendict({'x': 'x', 'y': 'y', 'z': 'z'})
 @shape('anchorscad/core/annotated_coordinates')
-@dataclass
+@datatree(frozen=True)
 class AnnotatedCoordinates(CompositeShape):
     
     coordinates: Coordinates=Coordinates()
-    coord_labels: frozendict=None
+    coord_labels: frozendict=field(default_factory=lambda : DEFAULT_ANNOTATED_LABELS)
     text_stem_size_ratio:float = 0.3
     coord_label_at: tuple=args(post=l.translate([0, 0, 1]) * l.rotY(-90))
     label: str=None
@@ -1948,8 +1948,6 @@ class AnnotatedCoordinates(CompositeShape):
     
     
     def build(self) -> Maker:
-        if not self.coord_labels:
-            self.coord_labels = frozendict({'x': 'x', 'y': 'y', 'z': 'z'})
         
         maker = self.coordinates.solid('coords').at('origin')
         if self.coord_labels:

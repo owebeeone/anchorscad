@@ -218,7 +218,7 @@ class TactileSwitchTL59Lead(core.CompositeShape):
 
 
 @core.shape('anchorscad.models.components.switches.tactile_switch_tl59')
-@datatree
+@datatree(frozen=True)
 class TactileSwitchTL59(core.CompositeShape):
     '''
     <description>
@@ -283,7 +283,7 @@ class TactileSwitchTL59(core.CompositeShape):
     
 
 @core.shape('anchorscad.models.components.switches.tactile_switch_outline')
-@datatree
+@datatree(frozen=True)
 class TactileSwitchOutline(core.CompositeShape):
     '''
     <description>

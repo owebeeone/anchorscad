@@ -116,6 +116,7 @@ class ExampleRunner:
     out_dir: str
     module_name: str
     out_file_format: str
+    gen_stl: bool
     runner_results: Dict[str, rs.RunnerShapeResults]=field(default_factory=dict)
     runner_examples: Dict[tuple, rs.RunnerExampleResults]=field(default_factory=dict)
     module_dir: str=None
@@ -179,7 +180,9 @@ class ExampleRunner:
             runner_example.stl_file = None
         
     def run_openscad(self, stl_file, png_file, scad_file):
-        if not GENERATE_STL:
+        if self.gen_stl is None:
+            self.gen_stl = GENERATE_STL
+        if not self.gen_stl:
             stl_file = None
         cmd = make_openscad_stl_command_line(stl_file, png_file, scad_file)
         p = Popen(cmd)
@@ -348,6 +351,19 @@ class AnchorScadRunner(core.ExampleCommandLineRenderer):
             action='store_true',
             help='Recursively pass through directories.')
         self.argq.set_defaults(recursive=None)
+        
+        self.argq.add_argument(
+            '--no-gen-stl', 
+            dest='gen_stl',
+            action='store_false',
+            help='Does not invoke OpenSCAD to generate stl.')
+        
+        self.argq.add_argument(
+            '--gen-stl', 
+            dest='gen_stl',
+            action='store_true',
+            help='Invoke OpenSCAD to generate stl.')
+        self.argq.set_defaults(gen_stl=None)
                 
         self.argq.add_argument(
             '--out_file_format', 
@@ -376,7 +392,8 @@ class AnchorScadRunner(core.ExampleCommandLineRenderer):
         ex_runner = ExampleRunner(
             out_dir=self.argp.out_dir,
             module_name=self.argp.dirs[1],
-            out_file_format=self.argp.out_file_format)
+            out_file_format=self.argp.out_file_format,
+            gen_stl=self.argp.gen_stl)
         
         core.render_examples(
             self.module, 

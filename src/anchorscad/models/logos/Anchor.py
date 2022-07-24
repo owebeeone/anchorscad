@@ -24,6 +24,7 @@ class AnchorArm(ad.CompositeShape):
     def build(self) -> ad.Maker:
         
         #angle = 
+        maker = ad.Box([10, 10, 10]).solid('temporary will go').at()
         
         return maker
     

@@ -5,16 +5,17 @@ Created on 16 Nov 2021
 '''
 
 from dataclasses import dataclass
+import anchorscad as ad
 import anchorscad.core as core
 import anchorscad.extrude as e
 import anchorscad.linear as l
 import numpy as np
 
-MAX_SCALED = np.array((135 * 2, 123.665, 1.45))
-MAX_ACTUAL = np.array((22.75, 10.42, 1.45))
+MAX_SCALED = (135 * 2, 123.665, 1.45)
+MAX_ACTUAL = (22.75, 10.42, 1.45)
 
 @core.shape('anchorscad/models/clips/lace_clip/LaceClip')
-@dataclass
+@dataclass(frozen=True)
 class LaceClip(core.CompositeShape):
     '''A clip for holding shoe laces when using magnetic shoe lace ties. 
     '''
@@ -26,17 +27,18 @@ class LaceClip(core.CompositeShape):
     
     EXAMPLE_SHAPE_ARGS=core.args()
     
-    
-    def __post_init__(self):
-        shape = core.Box(self.size)
-        self.maker = (shape.cage('cage')
-                      .transparent(True)
-                      .colour([0, 1, 0, 0.4])
-                      .at('face_corner', 0, 0))
-        maker = self.maker
+    def build(self) -> ad.Maker:
+        size = np.array(self.size)
+        scaled_size = np.array(self.scaled_size)
         
-        y = self.scaled_size[1] / 2
-        x = self.scaled_size[0] / 2
+        shape = core.Box(size)
+        maker = (shape.cage('cage')
+                  .transparent(True)
+                  .colour([0, 1, 0, 0.4])
+                  .at('face_corner', 0, 0))
+        
+        y = scaled_size[1] / 2
+        x = scaled_size[0] / 2
         path = (e.PathBuilder()
                 .move((0, 0))
                 .line((0, 44), 'centre_upper')
@@ -71,16 +73,17 @@ class LaceClip(core.CompositeShape):
                 .line((0, 0), 'centre_lower')
                 .build())
         
-        scale = self.size / self.scaled_size
+        scale = size / scaled_size
         path = path.transform(l.scale((scale[0], scale[0], 1)))
         
-        shape = e.LinearExtrude(path, self.size[2], fn=self.fn)
+        shape = e.LinearExtrude(path, size[2], fn=self.fn)
         
         maker.add_at(shape.solid('rhs').at('centre_upper', rh=0.5),
                      'centre', post=l.ROTZ_90 * l.ROTX_90)
         maker.add_at(shape.solid('lhs').at('centre_upper', rh=0.5),
                      'centre', post=l.ROTY_180 * l.ROTZ_90 * l.ROTX_90)
 
+        return maker
 
     
 if __name__ == "__main__":

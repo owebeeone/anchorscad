@@ -11,7 +11,7 @@ import numpy as np
 
 
 @shape
-@datatree
+@datatree(frozen=True)
 class HdmiOutline(CompositeShape):
     '''
     Hole cut out for HDMI Type A.

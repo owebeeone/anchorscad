@@ -12,7 +12,7 @@ from anchorscad.models.basic.box_side_bevels import BoxSideBevels
 
 
 @core.shape('anchorscad.models.fastners.snaps')
-@dataclass
+@dataclass(frozen=True)
 class Snap(core.CompositeShape):
     '''
     <description>

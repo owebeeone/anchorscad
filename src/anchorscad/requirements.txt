@@ -6,4 +6,3 @@ debugpy
 dill
 sortedcontainers
 graphviz
-scipy

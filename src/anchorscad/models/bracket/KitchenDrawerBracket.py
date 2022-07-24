@@ -7,7 +7,7 @@ Created on 12 Oct 2021
 '''
 
 from dataclasses import dataclass
-import anchorscad.core as core
+import anchorscad as ad
 import anchorscad.linear as l
 import anchorscad.extrude as e
 from anchorscad.models.basic.cone_ended_prism import ConeEndedPrism
@@ -83,9 +83,9 @@ DRAWER_CUTOUT_PATH=(e.PathBuilder().move([0, BRACKET_YS[0]])
       .build())
 
 
-@core.shape('anchorscad.models.bracket.KitchenDrawerOutline')
-@dataclass
-class KitchenDrawerMountHole(core.CompositeShape):
+@ad.shape('anchorscad.models.bracket.KitchenDrawerOutline')
+@ad.dataclass(frozen=True)
+class KitchenDrawerMountHole(ad.CompositeShape):
     '''
     Elongated screw hole.
     Args:
@@ -111,8 +111,8 @@ class KitchenDrawerMountHole(core.CompositeShape):
     fn: int=64
     
     EXAMPLE_ANCHORS=(
-        core.surface_args('base'),
-        core.surface_args('top'),)
+        ad.surface_args('base'),
+        ad.surface_args('top'),)
     
     def __post_init__(self):
         
@@ -139,20 +139,20 @@ class KitchenDrawerMountHole(core.CompositeShape):
 
         
         maker.add_at(hole.hole('hole').at('base'),
-                     'base', post=l.tranZ(self.epsilon))
+                     'base', post=ad.tranZ(self.epsilon))
         maker.add_at(cs_hole.hole('cs_hole').at('top'),
-                     'top', post=l.tranZ(self.epsilon))
+                     'top', post=ad.tranZ(self.epsilon))
         maker.add_at(access_hole.hole('access_hole').at('base'),
-                     'top', post=l.ROTX_180 * l.tranZ(self.epsilon))
+                     'top', post=ad.ROTX_180 * ad.tranZ(self.epsilon))
         
         self.set_maker(maker)
         
     def centre_offs(self):
         return self.rw / 2 + self.shell_w
     
-@core.shape('anchorscad.models.bracket.KitchenDrawerOutline')
-@dataclass
-class KitchenDrawerOutline(core.CompositeShape):
+@ad.shape('anchorscad.models.bracket.KitchenDrawerOutline')
+@ad.datatree(frozen=True)
+class KitchenDrawerOutline(ad.CompositeShape):
     '''
     <description>
     '''
@@ -162,44 +162,53 @@ class KitchenDrawerOutline(core.CompositeShape):
     drawer_cut_path: e.Path=DRAWER_CUTOUT_PATH
     drawer_cut_depth: float=WALL_T
     front_cut_depth: float=CUT_WIDTH
-    hook_shape: core.Shape=core.Box(
+    hook_shape: ad.Shape=ad.Box(
         [WALL_T, LIP_DEPTH, 2 * (BRACKET_YS[3] - BRACKET_YS[2])])
     show_outline: bool=False
+    
+    extents: tuple=ad.dtfield(
+        self_default=lambda s: s.drawer_path.extents(),
+        init=False)
+    
+    cut_extents: tuple=ad.dtfield(
+        self_default=lambda s: s.drawer_cut_path.extents(),
+        init=False)
+    
+    front_size: tuple=ad.dtfield(
+        self_default=lambda s: (
+            s.extents[1][0] - s.extents[0][0],
+            s.cut_extents[1][1] - s.cut_extents[0][1],
+            s.front_cut_depth),
+        init=False)
+    
     fn: int=16
     
 
-    EXAMPLE_SHAPE_ARGS=core.args()
+    EXAMPLE_SHAPE_ARGS=ad.args()
     EXAMPLE_ANCHORS=(
-        core.surface_args('upper_notch'),
-        core.surface_args('lower_notch'),)
+        ad.surface_args('upper_notch'),
+        ad.surface_args('lower_notch'),)
     
     def __post_init__(self):
-        render_mode = (core.ModeShapeFrame.SOLID 
+        render_mode = (ad.ModeShapeFrame.SOLID 
                        if self.show_outline else 
-                       core.ModeShapeFrame.HOLE)
+                       ad.ModeShapeFrame.HOLE)
         drawer_shape = e.LinearExtrude(
             path=self.drawer_path, h=self.drawer_depth, fn=self.fn)
         maker = drawer_shape.solid('drawer_side').at('base', 0)
-        extents = self.drawer_path.extents()
         
-        box_cage_shape = core.Box(
-            list(extents[1][i] - extents[0][i] for i in (0, 1))
+        box_cage_shape = ad.Box(
+            list(self.extents[1][i] - self.extents[0][i] for i in (0, 1))
             + [self.drawer_depth]
             )
         
         maker.add_at(box_cage_shape.cage('drawer_side_cage')
                      .colour([0, 1, 0, 0.5])
                      .at('face_edge', 0, 0),
-                     'upper_top', 0.5, rh=1, post=l.ROTX_180
+                     'upper_top', 0.5, rh=1, post=ad.ROTX_180
                      )
-        cut_extents = self.drawer_cut_path.extents()
-        
-        self.front_size = (extents[1][0] - extents[0][0],
-                      cut_extents[1][1] - cut_extents[0][1],
-                      self.front_cut_depth
-                      )
 
-        front_cut_shape = core.Box(
+        front_cut_shape = ad.Box(
             [self.front_size[0] + 2 * epsilon, 
              self.front_size[1] + 2 * epsilon, 
              self.front_size[2] + epsilon]
@@ -210,7 +219,7 @@ class KitchenDrawerOutline(core.CompositeShape):
                      .colour([0, 0, 1, 0.5])
                      .at('face_edge', 0, 0),
                      'drawer_side_cage', 'face_edge', 0, 0,
-                     post=l.translate([epsilon / 2, -epsilon, epsilon]))
+                     post=ad.translate([epsilon / 2, -epsilon, epsilon]))
                      
         cut_shape = e.LinearExtrude(
             path=self.drawer_cut_path,
@@ -222,29 +231,29 @@ class KitchenDrawerOutline(core.CompositeShape):
                      .colour([1, 0, 0, 0.5])
                      .at('base', 0),
                      'front_cut_shape', 'face_edge', 3, 2, 0,
-                     post=l.ROTZ_90 * l.ROTX_180)
+                     post=ad.ROTZ_90 * ad.ROTX_180)
 
         maker.add_at(self.hook_shape.solid('hook')
                      .at('face_edge', 2, 1, 0.5),
                      'cut_shape', 'lhs_2', 0.5,
-                     post=l.IDENTITY)
+                     post=ad.IDENTITY)
         
         
         self.set_maker(maker)
 
-    @core.anchor('Upper notch on side of drawer.')
+    @ad.anchor('Upper notch on side of drawer.')
     def lower_notch(self, t=0.0, **kwds):
         return self.at('cut_shape', ('notch', 'l', 'side'), t, **kwds)
 
 
-    @core.anchor('Upper notch on side of drawer.')
+    @ad.anchor('Upper notch on side of drawer.')
     def upper_notch(self, t=1.0, **kwds):
         return self.at('cut_shape', ('notch', '2', 'side'), t, **kwds)
 
 
-@core.shape('anchorscad.models.bracket.KitchenDrawerSideAdjuster')
+@ad.shape('anchorscad.models.bracket.KitchenDrawerSideAdjuster')
 @dataclass
-class KitchenDrawerSideAdjuster(core.CompositeShape):
+class KitchenDrawerSideAdjuster(ad.CompositeShape):
     r_outer: float=(BRACKET_YS[2] - BRACKET_YS[1]) / 2
     h_outer: float=WALL_T + 3
     r_offs: float=1.5
@@ -260,12 +269,12 @@ class KitchenDrawerSideAdjuster(core.CompositeShape):
     fa: float=None
     fs: float=None
     
-    EXAMPLE_SHAPE_ARGS=core.args(h_inner=8)
+    EXAMPLE_SHAPE_ARGS=ad.args(h_inner=8)
     EXAMPLE_ANCHORS=()
     
     def __post_init__(self):
         
-        inner = core.Cone(
+        inner = ad.Cone(
             h=self.h_inner,
             r_base=self.r_inner2,
             r_top=self.r_inner1,
@@ -277,7 +286,7 @@ class KitchenDrawerSideAdjuster(core.CompositeShape):
         
         if self.do_cut_model:
             # Cut model will cut the entire area.
-            outer = core.Cone(
+            outer = ad.Cone(
                 h=self.h_outer + epsilon,
                 r_base=self.r_inner1,
                 r_top=self.r_inner1,
@@ -288,7 +297,7 @@ class KitchenDrawerSideAdjuster(core.CompositeShape):
             maker.add_at(outer.solid('outer').at('base'),
                          'base', rh=1, h=-epsilon)
         else:
-            outer = core.Cone(
+            outer = ad.Cone(
                 h=self.h_outer + epsilon,
                 r_base=self.r_outer,
                 r_top=self.r_outer,
@@ -298,21 +307,21 @@ class KitchenDrawerSideAdjuster(core.CompositeShape):
             
             maker.add_at(outer.solid('outer').at('base'),
                          'base', rh=1, h=-epsilon,
-                         post=l.tranX(self.r_offs))
+                         post=ad.tranX(self.r_offs))
 
         if self.screw_blade_hole:
-            blade = core.Box(self.screw_blade_hole)
+            blade = ad.Box(self.screw_blade_hole)
             
             maker.add_at(blade.hole('blade_hole')
                          .at('face_centre', 1),
-                         'base', post=l.tranZ(epsilon))
+                         'base', post=ad.tranZ(epsilon))
 
         self.set_maker(maker)
         
 
-@core.shape('anchorscad.models.bracket.KitchenDrawerBracket')
+@ad.shape('anchorscad.models.bracket.KitchenDrawerBracket')
 @dataclass
-class KitchenDrawerBracket(core.CompositeShape):
+class KitchenDrawerBracket(ad.CompositeShape):
     '''
     An alternative bracket for Hettich drawers. These brackets are made with
     a cast alloy that seems to always fatigue fail. Also I have not been able
@@ -386,10 +395,10 @@ class KitchenDrawerBracket(core.CompositeShape):
       show_outline: Debugging setting for showing the drawer outline.
       adjuster: The shape type for theadjuster knob.
     '''
-    outline: core.Shape=KitchenDrawerOutline()
+    outline: ad.Shape=KitchenDrawerOutline()
     front_bevel_radius: float=RADIUS_TOP
-    mount_hole_lower: core.Shape=KitchenDrawerMountHole(h=17)
-    mount_hole_upper: core.Shape=KitchenDrawerMountHole(h=5)
+    mount_hole_lower: ad.Shape=KitchenDrawerMountHole(h=17)
+    mount_hole_upper: ad.Shape=KitchenDrawerMountHole(h=5)
     expand_base_lower: float=30
     expand_base_upper: float=20
     expand_x_top: float=2
@@ -413,53 +422,53 @@ class KitchenDrawerBracket(core.CompositeShape):
     make_mirror: bool=False
     
     # Fasteners
-    countersunk_scew_hole_type : core.Shape=CountersunkScrew
-    flatsunk_scew_hole_type : core.Shape=FlatSunkScrew
+    countersunk_scew_hole_type : ad.Shape=CountersunkScrew
+    flatsunk_scew_hole_type : ad.Shape=FlatSunkScrew
     
     fn: int=128
     fa: float=None
     fs: float=None
     
-    EXAMPLE_SHAPE_ARGS=core.args()
+    EXAMPLE_SHAPE_ARGS=ad.args()
     EXAMPLE_ANCHORS=()
     
-    EXAMPLES_EXTENDED={'outer': core.ExampleParams(core.args()),
-                       'adjuster': core.ExampleParams(
-                            core.args(
+    EXAMPLES_EXTENDED={'outer': ad.ExampleParams(ad.args()),
+                       'adjuster': ad.ExampleParams(
+                            ad.args(
                                 show_adjuster=True)),
-                       'inner': core.ExampleParams(
-                            shape_args=core.args(
+                       'inner': ad.ExampleParams(
+                            shape_args=ad.args(
                                 show_inner=True),
                             anchors=(
-                                # core.surface_args(
+                                # ad.surface_args(
                                 #     'inner_plate', 'face_centre', 4),
-                                # core.surface_args(
+                                # ad.surface_args(
                                 #     'outline', 'drawer_side_cage', 'face_centre', 2),
                                 ),
                             ),
-                       'mirror_outer': core.ExampleParams(
-                            core.args(make_mirror=True)),
-                       'mirror_adjuster': core.ExampleParams(
-                            core.args(
+                       'mirror_outer': ad.ExampleParams(
+                            ad.args(make_mirror=True)),
+                       'mirror_adjuster': ad.ExampleParams(
+                            ad.args(
                                 make_mirror=True,
                                 show_adjuster=True)),
-                       'mirror_inner': core.ExampleParams(
-                            core.args(
+                       'mirror_inner': ad.ExampleParams(
+                            ad.args(
                                 make_mirror=True,
                                 show_inner=True),
                             anchors=(
-                                # core.surface_args(
+                                # ad.surface_args(
                                 #     'inner_plate', 'face_centre', 4),
-                                # core.surface_args(
+                                # ad.surface_args(
                                 #     'outline', 'drawer_side_cage', 'face_centre', 2),
                                 ),
                             ),
                         }
     
     def __post_init__(self):
-        render_mode = (core.ModeShapeFrame.SOLID 
+        render_mode = (ad.ModeShapeFrame.SOLID 
                        if self.show_outline else 
-                       core.ModeShapeFrame.HOLE)
+                       ad.ModeShapeFrame.HOLE)
         
         maker = self.outline.named_shape('outline', render_mode).at()
         
@@ -476,8 +485,8 @@ class KitchenDrawerBracket(core.CompositeShape):
         cut_extents = self.outline.drawer_cut_path.extents()
         width = cut_extents[1][0] - cut_extents[0][0]
         
-        height_v = (maker.at('upper_notch') * l.GVector((0, 0, 0))
-                  - maker.at('lower_notch') * l.GVector((0, 0, 0)))
+        height_v = (maker.at('upper_notch') * ad.GVector((0, 0, 0))
+                  - maker.at('lower_notch') * ad.GVector((0, 0, 0)))
         
         height = height_v.z
         base_upper_x = height/2 + self.expand_base_upper - 7
@@ -504,12 +513,12 @@ class KitchenDrawerBracket(core.CompositeShape):
                      .colour([0.7, 0, 0.5])
                      .at('top_l', 0),
                      'lower_notch', rh=1, 
-                     post=l.translate(
+                     post=ad.translate(
                          [-self.expand_x_top, 
                           0, 
                           -self.expand_y_top]))
         
-        screw_post = l.ROTZ_90 * l.translate(
+        screw_post = ad.ROTZ_90 * ad.translate(
                          [self.screw_top_offs, 
                           self.mount_hole_upper.centre_offs(),
                           0])
@@ -519,7 +528,7 @@ class KitchenDrawerBracket(core.CompositeShape):
         
         maker.add_at(self.mount_hole_lower.composite('lower_hole').at('base'),
                      'front', 'face_edge', 1, 2, 1,
-                     post=screw_post * l.tranX(self.screw_hole_seps))
+                     post=screw_post * ad.tranX(self.screw_hole_seps))
         
         maker.add_at(
             self.outline.hook_shape.hole('hook_hole')
@@ -542,23 +551,23 @@ class KitchenDrawerBracket(core.CompositeShape):
                              self.inner_h)
         holder_plate = BoxSideBevels(holder_plate_size, ib)
         
-        screw1_axis = core.surface_args('upper_notch', rh=0, t=0.5,
-                     post=l.ROTX_90 * l.tranY(12))
+        screw1_axis = ad.surface_args('upper_notch', rh=0, t=0.5,
+                     post=ad.ROTX_90 * ad.tranY(12))
         
-        screw2_axis = core.surface_args('lower_notch', rh=0, t=0.5,
-                     post=l.ROTX_90 * l.tranY(15))
+        screw2_axis = ad.surface_args('lower_notch', rh=0, t=0.5,
+                     post=ad.ROTX_90 * ad.tranY(15))
         
         # Tnut side.
         
-        outer_plane = core.surface_args(
+        outer_plane = ad.surface_args(
             'outline', 'drawer_side_cage', 'face_centre', 2)
 
         maker.add_at(Tnut(left_handed=not self.make_mirror)
                      .hole('tnut1').at('base'),
-                     post=core.find_intersection(
+                     post=ad.find_intersection(
                                 maker, outer_plane, screw1_axis) 
-                            * l.ROTX_180
-                            * l.tranZ(epsilon))
+                            * ad.ROTX_180
+                            * ad.tranZ(epsilon))
         
         
         if self.show_inner:
@@ -567,23 +576,23 @@ class KitchenDrawerBracket(core.CompositeShape):
         # Make adjuster hole.
         adjuster_yoffs = self.adjuster_offs + adjuster_shape.r_inner1
         maker.add_at(adjuster_shape.hole('adjuster')
-                     .at('top', post=l.ROTZ_90),
+                     .at('top', post=ad.ROTZ_90),
                      'lower_notch', rh=1, t=0.5,
-                     post=l.ROTX_90 * l.translate(
+                     post=ad.ROTX_90 * ad.translate(
                          (0, adjuster_yoffs, epsilon)))
         
         
         # Inner plate
-        inner_msf = (core.ModeShapeFrame.SOLID 
+        inner_msf = (ad.ModeShapeFrame.SOLID 
                      if self.show_inner 
-                     else core.ModeShapeFrame.CAGE)
+                     else ad.ModeShapeFrame.CAGE)
         maker.add_at(holder_plate.named_shape('inner_plate', inner_msf)
                      # .colour((0, 1, 0, 0.3))
                      # .transparent(True)
                      .at('face_corner', 2, 0),
                      'lower_notch', rh=0, t=0,
-                     post=l.ROTZ_180 * l.ROTY_180 
-                            * l.translate((-ib / 2, 0, ib))
+                     post=ad.ROTZ_180 * ad.ROTY_180 
+                            * ad.translate((-ib / 2, 0, ib))
                      )
         
         self_tap_screw_hole = self.flatsunk_scew_hole_type(
@@ -597,8 +606,8 @@ class KitchenDrawerBracket(core.CompositeShape):
                 as_solid=False,
                 fn=self.fn)
         
-        inner_plate_plane = core.surface_args('inner_plate', 'face_centre', 4)
-        screw2_intersection = core.find_intersection(
+        inner_plate_plane = ad.surface_args('inner_plate', 'face_centre', 4)
+        screw2_intersection = ad.find_intersection(
             maker, inner_plate_plane, screw2_axis)
         
         
@@ -606,7 +615,7 @@ class KitchenDrawerBracket(core.CompositeShape):
                      # .colour((1, 0.2, 0.5, 0.4))
                      # .transparent(True)
                      .at('top'),
-                     post=screw2_intersection * l.tranZ(-epsilon))
+                     post=screw2_intersection * ad.tranZ(-epsilon))
         
         
         tnut_screw_hole = self.countersunk_scew_hole_type(
@@ -635,12 +644,12 @@ class KitchenDrawerBracket(core.CompositeShape):
         
         maker.add_at(adjuster_fixer.composite('adjuster_fixer').at('top'), 
                      'holder', 'top_l', 0.72, rh=0.71,
-                     post=l.ROTX_180)
+                     post=ad.ROTX_180)
         
         
         # Inner plate transforms
         
-        screw1_intersection = core.find_intersection(
+        screw1_intersection = ad.find_intersection(
             maker, inner_plate_plane, screw1_axis)
         
         maker.add_at(tnut_screw_hole.composite('screw1').at('top'),
@@ -650,14 +659,14 @@ class KitchenDrawerBracket(core.CompositeShape):
             self.maker = self.adjuster_solid.solid('adjuster').at('base')
         else:
             if self.make_mirror:
-                self.set_maker(maker.solid('mirror').at(post=l.mirror(l.X_AXIS)))
+                self.set_maker(maker.solid('mirror').at(post=ad.mirror(ad.X_AXIS)))
             else:
                 self.set_maker(maker)
 
-    @core.anchor('An example anchor specifier.')
+    @ad.anchor('An example anchor specifier.')
     def side(self, *args, **kwds):
         return self.maker.at('face_edge', *args, **kwds)
     
 
 if __name__ == '__main__':
-    core.anchorscad_main(False)
+    ad.anchorscad_main(False)

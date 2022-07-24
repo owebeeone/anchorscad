@@ -325,6 +325,9 @@ class GVector(object):
     def z(self):
         '''Returns the z component of this GVector.'''
         return self.v[0, 2]
+    
+    def __hash__(self):
+        return hash(tuple(self.L))
 
 
 # GVector for the X axis.
@@ -526,6 +529,9 @@ class GMatrix(object):
     def N(self):
         '''Returns a de-scaled (normalized) matrix.'''
         return self.descale()
+    
+    def __hash__(self):
+        return hash(tuple(tuple(x) for x in self.A))
 
 
 # The identity matrix.
