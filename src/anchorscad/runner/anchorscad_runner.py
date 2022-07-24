@@ -31,7 +31,7 @@ PATH_SEPARATOR = ';' if platform.system() == 'Windows' else ':'
 
 OPENSCAD_FILENAME=openscad_exe_location()
 
-def make_openscad_stl_command_line(stl_file, png_file, scad_file):
+def make_openscad_stl_command_line(stl_file, png_file, scad_file, imgsize):
     stl_options = ('-o', stl_file) if stl_file else ()
     png_options = ('-o', png_file) if png_file else ()
     return (OPENSCAD_FILENAME,) + stl_options + png_options + (
@@ -39,7 +39,7 @@ def make_openscad_stl_command_line(stl_file, png_file, scad_file):
         '--view',
         'axes',
         '--imgsize',
-        '1280,1024',
+        imgsize,
         scad_file
         )
 
@@ -116,7 +116,7 @@ class ExampleRunner:
     out_dir: str
     module_name: str
     out_file_format: str
-    gen_stl: bool
+    argp: object
     runner_results: Dict[str, rs.RunnerShapeResults]=field(default_factory=dict)
     runner_examples: Dict[tuple, rs.RunnerExampleResults]=field(default_factory=dict)
     module_dir: str=None
@@ -180,11 +180,12 @@ class ExampleRunner:
             runner_example.stl_file = None
         
     def run_openscad(self, stl_file, png_file, scad_file):
-        if self.gen_stl is None:
-            self.gen_stl = GENERATE_STL
-        if not self.gen_stl:
+        if self.argp.gen_stl is None and not GENERATE_STL:
             stl_file = None
-        cmd = make_openscad_stl_command_line(stl_file, png_file, scad_file)
+        elif not self.argp.gen_stl:
+            stl_file = None
+        cmd = make_openscad_stl_command_line(
+            stl_file, png_file, scad_file, self.argp.imgsize)
         p = Popen(cmd)
         return p.wait() == 0
 
@@ -386,6 +387,13 @@ class AnchorScadRunner(core.ExampleCommandLineRenderer):
             default='.',
             help='Reference directory used to compare generated files to.')
         
+        self.argq.add_argument(
+            '--imgsize', 
+            type=str,
+            default='1280,1024',
+            help='Size of generated image.')
+
+        
 
     def run_module(self):
         
@@ -393,7 +401,7 @@ class AnchorScadRunner(core.ExampleCommandLineRenderer):
             out_dir=self.argp.out_dir,
             module_name=self.argp.dirs[1],
             out_file_format=self.argp.out_file_format,
-            gen_stl=self.argp.gen_stl)
+            argp=self.argp)
         
         core.render_examples(
             self.module, 

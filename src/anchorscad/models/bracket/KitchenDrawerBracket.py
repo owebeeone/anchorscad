@@ -90,9 +90,9 @@ class KitchenDrawerMountHole(ad.CompositeShape):
       rw: Width of screw hole (the longest depth).
       r: Radius of screws.
       shell_w: Shell width of screw holes.
-      h_cs: Height of the coutersunk portion of the screw hole.
+      h_cs: Height of the countersunk portion of the screw hole.
       r_top_cs: Top radius of screw hole
-      t_base_cs: Base radius of scre hole (usually same as r).
+      t_base_cs: Base radius of screw hole (usually same as r).
       h_access: Extra hole to ensure access to hole.
     '''
     h: float=16
@@ -562,7 +562,6 @@ class KitchenDrawerBracket(ad.CompositeShape):
                      post=ad.ROTX_90 * ad.tranY(15))
         
         # Tnut side.
-        
         outer_plane = ad.surface_args(
             'outline', 'drawer_side_cage', 'face_centre', 2)
 
@@ -572,7 +571,6 @@ class KitchenDrawerBracket(ad.CompositeShape):
                                 maker, outer_plane, screw1_axis) 
                             * ad.ROTX_180
                             * ad.tranZ(epsilon))
-        
         
         if self.show_inner:
             maker = maker.cage('main_bracket_cage').at()
@@ -584,7 +582,6 @@ class KitchenDrawerBracket(ad.CompositeShape):
                      'lower_notch', rh=1, t=0.5,
                      post=ad.ROTX_90 * ad.translate(
                          (0, adjuster_yoffs, epsilon)))
-        
         
         # Inner plate
         inner_msf = (ad.ModeShapeFrame.SOLID 
