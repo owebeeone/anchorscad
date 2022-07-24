@@ -8,7 +8,6 @@ Created on 12 Oct 2021
 
 from dataclasses import dataclass
 import anchorscad as ad
-import anchorscad.linear as l
 import anchorscad.extrude as e
 from anchorscad.models.basic.cone_ended_prism import ConeEndedPrism
 from anchorscad.models.basic.box_side_bevels import BoxSideBevels
@@ -41,7 +40,7 @@ BRACKET_TOP_WIDTH=14.4
 BRACKET_BASE_WIDTH=12.4
 epsilon=0.001
 
-DRAWER_SIDE_PATH=(e.PathBuilder().move([0, 0])
+DRAWER_SIDE_PATH=(ad.PathBuilder().move([0, 0])
       .line([0, LIP_DEPTH - RADIUS_TOP], 'lip')
       .arc_tangent_point([RADIUS_TOP, LIP_DEPTH], name='lip_top_arc_l')
       .line([TOP_WIDTH - RADIUS_TOP, LIP_DEPTH], 'upper_top')
@@ -65,7 +64,7 @@ BRACKET_YS=(
    BRACKET_NOTCH,
    )
 
-DRAWER_CUTOUT_PATH=(e.PathBuilder().move([0, BRACKET_YS[0]])
+DRAWER_CUTOUT_PATH=(ad.PathBuilder().move([0, BRACKET_YS[0]])
       .line([0, BRACKET_YS[1]], 'lhs_1')
       .line([-NOTCH_DEPTH, BRACKET_YS[1]], ('notch', 'l', 'base'))
       .line([-NOTCH_DEPTH, BRACKET_YS[2]], ('notch', 'l', 'side'))
@@ -83,7 +82,7 @@ DRAWER_CUTOUT_PATH=(e.PathBuilder().move([0, BRACKET_YS[0]])
       .build())
 
 
-@ad.shape('anchorscad.models.bracket.KitchenDrawerOutline')
+@ad.shape
 @ad.dataclass(frozen=True)
 class KitchenDrawerMountHole(ad.CompositeShape):
     '''
@@ -114,7 +113,7 @@ class KitchenDrawerMountHole(ad.CompositeShape):
         ad.surface_args('base'),
         ad.surface_args('top'),)
     
-    def __post_init__(self):
+    def build(self) -> ad.Maker:
         
         w = self.rw - 2 * self.r
         sr = self.shell_w + self.r
@@ -145,21 +144,23 @@ class KitchenDrawerMountHole(ad.CompositeShape):
         maker.add_at(access_hole.hole('access_hole').at('base'),
                      'top', post=ad.ROTX_180 * ad.tranZ(self.epsilon))
         
-        self.set_maker(maker)
+        return maker
         
     def centre_offs(self):
         return self.rw / 2 + self.shell_w
-    
-@ad.shape('anchorscad.models.bracket.KitchenDrawerOutline')
+
+
+@ad.shape
 @ad.datatree(frozen=True)
 class KitchenDrawerOutline(ad.CompositeShape):
-    '''
-    <description>
+    '''Outline of side edge of drawer.
+    
+    This shape is to be used to locate the bracket components.
     '''
     t: float=1.1
-    drawer_path: e.Path=DRAWER_SIDE_PATH
+    drawer_path: ad.Path=DRAWER_SIDE_PATH
     drawer_depth: float=100
-    drawer_cut_path: e.Path=DRAWER_CUTOUT_PATH
+    drawer_cut_path: ad.Path=DRAWER_CUTOUT_PATH
     drawer_cut_depth: float=WALL_T
     front_cut_depth: float=CUT_WIDTH
     hook_shape: ad.Shape=ad.Box(
@@ -189,7 +190,7 @@ class KitchenDrawerOutline(ad.CompositeShape):
         ad.surface_args('upper_notch'),
         ad.surface_args('lower_notch'),)
     
-    def __post_init__(self):
+    def build(self) -> ad.Maker:
         render_mode = (ad.ModeShapeFrame.SOLID 
                        if self.show_outline else 
                        ad.ModeShapeFrame.HOLE)
@@ -237,9 +238,8 @@ class KitchenDrawerOutline(ad.CompositeShape):
                      .at('face_edge', 2, 1, 0.5),
                      'cut_shape', 'lhs_2', 0.5,
                      post=ad.IDENTITY)
-        
-        
-        self.set_maker(maker)
+
+        return maker
 
     @ad.anchor('Upper notch on side of drawer.')
     def lower_notch(self, t=0.0, **kwds):
@@ -251,9 +251,10 @@ class KitchenDrawerOutline(ad.CompositeShape):
         return self.at('cut_shape', ('notch', '2', 'side'), t, **kwds)
 
 
-@ad.shape('anchorscad.models.bracket.KitchenDrawerSideAdjuster')
-@dataclass
+@ad.shape
+@ad.datatree
 class KitchenDrawerSideAdjuster(ad.CompositeShape):
+    '''The drawer level adjuster.'''
     r_outer: float=(BRACKET_YS[2] - BRACKET_YS[1]) / 2
     h_outer: float=WALL_T + 3
     r_offs: float=1.5
@@ -265,46 +266,52 @@ class KitchenDrawerSideAdjuster(ad.CompositeShape):
         1.2,
         5)
     do_cut_model: bool=False
+    
+    inner_cone_node: ad.Node=ad.dtfield(
+        ad.ShapeNode(ad.Cone, {
+            'h': 'h_inner',
+            'r_base': 'r_inner2',
+            'r_top': 'r_inner1'}),
+        init=False
+        )
+    
+    cut_h: float=ad.dtfield(
+        self_default=lambda s: s.h_outer + epsilon,
+        init=False)
+    
+    cut_outer_cone_node: ad.Node=ad.dtfield(
+        ad.ShapeNode(ad.Cone, {
+            'h': 'cut_h',
+            'r_base': 'r_inner1',
+            'r_top': 'r_inner1'}),
+        init=False
+        )
+    
+    outer_cone_node: ad.Node=ad.dtfield(
+        ad.ShapeNode(ad.Cone, {
+            'h': 'cut_h',
+            'r_base': 'r_outer',
+            'r_top': 'r_outer'}),
+        init=False
+        )
+    
     fn: int=128
-    fa: float=None
-    fs: float=None
     
     EXAMPLE_SHAPE_ARGS=ad.args(h_inner=8)
     EXAMPLE_ANCHORS=()
     
     def __post_init__(self):
         
-        inner = ad.Cone(
-            h=self.h_inner,
-            r_base=self.r_inner2,
-            r_top=self.r_inner1,
-            fn=self.fn,
-            fa=self.fa,
-            fs=self.fs)
-        
+        inner = self.inner_cone_node()
         maker = inner.solid('inner').at('base')
         
         if self.do_cut_model:
             # Cut model will cut the entire area.
-            outer = ad.Cone(
-                h=self.h_outer + epsilon,
-                r_base=self.r_inner1,
-                r_top=self.r_inner1,
-                fn=self.fn,
-                fa=self.fa,
-                fs=self.fs)
-            
+            outer = self.cut_outer_cone_node()            
             maker.add_at(outer.solid('outer').at('base'),
                          'base', rh=1, h=-epsilon)
         else:
-            outer = ad.Cone(
-                h=self.h_outer + epsilon,
-                r_base=self.r_outer,
-                r_top=self.r_outer,
-                fn=self.fn,
-                fa=self.fa,
-                fs=self.fs)
-            
+            outer = self.outer_cone_node()
             maker.add_at(outer.solid('outer').at('base'),
                          'base', rh=1, h=-epsilon,
                          post=ad.tranX(self.r_offs))
@@ -319,8 +326,8 @@ class KitchenDrawerSideAdjuster(ad.CompositeShape):
         self.set_maker(maker)
         
 
-@ad.shape('anchorscad.models.bracket.KitchenDrawerBracket')
-@dataclass
+@ad.shape
+@ad.datatree
 class KitchenDrawerBracket(ad.CompositeShape):
     '''
     An alternative bracket for Hettich drawers. These brackets are made with

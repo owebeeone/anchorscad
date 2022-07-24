@@ -51,12 +51,19 @@ class SpecifiedMultipleDefaults(Exception):
     '''Attempting to specify default and self_default parameters.'''
 
 
-def _update_name_map(clz, map, from_name, to_value, description):
+def _update_name_map(clz, name_map, from_name, to_value, description):
     '''Updates the given map but does not allow collision.'''
-    if from_name in map:
+    if from_name in name_map:
         raise NameCollision(
             f'{description} {from_name} specified multiple times in {clz.__name__}')
-    map[from_name] = to_value
+    name_map[from_name] = to_value
+    
+def _update_name_multi_map(clz, name_map, from_name, to_value):
+    '''Updates the given multi-valued map.'''
+    if from_name in name_map:
+        cur = name_map[from_name]
+        name_map[from_name] = cur + (to_value,)
+    name_map[from_name] = (to_value,)
 
 def _dupes_and_allset(itr):
     '''Returns a tuple containing a set of duplicates and a set of all non 
@@ -297,9 +304,8 @@ class Node:
                     clz_or_func, expose_dict, from_id, to_id, 'Field name')
                 anno_detail = self.make_anno_detail(
                         from_id, clz_or_func.__dataclass_fields__[from_id], clz_or_func.__annotations__)
-                _update_name_map(
-                    clz_or_func, expose_rev_dict, to_id, anno_detail, 
-                    'Mapped field name')
+                _update_name_multi_map(
+                    clz_or_func, expose_rev_dict, to_id, anno_detail)
                 
             for map_specified in maps_specified:
                 # The dictionary has a set of from:to pairs.
@@ -312,9 +318,8 @@ class Node:
                         clz_or_func, expose_dict, from_id, to_id, 'Field name')
                     anno_detail = self.make_anno_detail(
                         from_id, clz_or_func.__dataclass_fields__[from_id], clz_or_func.__annotations__)
-                    _update_name_map(
-                        clz_or_func, expose_rev_dict, to_id, anno_detail,
-                        'Mapped field name')
+                    _update_name_multi_map(
+                        clz_or_func, expose_rev_dict, to_id, anno_detail)
         else:  # Not a dataclass type, can be a function.
             
             for from_id in fields_specified:
@@ -326,9 +331,8 @@ class Node:
                 _update_name_map(
                     clz_or_func, expose_dict, from_id, to_id, 'Field name')
                 anno_detail = AnnotationDetails.from_init_param(from_id, params)
-                _update_name_map(
-                    clz_or_func, expose_rev_dict, to_id, anno_detail, 
-                    'Mapped field name')
+                _update_name_multi_map(
+                    clz_or_func, expose_rev_dict, to_id, anno_detail)
                 
             for map_specified in maps_specified:
                 # The dictionary has a set of from:to pairs.
@@ -340,12 +344,11 @@ class Node:
                     _update_name_map(
                         clz_or_func, expose_dict, from_id, to_id, 'Field name')
                     anno_detail = AnnotationDetails.from_init_param(from_id, params)
-                    _update_name_map(
-                        clz_or_func, expose_rev_dict, to_id, anno_detail,
-                        'Mapped field name')
+                    _update_name_multi_map(
+                        clz_or_func, expose_rev_dict, to_id, anno_detail)
             
         _field_assign(self, 'expose_map', frozendict(expose_dict))
-        _field_assign(self, 'expose_rev_map', frozendict(frozendict(expose_rev_dict)))
+        _field_assign(self, 'expose_rev_map', frozendict(expose_rev_dict))
         
     def make_anno_detail(self, from_id, dataclass_field, annotations):
         if from_id in annotations:
@@ -410,7 +413,8 @@ def _apply_node_fields(clz):
         if isinstance(anno_default, Node):
             nodes[name] = anno_default
             rev_map = anno_default.get_rev_map()
-            for rev_map_name, anno_detail in rev_map.items():
+            for rev_map_name, anno_detail_tuple in rev_map.items():
+                anno_detail = anno_detail_tuple[0]
                 if not rev_map_name in new_annos:
                     new_annos[rev_map_name] = anno_detail.anno_type
                     if not hasattr(clz, rev_map_name):
