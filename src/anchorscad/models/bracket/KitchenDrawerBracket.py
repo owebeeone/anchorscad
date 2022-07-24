@@ -6,9 +6,7 @@ Created on 12 Oct 2021
 @author: gianni
 '''
 
-from dataclasses import dataclass
 import anchorscad as ad
-import anchorscad.extrude as e
 from anchorscad.models.basic.cone_ended_prism import ConeEndedPrism
 from anchorscad.models.basic.box_side_bevels import BoxSideBevels
 from anchorscad.models.screws.CountersunkScrew import CountersunkScrew, \
@@ -194,7 +192,7 @@ class KitchenDrawerOutline(ad.CompositeShape):
         render_mode = (ad.ModeShapeFrame.SOLID 
                        if self.show_outline else 
                        ad.ModeShapeFrame.HOLE)
-        drawer_shape = e.LinearExtrude(
+        drawer_shape = ad.LinearExtrude(
             path=self.drawer_path, h=self.drawer_depth, fn=self.fn)
         maker = drawer_shape.solid('drawer_side').at('base', 0)
         
@@ -222,7 +220,7 @@ class KitchenDrawerOutline(ad.CompositeShape):
                      'drawer_side_cage', 'face_edge', 0, 0,
                      post=ad.translate([epsilon / 2, -epsilon, epsilon]))
                      
-        cut_shape = e.LinearExtrude(
+        cut_shape = ad.LinearExtrude(
             path=self.drawer_cut_path,
             h=self.drawer_cut_depth + 2 * epsilon, 
             fn=self.fn)
@@ -300,8 +298,7 @@ class KitchenDrawerSideAdjuster(ad.CompositeShape):
     EXAMPLE_SHAPE_ARGS=ad.args(h_inner=8)
     EXAMPLE_ANCHORS=()
     
-    def __post_init__(self):
-        
+    def build(self) -> ad.Maker:
         inner = self.inner_cone_node()
         maker = inner.solid('inner').at('base')
         
@@ -323,7 +320,7 @@ class KitchenDrawerSideAdjuster(ad.CompositeShape):
                          .at('face_centre', 1),
                          'base', post=ad.tranZ(epsilon))
 
-        self.set_maker(maker)
+        return maker
         
 
 @ad.shape
@@ -472,7 +469,7 @@ class KitchenDrawerBracket(ad.CompositeShape):
                             ),
                         }
     
-    def __post_init__(self):
+    def build(self) -> ad.Maker:
         render_mode = (ad.ModeShapeFrame.SOLID 
                        if self.show_outline else 
                        ad.ModeShapeFrame.HOLE)
@@ -501,7 +498,7 @@ class KitchenDrawerBracket(ad.CompositeShape):
         top_x = height/2 + self.expand_x_top
         top_y = width + self.expand_y_top
         
-        holder_path = (e.PathBuilder()
+        holder_path = (ad.PathBuilder()
                   .move([0, 0])
                   .line([-base_lower_x, 0], 'base_l')
                   .line([-base_lower_x, 14], 'base_l2')
@@ -512,7 +509,7 @@ class KitchenDrawerBracket(ad.CompositeShape):
                   .line([0, 0], 'base_r')
                   .build())
 
-        holder_shape = e.LinearExtrude(
+        holder_shape = ad.LinearExtrude(
             path=holder_path, 
             h=self.outline.front_size[0] - self.outline.drawer_cut_depth)
 
@@ -637,7 +634,6 @@ class KitchenDrawerBracket(ad.CompositeShape):
                 fn=self.fn)
         
         # Adjuster fixer screw.
-        
         adjuster_fixer = self.countersunk_scew_hole_type(
                 shaft_overall_length=25,
                 shaft_thru_length=14,
@@ -653,9 +649,7 @@ class KitchenDrawerBracket(ad.CompositeShape):
                      'holder', 'top_l', 0.72, rh=0.71,
                      post=ad.ROTX_180)
         
-        
         # Inner plate transforms
-        
         screw1_intersection = ad.find_intersection(
             maker, inner_plate_plane, screw1_axis)
         
@@ -663,12 +657,12 @@ class KitchenDrawerBracket(ad.CompositeShape):
                      post=screw1_intersection)
         
         if self.show_adjuster:
-            self.maker = self.adjuster_solid.solid('adjuster').at('base')
+            return self.adjuster_solid.solid('adjuster').at('base')
         else:
             if self.make_mirror:
-                self.set_maker(maker.solid('mirror').at(post=ad.mirror(ad.X_AXIS)))
+                return maker.solid('mirror').at(post=ad.mirror(ad.X_AXIS))
             else:
-                self.set_maker(maker)
+                return maker
 
     @ad.anchor('An example anchor specifier.')
     def side(self, *args, **kwds):
