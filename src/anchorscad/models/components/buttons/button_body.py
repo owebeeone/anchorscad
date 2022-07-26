@@ -8,7 +8,7 @@ Created on 9 Jan 2022
 from anchorscad import args, anchor, shape, surface_args, datatree, CompositeShape, \
     Node, EMPTY_ATTRS, ShapeNode, CageOfNode, Cylinder, ModeShapeFrame, anchorscad_main, \
     RotateExtrude, Path, PathBuilder, ROTX_90, ROTX_180, ROTY_180, ROTZ_90, ROTZ_180, \
-    tranZ, ModuleDefault
+    tranZ, ModuleDefault, Maker
 
 import anchorscad.models.components.switches.tactile_tl1105 as tactile_switches
 import anchorscad.models.components.buttons.button_cap as button_cap
@@ -62,7 +62,7 @@ class ButtonBody(CompositeShape):
     EXAMPLE_ANCHORS=(surface_args('base', scale_anchor=0.5),
                      surface_args('plate', scale_anchor=0.5),)
     
-    def __post_init__(self):
+    def build(self) -> Maker:
         
         outside_radius = self.outer_r
         height = (self.top_plate_height
@@ -127,7 +127,7 @@ class ButtonBody(CompositeShape):
         wings_shape = self.body_wing_node()
         maker.add_at(wings_shape.named_shape('body_wings', wings_mode).at('base'),
                      'rim_plate_cage', 'base', rh=1, post=ROTZ_180 * tranZ(-EPSILON))
-        self.set_maker(maker)
+        return maker
 
     @anchor('Plate top.')
     def plate(self, *args, **kwds):
@@ -158,10 +158,10 @@ class ButtonForTactileSwitch(CompositeShape):
                  'cap_wing_angle'}))
     fn: int=64
     
-    EXAMPLE_SHAPE_ARGS=args(switch_type='TL59')
+    EXAMPLE_SHAPE_ARGS=args(switch_type='TL59', wing_count=3)
     EXAMPLE_ANCHORS=tuple()
     
-    def __post_init__(self):
+    def build(self) -> Maker:
         body = self.body_node()
         
         maker = body.solid('body').at()
@@ -173,7 +173,7 @@ class ButtonForTactileSwitch(CompositeShape):
         maker.add_at(switch_shape.hole('switch_hole').at('switch_top'),
                      'plate_cage', 'top', post=tranZ(EPSILON))
         
-        self.set_maker(maker)
+        return maker
 
     def select_switch(self):
         if self.switch_type is None:
@@ -209,7 +209,7 @@ class ButtonAssemblyTest(CompositeShape):
                             fn=64)
     EXAMPLE_ANCHORS=tuple()
     
-    def __post_init__(self):
+    def build(self) -> Maker:
         
         inner_size = self.button_r - self.body_inner_rim_r
         self.wing_r_inner_size = inner_size + self.gap_size
@@ -231,7 +231,7 @@ class ButtonAssemblyTest(CompositeShape):
         maker.add_at(cap_shape.solid('cap').colour([1, 0.3, 0.8, 1]).at('base'),
                      'rim_plate_cage', 'base', rh=1, post=ROTZ_180 * tranZ(-0.))
         
-        self.set_maker(maker)
+        return maker
 
 
 MAIN_DEFAULT=ModuleDefault(True)
