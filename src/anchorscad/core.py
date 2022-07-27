@@ -85,6 +85,9 @@ def args(*args, **kwds):
     '''Returns a tuple or args and kwds passed to this function.'''
     return (args, kwds)
 
+def apply_args(other_args, *args, **kwds):
+    return (other_args[0] + args, {**kwds, **(other_args[1])})
+
 def kwargs_chain_pre_post(kwargs, pre=None, post=None):
     new_kwargs = None
     params = {'pre': pre, 'post': post}

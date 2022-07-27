@@ -8,7 +8,8 @@ Created on 9 Jan 2022
 from anchorscad import args, anchor, shape, surface_args, datatree, CompositeShape, \
     Node, EMPTY_ATTRS, ShapeNode, CageOfNode, Cylinder, ModeShapeFrame, anchorscad_main, \
     RotateExtrude, Path, PathBuilder, ROTX_90, ROTX_180, ROTY_180, ROTZ_90, ROTZ_180, \
-    tranZ, ModuleDefault, Maker
+    tranZ, ModuleDefault, Maker, to_degrees, dtfield, Shape
+import anchorscad as ad
 
 import anchorscad.models.components.switches.tactile_tl1105 as tactile_switches
 import anchorscad.models.components.buttons.button_cap as button_cap
@@ -50,9 +51,24 @@ class ButtonBody(CompositeShape):
     WINGS_PRESERVE_SET={'button_r', 'button_h', 'wing_count'}
     
     with_wings: bool=True
-    body_wing_node: Node=ShapeNode(button_cap.ButtonWings, 
+    
+    cap_node: Node=dtfield(ShapeNode(button_cap.ButtonCap), init=False)
+    
+    gap_size: float=0.5
+    inner_size:float=dtfield(self_default=lambda s: s.button_r - s.inner_rim_r)
+    wing_r_inner_size:float = dtfield(self_default=lambda s: s.inner_size + s.gap_size)
+    cap_wing_r_inner_size:float = dtfield(self_default=lambda s: s.inner_size)
+    cap_wing_h:float = dtfield(self_default=lambda s: s.wing_h - s.gap_size)
+    cap_wing_angle:float = dtfield(self_default=lambda s: 
+                                   s.wing_angle - to_degrees(2 * s.gap_size / s.button_r))
+    
+    cap_shape: Shape=dtfield(
+        self_default=lambda s: s.cap_node(), init=False)
+        
+    body_wing_node: Node=dtfield(ShapeNode(button_cap.ButtonWings, 
             preserve=WINGS_PRESERVE_SET,
-            prefix='cap_')
+            prefix='cap_'),
+            init=False)
     fn: int=64
     
     EXAMPLE_SHAPE_ARGS=args(as_cage=True,
@@ -156,13 +172,27 @@ class ButtonForTactileSwitch(CompositeShape):
                  'cap_wing_r_outer_size',
                  'cap_wing_h',
                  'cap_wing_angle'}))
+    
+    body_shape: Shape=dtfield(
+        self_default=lambda s: s.body_node(), init=False)
+    
+    make_cap: bool=False
     fn: int=64
     
-    EXAMPLE_SHAPE_ARGS=args(switch_type='TL59', wing_count=3)
+    EXAMPLE_SHAPE_ARGS=args(switch_type='TL59', wing_count=4, body_gap_size=0.5)
     EXAMPLE_ANCHORS=tuple()
+    EXAMPLES_EXTENDED={
+        'example2_cap': ad.ExampleParams(
+            shape_args=ad.apply_args(EXAMPLE_SHAPE_ARGS, make_cap=True),
+            anchors=())
+        }
     
     def build(self) -> Maker:
-        body = self.body_node()
+        body = self.body_shape
+        
+        if self.make_cap:
+            maker = body.cap_shape.solid('cap').at()
+            return maker
         
         maker = body.solid('body').at()
         
@@ -188,6 +218,7 @@ class ButtonForTactileSwitch(CompositeShape):
         assert False, f'Failed to find switch_type {self.switch_type!r}.'
         
 
+
 @shape('anchorscad.models.components.buttons.button_for_tactile_switch')
 @datatree
 class ButtonAssemblyTest(CompositeShape):
@@ -196,27 +227,26 @@ class ButtonAssemblyTest(CompositeShape):
     '''
     
     base_node: Node=ShapeNode(ButtonForTactileSwitch)
-    cap_node: Node=ShapeNode(button_cap.ButtonCap)
-    gap_size: float=0.3
     wing_count: int=4
-    wing_angle: float=15
+    wing_angle: float=20
 
     EXAMPLE_SHAPE_ARGS=args(switch_type='TL1105',
                             body_as_cage=True,
                             body_plate_cage_as_cage=False, 
                             body_degrees=270, 
-                            ex_degrees=270,
+                            body_ex_degrees=270,
                             fn=64)
     EXAMPLE_ANCHORS=tuple()
     
     def build(self) -> Maker:
         
-        inner_size = self.button_r - self.body_inner_rim_r
-        self.wing_r_inner_size = inner_size + self.gap_size
-        self.cap_wing_r_inner_size = inner_size
-        self.cap_wing_h = self.wing_h - self.gap_size
-        self.cap_wing_angle = self.wing_angle - 2
-        
+        # inner_size = self.button_r - self.body_inner_rim_r
+        # self.wing_r_inner_size = inner_size + self.gap_size
+        # self.cap_wing_r_inner_size = inner_size
+        # self.cap_wing_h = self.wing_h - self.gap_size
+        # self.cap_wing_angle = self.wing_angle - to_degrees(2 * self.gap_size / self.button_r)
+        #
+
         shape = self.base_node()
         
         maker = shape.solid('base').at(post=ROTZ_90)
@@ -226,7 +256,7 @@ class ButtonAssemblyTest(CompositeShape):
         maker.add_at(switch.solid('switch').colour([1, 0.3, 0.1, 1]).at('switch_base'),
                      'switch_hole', 'switch_base')
         
-        cap_shape = self.cap_node()
+        cap_shape = shape.body_shape.cap_shape
         
         maker.add_at(cap_shape.solid('cap').colour([1, 0.3, 0.8, 1]).at('base'),
                      'rim_plate_cage', 'base', rh=1, post=ROTZ_180 * tranZ(-0.))

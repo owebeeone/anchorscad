@@ -124,7 +124,7 @@ class TactileSwitchTL1105(core.CompositeShape):
     '''
     <description>
     '''
-    body_size: tuple=(6, 6, 3.6)
+    body_size: tuple=(6.2, 6.2, 3.6)
     shaft_r_base: float=3.5 / 2
     shaft_r_top: float=3.08 / 2
     shaft_h: float=6.3
@@ -223,7 +223,7 @@ class TactileSwitchTL59(core.CompositeShape):
     '''
     <description>
     '''
-    body_size: tuple=(6, 6, 3.6)
+    body_size: tuple=(6.2, 6.2, 3.6)
     shaft_r_base: float=3.5 / 2
     shaft_r_top: float=3.08 / 2
     shaft_h: float=6.3

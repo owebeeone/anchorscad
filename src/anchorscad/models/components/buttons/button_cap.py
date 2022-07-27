@@ -30,7 +30,10 @@ class ButtonWings(ad.CompositeShape):
     winge_cageof_node: Node=Node(ad.cageof, prefix='wings_cage_')
     fn=128
     
-    EXAMPLE_SHAPE_ARGS=ad.args(wings_cage_as_cage=False)
+    EXAMPLE_SHAPE_ARGS=ad.args(wings_cage_as_cage=False,
+                               wing_angle=10,
+                               wing_r_inner_size=2,
+                               wing_count=4)
     EXAMPLE_ANCHORS=()
     
     def build(self) -> ad.Maker:
@@ -55,10 +58,11 @@ class ButtonWings(ad.CompositeShape):
         assert angle_remaining >= 0, 'Too many wings, they will overlap.'
         
         rot_angle_offset = - self.wing_angle / 2
-        angle_per_wing = self.wing_angle + angle_remaining / self.wing_count
-        for i in range(self.wing_count):
-            maker.add_at(shape.solid(('wing', i)).at(),
-                         post=ad.rotZ(rot_angle_offset + i * angle_per_wing))
+        if self.wing_count> 0:
+            angle_per_wing = self.wing_angle + angle_remaining / self.wing_count
+            for i in range(self.wing_count):
+                maker.add_at(shape.solid(('wing', i)).at(),
+                             post=ad.rotZ(rot_angle_offset + i * angle_per_wing))
         return maker
 
 
@@ -158,10 +162,10 @@ class EngravedButtonCap(ad.CompositeShape):
     engrave_h: float=0.4
     engrave_shape: ad.shape=None
     engrave_shape_anchor: ad.AnchorArgs=ad.surface_args()
-    wing_count: int=2
+    wing_count: int=4
 
     EXAMPLE_SHAPE_ARGS=ad.args(
-        wing_count=3,
+        wing_count=4,
         engrave_shape=ad.Text('⚓', 
                                 size=14,
                                 depth=10, 
