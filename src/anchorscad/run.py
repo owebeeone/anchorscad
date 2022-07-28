@@ -163,7 +163,7 @@ class RunAnchorSCADModule:
     def get_anchorscad_path(self):
         '''Evaluates the AnchorSCAD path given the file location of
         self.module.'''
-        path_to_module = Path(inspect.getfile(self.module))
+        path_to_module = Path(os.path.abspath(inspect.getfile(self.module)))
         return path_to_module.parents[1]
     
         
