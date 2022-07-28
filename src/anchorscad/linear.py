@@ -60,9 +60,9 @@ def to_radians(degs):
     '''Convert degrees to radians.'''
     return degs * np.pi / 180.0
 
-def to_degrees(degs):
+def to_degrees(radians):
     '''Convert radians to degrees.'''
-    return degs * 180 / np.pi
+    return radians * 180.0 / np.pi
 
 def list_of(typ, len_min_max=(3, 3), fill_to_min=None):
     '''Defines a converter for an iterable to a list of elements of a given type.

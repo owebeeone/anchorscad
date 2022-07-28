@@ -17,17 +17,32 @@ CYGWIN_PLACES_TO_CHECK=(
     '/cygdrive/d/Program Files/OpenSCAD/openscad.exe',
     )
 
+MACOS_PLACES_TO_CHECK=(
+    "/Applications/OpenSCAD.app/Contents/MacOS/openscad",
+    )
+
+LINUX_PLACES_TO_CHECK=(
+    '/usr/bin/openscad',
+    '/usr/local/bin/openscad',
+    '/usr/share/openscad/openscad',
+    )
+
+OS_MAP_PLACES_TO_CHECK=(
+    ('Windows', WINDOWS_PLACES_TO_CHECK),
+    ('CYGWIN_NT', CYGWIN_PLACES_TO_CHECK),
+    ('Darwin', MACOS_PLACES_TO_CHECK),
+    ('Linux', LINUX_PLACES_TO_CHECK),
+)
+
 def openscad_exe_location():
     '''Returns the system command string for the openscad executable.'''
-    if platform.system() == 'Windows':
-        for p in WINDOWS_PLACES_TO_CHECK:
-            if op.isfile(p):
-                return p
-        raise Exception(f'Could not find OpenSCAD. Please install')
-    if platform.system().startswith('CYGWIN_NT'):
-        for p in CYGWIN_PLACES_TO_CHECK:
-            if op.isfile(p):
-                return p
+    
+    this_platform = platform.system()
+    
+    for platform_name, places_to_check in OS_MAP_PLACES_TO_CHECK:
+        if this_platform.startswith(platform_name):
+            for place_to_check in places_to_check:
+                if op.isfile(place_to_check):
+                    return place_to_check
     return 'openscad'
-
 
