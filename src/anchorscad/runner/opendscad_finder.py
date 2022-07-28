@@ -21,7 +21,8 @@ MACOS_PLACES_TO_CHECK=(
     "/Applications/OpenSCAD.app/Contents/MacOS/openscad",
     )
 
-LINUX_PLACES_TO_CHECK=(
+# All unix derived systems.
+NIX_PLACES_TO_CHECK=(
     '/usr/bin/openscad',
     '/usr/local/bin/openscad',
     '/usr/share/openscad/openscad',
@@ -31,7 +32,10 @@ OS_MAP_PLACES_TO_CHECK=(
     ('Windows', WINDOWS_PLACES_TO_CHECK),
     ('CYGWIN_NT', CYGWIN_PLACES_TO_CHECK),
     ('Darwin', MACOS_PLACES_TO_CHECK),
-    ('Linux', LINUX_PLACES_TO_CHECK),
+    ('Linux', NIX_PLACES_TO_CHECK),
+    ('FreeBSD', NIX_PLACES_TO_CHECK),
+    ('OpenBSD', NIX_PLACES_TO_CHECK),
+    ('NetBSD', NIX_PLACES_TO_CHECK),
 )
 
 def openscad_exe_location():
