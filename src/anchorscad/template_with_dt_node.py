@@ -7,7 +7,7 @@ Created on ${date}
 import anchorscad as ad
 
 
-@ad.shape('${file}/ShapeName')
+@ad.shape
 @ad.datatree
 class ShapeName(ad.CompositeShape):
     '''

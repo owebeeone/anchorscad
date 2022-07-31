@@ -835,7 +835,7 @@ class Shape(ShapeNamer, ShapeMaker):
             target_maker=target_maker)
 
 
-@dataclass()
+@dataclass(frozen=True)
 class _Mode():
     mode: str
     has_operator_container: bool=False
@@ -843,7 +843,7 @@ class _Mode():
     def make_container(self, model):
         return model.Union()
 
-@dataclass()
+@dataclass(frozen=True)
 class SolidMode(_Mode):
     def __init__(self):
         super().__init__('solid')
@@ -851,7 +851,7 @@ class SolidMode(_Mode):
     def pick_rendererx(self, renderer):
         return renderer.solid()    
 
-@dataclass()
+@dataclass(frozen=True)
 class HoleMode(_Mode):
     def __init__(self):
         super().__init__('hole')
@@ -859,7 +859,7 @@ class HoleMode(_Mode):
     def pick_rendererx(self, renderer):
         return renderer.hole()
     
-@dataclass()
+@dataclass(frozen=True)
 class CompositeMode(_Mode):
     def __init__(self):
         super().__init__('composite')
@@ -867,7 +867,7 @@ class CompositeMode(_Mode):
     def pick_rendererx(self, renderer):
         return renderer.hole()
 
-@dataclass()
+@dataclass(frozen=True)
 class CageMode(_Mode):
     def __init__(self):
         super().__init__('cage')
@@ -875,7 +875,7 @@ class CageMode(_Mode):
     def pick_rendererx(self, renderer):
         return renderer.null()
 
-@dataclass()
+@dataclass(frozen=True)
 class IntersectMode(_Mode):
     def __init__(self):
         super().__init__('intersect', True)
@@ -886,7 +886,7 @@ class IntersectMode(_Mode):
     def make_container(self, model):
         return model.Intersection()
 
-@dataclass()
+@dataclass(frozen=True)
 class HullMode(_Mode):
     def __init__(self):
         super().__init__('hull', True)
@@ -897,7 +897,7 @@ class HullMode(_Mode):
     def make_container(self, model):
         return model.Hull()
 
-@dataclass()
+@dataclass(frozen=True)
 class MinkowskiMode(_Mode):
     def __init__(self):
         super().__init__('minkowski', True)
@@ -2148,6 +2148,7 @@ class ArgumentParserWithReconstruct(argparse.ArgumentParser):
         '''Returns an argv for the current argp.'''
         parameter_defs = getattr(self, 'parameter_defs', {} )
         
+        post_result = []
         result = []
         for pdef in parameter_defs.values():
             aval = getattr(argp, pdef.dest, None)
@@ -2175,10 +2176,10 @@ class ArgumentParserWithReconstruct(argparse.ArgumentParser):
                 if nargs in ['*', '+', '...']:
                     arg_name = pdef.param_args[0][0]
                     if arg_name[0] in self.prefix_chars:
-                        result.append(arg_name)
-                    result.extend(str(a) for a in aval)
+                        post_result.append(arg_name)
+                    post_result.extend(str(a) for a in aval)
                     
-        return tuple(result)
+        return tuple(result + post_result)
     
     def get_parameter_defs(self):
         parameter_defs = getattr(self, 'parameter_defs', None)

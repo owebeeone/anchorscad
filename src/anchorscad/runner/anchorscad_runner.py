@@ -23,7 +23,7 @@ import pickle
 from anchorscad.runner.opendscad_finder import openscad_exe_location
 from anchorscad.runner.process_manager import ProcessManager, ProcessManagerEntry
 
-GENERATE_STL = True
+GENERATE_STL_DEFAULT = True
 
 ENVIRON_NAME = '__ANCHORSCAD_RUNNER_KEY__'
 
@@ -180,9 +180,7 @@ class ExampleRunner:
             runner_example.stl_file = None
         
     def run_openscad(self, stl_file, png_file, scad_file):
-        if self.argp.gen_stl is None and not GENERATE_STL:
-            stl_file = None
-        elif not self.argp.gen_stl:
+        if not self.argp.gen_stl:
             stl_file = None
         cmd = make_openscad_stl_command_line(
             stl_file, png_file, scad_file, self.argp.imgsize)
@@ -331,7 +329,6 @@ class AnchorScadRunner(core.ExampleCommandLineRenderer):
         self.stats = AnchorScadRunnerStats()
     
     def add_more_args(self):
-
         self.argq.add_argument(
             'dirs',
             metavar='dirs',
@@ -357,14 +354,14 @@ class AnchorScadRunner(core.ExampleCommandLineRenderer):
             '--no-gen-stl', 
             dest='gen_stl',
             action='store_false',
-            help='Does not invoke OpenSCAD to generate stl.')
+            help='Does not request OpenSCAD to generate stl.')
         
         self.argq.add_argument(
             '--gen-stl', 
             dest='gen_stl',
             action='store_true',
-            help='Invoke OpenSCAD to generate stl.')
-        self.argq.set_defaults(gen_stl=None)
+            help='Requests OpenSCAD to generate stl.')
+        self.argq.set_defaults(gen_stl=GENERATE_STL_DEFAULT)
                 
         self.argq.add_argument(
             '--out_file_format', 
@@ -393,8 +390,6 @@ class AnchorScadRunner(core.ExampleCommandLineRenderer):
             default='1280,1024',
             help='Size of generated image.')
 
-        
-
     def run_module(self):
         
         ex_runner = ExampleRunner(
@@ -418,7 +413,6 @@ class AnchorScadRunner(core.ExampleCommandLineRenderer):
         sys.stderr.write(ex_runner.get_error_text())
         
         return runner_status
-        
         
     def run(self):
         if ENVIRON_NAME in self.env:
