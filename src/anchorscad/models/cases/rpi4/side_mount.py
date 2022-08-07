@@ -7,6 +7,7 @@ Created on 10 Feb 2021
 
 from dataclasses import dataclass
 
+import anchorscad as ad
 from anchorscad.core import shape, CompositeShape, non_defaults_dict, Cylinder, args, \
     surface_args, anchorscad_main, Cone, create_from, anchor, Box
 from anchorscad.extrude import PathBuilder 
@@ -18,7 +19,7 @@ import numpy as np
 
 RUNNER_EXCLUDE=True
 
-@shape('anchorscad/models/cases/rpi4/side_mount')
+@shape
 @dataclass
 class SideMount(CompositeShape):
     h: float
@@ -35,6 +36,7 @@ class SideMount(CompositeShape):
     dims: HoleDimensions=None
     outer_delta: float=6
     overlap_delta: float=0.01
+    r_sphere: float=4
     fn: int=None
     fa: float=None
     fs: float=None
@@ -59,9 +61,9 @@ class SideMount(CompositeShape):
         if not self.outer_dia:
             self.outer_dia = self_tap_hole.outer_dia
        
-        path = self._make_profle()
+        path = self._make_profile()
         
-        box_cage = Box([self.outer_dia, ])
+        maker = ad.LinearExtrude(path, self.h).solid('profile').at()
         
         self.set_maker(maker)
         
@@ -72,7 +74,7 @@ class SideMount(CompositeShape):
         
         sin_t = centre_offset / (outer_r + bevel_r)
         cos_t = np.sqrt(1 - sin_t ** 2)
-        p1 = [cos_t * outer_r, -sin_t * outer_r]
+        p1 = [cos_t * outer_r, sin_t * outer_r]
         p2 = [cos_t * (outer_r + bevel_r), 0]
         
         return (PathBuilder()

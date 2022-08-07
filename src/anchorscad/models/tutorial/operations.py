@@ -10,7 +10,7 @@ import anchorscad as ad
 @ad.shape
 @ad.datatree
 class SquareSphereOperation(ad.CompositeShape):
-    '''Example of a box and sphere.
+    '''Example of a box and sphere with various compositions.
     '''
     size: tuple=ad.dtfield(
         default=(30, 30, 20),

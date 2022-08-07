@@ -57,10 +57,11 @@ class TeePipe(ad.CompositeShape):
     tee_pos: float=25
     inside_r: float=8
     outside_r: float=10
+    skew: float=ad.dtfield(0, doc='Skew angle of tee pipe')
     through_node: ad.Node=ad.ShapeNode(Pipe, {'h': 'through_h'}, expose_all=True)
-    tee_node: ad.Node=ad.ShapeNode(Pipe, {'h': 'tee_h'}, expose_all=True)  
+    tee_node: ad.Node=ad.ShapeNode(Pipe, {'h': 'tee_h'}, expose_all=True)
     
-    EXAMPLE_SHAPE_ARGS=ad.args(inside_r=6, outside_r=10, fn=64)
+    EXAMPLE_SHAPE_ARGS=ad.args(inside_r=6, outside_r=10, fn=64, skew=22.5)
     EXAMPLE_ANCHORS=(
         ad.surface_args('tee', 'top'),
         ad.surface_args('tee', 'surface', 15, 225),
@@ -74,8 +75,7 @@ class TeePipe(ad.CompositeShape):
         maker.add_at(
                 self.tee_node().composite('tee')
                 .at('base'),
-                'base', self.tee_pos, post=ad.ROTX_90
-            )
+                'base', self.tee_pos, post=ad.rotX(90 + self.skew))
 
         return maker
 

@@ -206,11 +206,10 @@ class Node:
     expose_all: bool=dtfield(
         doc='Forces the mapping of all fields even if the expose_spec '
             ' excluded the class or function parameter name.')
-    init_signature: tuple=field(repr=False)
-    expose_map: dict=field(repr=False)
-    expose_rev_map: dict=field(repr=False)
-    node_doc: str=dtfield(None,
-        doc='Field documentation.')
+    init_signature: tuple=field(default=None, repr=False)
+    expose_map: dict=field(default=None, repr=False)
+    expose_rev_map: dict=field(default=None, repr=False)
+    node_doc: str=dtfield(None, doc='Field documentation.')
     
     # The default value for the preserve init parameter. Derived classes can override.
     # This allows for application specific Node types that have a set of
