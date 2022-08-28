@@ -237,5 +237,7 @@ class BoxCutter(ad.CompositeShape):
         
         return maker
 
+MAIN_DEFAULT=ad.ModuleDefault(True)
+
 if __name__ == "__main__":
     ad.anchorscad_main()

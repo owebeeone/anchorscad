@@ -891,3 +891,8 @@ def plane_line_intersect(plane_in, line_in):
     result = line * translate(l_z * t)
     
     return result.I
+
+def distance_between(pointA: GMatrix, pointB: GMatrix):
+    '''Returns the distance from between 2 points.'''
+    diff = pointA.get_translation() - pointB.get_translation()
+    return clean(diff.length(), epsilon=1.e-20)

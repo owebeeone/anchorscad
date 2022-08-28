@@ -10,6 +10,7 @@ import anchorscad as ad
 
 @ad.datatree(frozen=True)
 class Segment:
+    '''Defines a segment of the PolyConical shape.'''
     r: float=ad.dtfield(doc='Radius of segment')
     h: float=ad.dtfield(0, doc='Height of segment')
     name: object=ad.dtfield(None, doc='optional name of segment')
@@ -22,13 +23,11 @@ class Segment:
 
 def segmentsToPolyConicalPath(segments: tuple):
     builder = ad.PathBuilder().move((0, 0), direction=(1, 0))
-    last_r = 0
     last_h = 0
     last_name = 'base_segment'
     for i, s in enumerate(segments):
         builder.line((s.r, last_h), last_name)
         last_h -= s.h
-        last_r = s.r
         last_name = s.nameof(i)
     
     builder.line((0, last_h), 'top_segment')
@@ -39,20 +38,20 @@ def segmentsToPolyConicalPath(segments: tuple):
 @ad.shape
 @ad.datatree(frozen=True)
 class PolyConical(ad.CompositeShape):
+    '''A circular polycone shape. The segments are defined by
+    a tuple of Segment objects.
     '''
-    <description>
-    '''
-    segment_defines: tuple=ad.dtfield(doc='Tuple of Segments defining shape')
+    segments: tuple=ad.dtfield(doc='Tuple of Segments defining shape')
     path: ad.Path=ad.dtfield(
         self_default=lambda s:
-            segmentsToPolyConicalPath(s.segment_defines),
+            segmentsToPolyConicalPath(s.segments),
         doc='Path of shape')
     
     extrude_node: ad.Node=ad.dtfield(
         ad.ShapeNode(ad.RotateExtrude),
         init=False)
 
-    EXAMPLE_SHAPE_ARGS=ad.args(segment_defines=(Segment(10, 10), Segment(20, 10), Segment(10, 10), Segment(20)))
+    EXAMPLE_SHAPE_ARGS=ad.args(segments=(Segment(10, 10), Segment(20, 10), Segment(10, 10), Segment(20)))
     EXAMPLE_ANCHORS=(ad.surface_args('base'),
                      ad.surface_args('top'),
                      ad.surface_args('surface', 2, 0.5),)
@@ -73,10 +72,9 @@ class PolyConical(ad.CompositeShape):
     
     @ad.anchor('Surface of the shape')
     def surface(self, index, t=0, **kwargs):
-        segment = self.segment_defines[index]
+        segment = self.segments[index]
         name = segment.nameof(index)
         return self.maker.at(name, t, **kwargs) * ad.ROTY_180
-
 
 # Uncomment the line below to default to writing OpenSCAD files
 # when anchorscad_main is run with no --write or --no-write options.

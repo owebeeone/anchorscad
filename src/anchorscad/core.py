@@ -131,6 +131,13 @@ class AnchorArgs():
         if not self.scale_anchor is None:
             result = result * l.scale(self.scale_anchor)
         return result
+    
+    def rebase(self, *args):
+        '''Returns a new AnchorArgs with the provided args prefixing self's args.'''
+        newargs = (self.args_[0],
+                   (args + self.args_[1][0], self.args_[1][1]))
+        return AnchorArgs(
+            newargs, scale_anchor=self.scale_anchor)
         
     @property
     def name(self):
@@ -1047,6 +1054,12 @@ class CageOfNode(Node):
     def __init__(self, *args_, **kwds_):
         super().__init__(cageof, 'as_cage', *args_, **kwds_)
 
+@dataclass(frozen=True)
+class AbsoluteReference:
+    pass
+
+ABSOLUTE=AbsoluteReference()
+
 @dataclass
 class Maker(Shape):
     '''The builder of composite shapes. Provides the ability to anchor shapes at various other
@@ -1191,9 +1204,16 @@ class Maker(Shape):
         args = args[1:]
         shapeframe = self.reference_shape.shapeframe
         ref_shape = shapeframe.shape
-        if ref_shape.has_anchor(name):
+        if isinstance(name, AbsoluteReference):
+            # ABSOLUTE name is a path search modifier. It stops searching the 
+            # reference shape. Here we skip the ABSOLUTE name and continue with the
+            # rest of the args.
+            name = args[0]
+            args = args[1:]
+        elif ref_shape.has_anchor(name):
             entry = self.entries.get(self.reference_shape.name())
             return entry.reference_frame() * ref_shape.at(name, *args, **kwds)
+
         entry = self.entries.get(name)
         
         if entry is None:
