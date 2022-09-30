@@ -74,12 +74,10 @@ class SvgRenderer(object):
     stroke_colour: str='black'
     path_render: SvgPathRenderer=field(default_factory=SvgPathRenderer)
     
-    
     def __post_init__(self):
         self.path.svg_path_render(self.path_render)
         self.path_render.close()
         self.model_transform = self._get_optimal_transform()
-        print(self.model_transform)
     
     def _get_optimal_transform(self):
         '''Find a transform that places the '''
