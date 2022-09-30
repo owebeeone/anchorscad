@@ -13,6 +13,7 @@ import anchorscad.linear as l
 from anchorscad.renderer import render
 from test_tools import iterable_assert
 import numpy as np
+import anchorscad.svg_renderer as sr
 
 
 @dataclass
@@ -834,6 +835,21 @@ class ExtrudeTest(TestCase):
                             [-12.20163402,  -8.9619868 ],
                             [-10.76040597, -10.64944805],
                             [-10.23344536, -10.97236992]],)) 
+        
+    def testSvgRender(self):
+        path = self.makePathWithCentreSweep(90)
+        model = sr.SvgRenderer(path)
+        paths = model.path_render.get_paths()
+        
+        assert(paths == ['M 0 0 L -10 10 A 14.1421 14.1421 0 0 1 -10 -10 L 0 0 Z'])
+        
+        print(model.to_svg_string())
+        
+    def testSvgRender2(self):
+        path = self.makeTestObject().path
+        model = sr.SvgRenderer(path)
+        
+        print(model.to_svg_string())
             
                         
 if __name__ == "__main__":

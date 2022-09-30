@@ -38,7 +38,7 @@ class RectangularGrille(core.CompositeShape):
         
         actual_sep = actual_size - self.w
         
-        full_path, half_path = self.paths(self.size[1], actual_sep) 
+        full_path, half_path = self._paths(self.size[1], actual_sep) 
         
         full_shape = LinearExtrude(full_path, h=self.size[2])
         half_shape = LinearExtrude(half_path, h=self.size[2])
@@ -70,7 +70,7 @@ class RectangularGrille(core.CompositeShape):
     
         return maker1.solid('holes')
         
-    def paths(self, vane_w, sep):
+    def _paths(self, vane_w, sep):
         
         assert(self.chamfer_size_ratio < 0.5) and (self.chamfer_size_ratio >= 0
                 ), 'chamfer_size_ratio is out of range - [0 - 0.5]'
@@ -140,7 +140,7 @@ class RectangularGrilleHoles(core.CompositeShape):
         actual_w = self.size[0] / ( 2 * count - k)
         actual_sep = k * actual_w
         
-        full_path = self.paths(self.size[1], actual_w, actual_sep) 
+        full_path = self._paths(self.size[1], actual_w, actual_sep) 
         
         full_shape = LinearExtrude(full_path, h=self.size[2])
         
@@ -163,7 +163,7 @@ class RectangularGrilleHoles(core.CompositeShape):
     
         return maker1.solid('holes')
         
-    def paths(self, vane_w, actual_w, sep):
+    def _paths(self, vane_w, actual_w, sep):
         
         assert(self.chamfer_size_ratio < 0.5) and (self.chamfer_size_ratio >= 0
                 ), 'chamfer_size_ratio is out of range - [0 - 0.5]'

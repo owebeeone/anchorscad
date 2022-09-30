@@ -319,7 +319,7 @@ class FanHousing(ad.CompositeShape):
         ad.ShapeNode(ad.Cylinder, prefix='mount_screw_'),
         init=False)
     
-    EXAMPLE_SHAPE_ARGS=ad.args(as_cage=True, fn=128)
+    EXAMPLE_SHAPE_ARGS=ad.args(as_cage=False, fn=128)
     SCREW_ANCHORS=(
         ad.surface_args('mount_screw', 0,),
         ad.surface_args('mount_screw', 1,),

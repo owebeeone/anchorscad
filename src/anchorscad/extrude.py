@@ -233,6 +233,10 @@ class OpBase:
 
     def transform(self, m):
         raise NotImplemented('Derived class must implement this.')
+    
+    def render_as_svg(self, svg_model):
+        raise NotImplemented('Derived class must implement this.')
+    
 
 @dataclass
 class OpMetaData():
@@ -328,6 +332,10 @@ class Path():
         if ranges:
             return points, ranges
         return (points,)
+    
+    def svg_path_render(self, svg_model):
+        for op in self.ops:
+            op.render_as_svg(svg_model)
 
     def transform_to_builder(self, 
                              m, 
@@ -588,8 +596,8 @@ class PathBuilder():
     ops: list
     name_map: dict
     multi: bool=False
-    
-    
+
+
     @dataclass(frozen=True)
     class _LineTo(OpBase):
         '''Line segment from current position.'''
@@ -634,8 +642,11 @@ class PathBuilder():
             params = self._as_non_defaults_dict()
             params['point'] = (m * to_gvector(self.point)).A[0:len(self.point)]
             return (self.__class__, params)
-            
-    
+        
+        def render_as_svg(self, svg_model):
+            svg_model.lineto(self.point, self.name)
+
+
     @dataclass(frozen=True)
     class _MoveTo(OpBase):
         '''Move to position.'''
@@ -684,7 +695,10 @@ class PathBuilder():
         
         def is_move(self):
             return True
-            
+        
+        def render_as_svg(self, svg_model):
+            svg_model.moveto(self.point, self.name)
+
 
     @dataclass(frozen=True)
     class _SplineTo(OpBase):
@@ -750,8 +764,11 @@ class PathBuilder():
             params = self._as_non_defaults_dict()
             params['points'] = points
             return (self.__class__, params)
-    
-        
+
+        def render_as_svg(self, svg_model):
+            svg_model.splineto(self.points, self.name)
+
+
     @dataclass(frozen=True)
     class _ArcTo(OpBase):
         '''Draw a circular arc.'''
@@ -777,6 +794,113 @@ class PathBuilder():
             radius_end = _vlen(r_end)
             assert np.abs(radius_start - radius_end) < EPSILON, (
                 f'start and end point radius should be the same. {radius_start} != {radius_end}')
+            s_normal = r_start / radius_start
+            e_normal = r_end / radius_start
+            cos_s = s_normal[0]
+            sin_s = s_normal[1]
+            start_angle = np.arctan2(sin_s, cos_s)
+            
+            cos_e = e_normal[0]
+            sin_e = e_normal[1]
+            end_angle = np.arctan2(sin_e, cos_e)
+           
+            end_delta = end_angle - start_angle
+ 
+            if self.path_direction:
+                # Should be clockwise.
+                if end_delta < 0:
+                    end_delta = 2 * np.pi + end_delta
+            else:
+                # Should be anti-clockwise
+                if end_delta > 0:
+                    end_delta = -2 * np.pi + end_delta
+                    
+            object.__setattr__(self, 'arcto', CircularArc(
+                start_angle, end_delta, radius_start, self.centre))
+            
+        def lastPosition(self):
+            return self.end_point
+            
+        def populate(self, path_builder, start_indexes, map_builder, meta_data):
+            if self.meta_data and self.meta_data.fn:
+                meta_data = self.meta_data
+    
+            count = meta_data.fn
+            if not count:
+                count = 10
+                
+            for i in range(1, count + 1):
+                t = float(i) / float(count)
+                point = self.arcto.evaluate(t)
+                path_builder.append(point)
+                map_builder.append(self, point, count, t)
+    
+        def direction(self, t):
+            return self.arcto.derivative(t)
+        
+        def direction_normalized(self, t):
+            return _normalize(self.direction(t))
+        
+        def normal2d(self, t, dims=[0, 1]):
+            return self.arcto.normal2d(t)
+        
+        def extremes(self):
+            return self.arcto.extremes()
+        
+        def extents(self):
+            return self.arcto.extents()
+        
+        def position(self, t):
+            if t < 0:
+                return self.direction(0) * t + self.prev_op.lastPosition()
+            elif t > 1:
+                return self.direction(1) * t + self.end_point
+            return self.arcto.evaluate(t)
+        
+        def transform(self, m):
+            end_point = (m * to_gvector(self.end_point)).A[0:len(self.end_point)]
+            centre = (m * to_gvector(self.centre)).A[0:len(self.centre)]
+            params = {
+                'end_point': end_point,
+                'centre': centre,
+                'path_direction': self.path_direction}
+            return (self.__class__, params)
+
+        def render_as_svg(self, svg_model):
+            svg_model.arcto1(
+                self.arcto.radius,
+                self.arcto.sweep_angle,
+                self.path_direction,
+                self.end_point,
+                self.name)
+
+
+    @dataclass(frozen=True)
+    class _LinearSprialTo(OpBase):
+        '''Draw a linear sprial.'''
+        end_point: np.array
+        centre: np.array
+        path_direction: bool
+        prev_op: object=field(
+            default=None, 
+            init=True, 
+            repr=False, 
+            hash=False, 
+            compare=False, 
+            metadata=None)
+        name: str=None
+        meta_data: object=None
+        
+        def __post_init__(self):
+            
+            start_point = self.prev_op.lastPosition()
+            r_start = start_point - self.centre
+            radius_start = _vlen(r_start)
+            r_end = self.end_point - self.centre
+            radius_end = _vlen(r_end)
+            
+            
+            
             s_normal = r_start / radius_start
             e_normal = r_end / radius_start
             cos_s = s_normal[0]
