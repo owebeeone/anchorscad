@@ -837,19 +837,16 @@ class ExtrudeTest(TestCase):
                             [-10.23344536, -10.97236992]],)) 
         
     def testSvgRender(self):
-        path = self.makePathWithCentreSweep(90)
-        model = sr.SvgRenderer(path)
-        paths = model.path_render.get_paths()
-        
-        assert(paths == ['M 0 0 L -10 10 A 14.1421 14.1421 0 0 1 -10 -10 L 0 0 Z'])
-        
-        print(model.to_svg_string())
+        path = self.makePathWithCentreSweep(150)
+        model = sr.SvgRenderer(path, img_margin_size=150, target_image_size=(700, 700))
+
+        model.write('testSvgRender.svg')
         
     def testSvgRender2(self):
-        path = self.makeTestObject().path
+        path = self.makeTestObject(scale=11).path
         model = sr.SvgRenderer(path)
         
-        print(model.to_svg_string())
+        model.write('testSvgRender2.svg')
             
                         
 if __name__ == "__main__":
