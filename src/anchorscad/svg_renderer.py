@@ -21,7 +21,7 @@ class Segment(object):
     points: tuple
     id: str = dt.dtfield(self_default=lambda s: s.next_id())
 
-    curr_idx = 0
+    curr_idx = 0  # Ad ID generator.
 
     @classmethod
     def next_id(cls):
@@ -103,6 +103,9 @@ class SvgPathRenderer(object):
     def get_paths(self):
         self.finish()
         return self._paths
+    
+    def get_segments(self):
+        return self._segs
 
 
 LOG10_5 = np.log10(0.5)
@@ -328,7 +331,9 @@ class SvgRenderer(object):
     target_image_size: tuple = (600.0, 600.0)
     fill_color: str = '#bfbf10'
     stroke_width_px: float = 1.5
+    stroke_hover_width_px: float = 4.5
     stroke_colour: str = 'black'
+    stroke_hover_colour: str = 'red'
 
     img_scale: float = dt.dtfield(init=False)
     model_transform: l.GMatrix = dt.dtfield(init=False)
@@ -417,9 +422,16 @@ class SvgRenderer(object):
         sc = self.stroke_colour
         sw = self.stroke_width_px / self.img_scale
         fc = self.fill_color
-        return tuple(
+        paths = list(
             f'<path d="{p}" class="shape"/>'
             for p in ps)
+        
+        segments = []
+        for seg in self.path_render.get_segments():
+            segments.append(
+                f'<path d="{seg.path}" id="{seg.id}" class="segment"/>')
+        
+        return paths + segments
 
     def get_svg_styles(self):
         shape_style = f'''.shape {{
@@ -427,7 +439,19 @@ class SvgRenderer(object):
             stroke-width: {self.stroke_width_px / self.img_scale:G};
             fill: {self.fill_color};
         }}'''
-        return ("<style>", shape_style, "</style>")
+        seg_style = f'''.segment {{
+            stroke: {self.stroke_colour};
+            stroke-width: {self.stroke_width_px / self.img_scale:G};
+            fill: none;
+            pointer-events: stroke;
+        }}''' \
+        + f'''.segment:hover {{
+            stroke: {self.stroke_hover_colour};
+            stroke-width: {self.stroke_hover_width_px / self.img_scale:G};
+            fill: #0000;
+            pointer-events: stroke;
+        }}'''
+        return ("<style>", shape_style, seg_style, "</style>")
 
     def to_svg_string(self):
         '''Returns the SVG image as a string.'''

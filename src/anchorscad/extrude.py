@@ -652,7 +652,7 @@ class PathBuilder():
             return (self.__class__, params)
         
         def render_as_svg(self, svg_model):
-            svg_model.lineto(self.point, self.name)
+            svg_model.lineto(self.point, self.name, self.trace)
 
 
     @dataclass(frozen=True)
@@ -705,7 +705,7 @@ class PathBuilder():
             return True
         
         def render_as_svg(self, svg_model):
-            svg_model.moveto(self.point, self.name)
+            svg_model.moveto(self.point, self.name, self.trace)
 
 
     @dataclass(frozen=True)
@@ -774,7 +774,7 @@ class PathBuilder():
             return (self.__class__, params)
 
         def render_as_svg(self, svg_model):
-            svg_model.splineto(self.points, self.name)
+            svg_model.splineto(self.points, self.name, self.trace)
 
 
     @dataclass(frozen=True)
@@ -880,7 +880,8 @@ class PathBuilder():
                 self.arcto.sweep_angle,
                 self.path_direction,
                 self.end_point,
-                self.name)
+                self.name,
+                self.trace)
 
 
     @dataclass(frozen=True)
