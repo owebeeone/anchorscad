@@ -826,7 +826,6 @@ class ExtrudeTest(TestCase):
         path = self.makePathWithCentreSweep(150)
         model = sr.SvgRenderer(path, img_margin_size=150,
                                target_image_size=(700, 700))
-        print(model.to_svg_string())
         model.write('testSvgRender.svg')
 
     def testSvgRender2(self):

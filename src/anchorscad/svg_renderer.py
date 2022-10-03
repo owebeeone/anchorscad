@@ -13,11 +13,29 @@ LIST_3_FLOAT_0 = l.list_of(l.strict_float, len_min_max=(3, 3), fill_to_min=0.0)
 
 
 @dt.datatree
+class Segment(object):
+    name: object
+    trace: object
+    shape_type: str
+    path: str
+    points: tuple
+    id: str = dt.dtfield(self_default=lambda s: s.next_id())
+
+    curr_idx = 0
+
+    @classmethod
+    def next_id(cls):
+        cls.curr_idx += 1
+        return f'seg_id{cls.curr_idx}'
+
+
+@dt.datatree
 class SvgPathRenderer(object):
     '''Render visitor/builder for anchorscad.Path. Creates an SVG path string.'''
     last_position: np.array = None
     _builder: list = dt.dtfield(default=None, init=False, repr=False)
     _paths: list = dt.dtfield(default_factory=list, init=False)
+    _segs: list = dt.dtfield(default_factory=list, init=False)
 
     def _set_last_position(self, new_last_position):
         if self.last_position is None:
