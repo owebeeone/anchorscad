@@ -133,6 +133,7 @@ class SvgGraduationRenderer(object):
         SvgAxisAttributes(1, '#7010500f'),
         SvgAxisAttributes(1.5, '#0070102f'))
     grad_axis_attr: SvgAxisAttributes = SvgAxisAttributes(1.7, '#0000ffff')
+    GRAD_NAMES = ('graduation_small', 'graduation_medium', 'graduation_large')
 
     def render(self):
         '''Returns a tuple of lists of strings. The first is placed before the rendered shape
@@ -158,10 +159,11 @@ class SvgGraduationRenderer(object):
         v = 0.0
         sc = self.grad_text_scale / self.img_scale
         txt_offs = np.array(self.grad_text_offset_px) / self.img_scale
+        gclass = self.GRAD_NAMES[0]
 
         def add_grad(grads):
             grads.append(
-                f'<path d="M {sp[0]:G} {sp[1]:G} L {ep[0]:G} {ep[1]:G}" stroke="{lc}" stroke-width="{gw}"/>')
+                f'<path d="M {sp[0]:G} {sp[1]:G} L {ep[0]:G} {ep[1]:G}" class="{gclass}"/>')
 
         def add_text(grads):
             grads.append(
@@ -187,6 +189,7 @@ class SvgGraduationRenderer(object):
                     grad_size_idx = 1
 
                 gw = w[grad_size_idx]
+                gclass = self.GRAD_NAMES[grad_size_idx]
 
                 sp[d] = v
                 sp[od] = self.grad_top_left_ms[od]
@@ -223,6 +226,15 @@ class SvgGraduationRenderer(object):
                 current += 1
 
         return rear_grads, grads
+
+    def get_grad_css(self):
+        '''Returns a string containing the CSS for the graduations.'''
+        styles = tuple(f'''.{self.GRAD_NAMES[i]} {{
+            stroke: {self.grad_line_colour};
+            stroke-width: {self.grad_width_px[i] / self.img_scale};
+            fill: none;
+        }}''' for i in range(3))
+        return styles
 
 
 @dt.datatree
@@ -315,7 +327,8 @@ class SvgRenderer(object):
 
     def get_grads(self):
         renderer = self.grad_render_node()
-        return renderer.render()
+        styles = renderer.get_grad_css()
+        return (styles, *renderer.render())
 
     def get_frame(self):
         renderer = self.frame_render_node()
@@ -344,19 +357,8 @@ class SvgRenderer(object):
             f'<path d="{p}" stroke="{sc}" stroke-width="{sw:G}" fill="{fc}"/>'
             for p in ps)
 
-    def get_grad_css(self):
-        style = f'''
-        .grad {{
-            stroke: {self.grad_line_colour};
-            stroke-width: {self.grad_width_px};
-            fill: none;
-        }}
-        '''
-        return (style,)
-
     def get_svg_styles(self):
-        grads_styles = self.get_grad_css()
-        return ("<style>", *grads_styles, "</style>")
+        return ("<style>", "</style>")
 
     def to_svg_string(self):
         '''Returns the SVG image as a string.'''
@@ -364,8 +366,8 @@ class SvgRenderer(object):
         styles = self.get_svg_styles()
         g = self.get_svg_transform()
         p = self.get_svg_path()
-        rgs, gs = self.get_grads()
-        seq = (hdr[0], *styles, g[0], *self.get_frame(),
+        gstyles, rgs, gs = self.get_grads()
+        seq = (hdr[0], *styles[:-1], *gstyles, styles[-1], g[0], *self.get_frame(),
                *rgs, *p, *gs, g[1], hdr[1], '')
         return '\n'.join(seq)
 
