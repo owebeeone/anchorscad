@@ -15,6 +15,7 @@ import anchorscad.core as core
 import anchorscad.linear as l
 import numpy as np
 import pyclipper as pc
+import traceback as tb
 
 
 class DuplicateNameException(Exception):
@@ -217,11 +218,18 @@ def adder(a, b):
     return a + b
 
 
+@dataclass(frozen=True)
 class OpBase:
     '''Base class for path operations (move, line, arc and spline).
     '''
     # Implementation state should consist of control points that can be easily 
     # transformed via a matrix multiplication.
+    
+    trace: tb.StackSummary=field(
+        default_factory=lambda: tb.extract_stack(limit=10), 
+        init=False, 
+        repr=False,
+        compare=False)
     
     def _as_non_defaults_dict(self):
         return dict((k, getattr(self, k)) 
