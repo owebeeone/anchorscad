@@ -381,11 +381,16 @@ class SvgRenderer(object):
         sw = self.stroke_width_px / self.img_scale
         fc = self.fill_color
         return tuple(
-            f'<path d="{p}" stroke="{sc}" stroke-width="{sw:G}" fill="{fc}"/>'
+            f'<path d="{p}" class="shape"/>'
             for p in ps)
 
     def get_svg_styles(self):
-        return ("<style>", "</style>")
+        shape_style = f'''.shape {{
+            stroke: {self.stroke_colour};
+            stroke-width: {self.stroke_width_px / self.img_scale:G};
+            fill: {self.fill_color};
+        }}'''
+        return ("<style>", shape_style, "</style>")
 
     def to_svg_string(self):
         '''Returns the SVG image as a string.'''
