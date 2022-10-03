@@ -108,8 +108,15 @@ def find_grad_multiple(target_size: np.array, allowed_multiples_log10):
 @dt.datatree(frozen=True)
 class SvgAxisAttributes(object):
     '''Attributes for axes being rendered.'''
+    css_class_name: str = None
     axis_width_px: float = 2
     axis_colour: str = '#1010103f'
+
+    def get_style(self, scale):
+        return f'''.{self.css_class_name} {{
+            stroke: {self.axis_colour};
+            stroke-width: {self.axis_width_px / scale};
+            }}'''
 
 
 @dt.datatree
@@ -130,10 +137,12 @@ class SvgGraduationRenderer(object):
     grad_multiples_log10: tuple = (0, LOG10_5, LOG10_25)
     grad_grid_attrs: tuple = (
         None,
-        SvgAxisAttributes(1, '#7010500f'),
-        SvgAxisAttributes(1.5, '#0070102f'))
-    grad_axis_attr: SvgAxisAttributes = SvgAxisAttributes(1.7, '#0000ffff')
+        SvgAxisAttributes('grid_fives', 1, '#7010500f'),
+        SvgAxisAttributes('grid_tens', 1.5, '#0070102f'))
+    grad_axis_attr: SvgAxisAttributes = SvgAxisAttributes(
+        'grid_axes', 1.7, '#0000ffff')
     GRAD_NAMES = ('graduation_small', 'graduation_medium', 'graduation_large')
+    GRID_NAMES = ('grid_tens', 'grid_fives')
 
     def render(self):
         '''Returns a tuple of lists of strings. The first is placed before the rendered shape
@@ -147,7 +156,7 @@ class SvgGraduationRenderer(object):
         grad_size, elems, divider = find_grad_multiple(
             grad_sizes, self.grad_multiples_log10)
 
-        rear_grads = []
+        grid_axes = []
         grads = []
         lc = self.grad_line_colour
         w = np.array(self.grad_width_px) / self.img_scale
@@ -220,21 +229,24 @@ class SvgGraduationRenderer(object):
                     aw = self.grad_axis_attr.axis_width_px / self.img_scale
                     alc = self.grad_axis_attr.axis_colour
                     sp[od] = end_1
-                    rear_grads.append(
+                    grid_axes.append(
                         f'<path d="M {sp[0]:G} {sp[1]:G} L {ep[0]:G} {ep[1]:G}" stroke="{alc}" stroke-width="{aw}"/>')
 
                 current += 1
 
-        return rear_grads, grads
+        return grid_axes, grads
 
-    def get_grad_css(self):
+    def get_styles(self):
         '''Returns a string containing the CSS for the graduations.'''
-        styles = tuple(f'''.{self.GRAD_NAMES[i]} {{
+        grad_styles = tuple(f'''.{self.GRAD_NAMES[i]} {{
             stroke: {self.grad_line_colour};
             stroke-width: {self.grad_width_px[i] / self.img_scale};
             fill: none;
         }}''' for i in range(3))
-        return styles
+
+        grid_styles = tuple(self.grad_grid_attrs[i].get_style(
+            self.img_scale) for i in range(3) if self.grad_grid_attrs[i])
+        return grad_styles + grid_styles
 
 
 @dt.datatree
@@ -252,8 +264,16 @@ class SvgFrameRenderer(object):
         lc = self.line_colour
         fc = self.fill_colour
         w = self.width_px / scale
-        return (f'<path d="M {l} {t} L {r} {t} L {r} {b} L {l} {b} Z" stroke="{lc}" '
-                f'stroke-width="{w}" fill="{fc}"/>',)
+        return (f'<path d="M {l} {t} L {r} {t} L {r} {b} L {l} {b} Z" class="frame"/>',)
+
+    def get_styles(self, scale):
+        '''Returns a string containing the CSS for the frame.'''
+        styles = (f'''.frame {{
+            stroke: {self.line_colour};
+            stroke-width: {self.width_px / scale};
+            fill: {self.fill_colour};
+        }}''',)
+        return styles
 
 
 @dt.datatree
@@ -327,13 +347,14 @@ class SvgRenderer(object):
 
     def get_grads(self):
         renderer = self.grad_render_node()
-        styles = renderer.get_grad_css()
+        styles = renderer.get_styles()
         return (styles, *renderer.render())
 
     def get_frame(self):
         renderer = self.frame_render_node()
-        return renderer.render(
-            self.grad_top_left_ms, self.grad_bot_right_ms, self.img_scale)
+        styles = renderer.get_styles(self.img_scale)
+        return (styles, renderer.render(
+            self.grad_top_left_ms, self.grad_bot_right_ms, self.img_scale))
 
     def get_svg_header(self):
         w = self.target_image_size[0]
@@ -367,7 +388,8 @@ class SvgRenderer(object):
         g = self.get_svg_transform()
         p = self.get_svg_path()
         gstyles, rgs, gs = self.get_grads()
-        seq = (hdr[0], *styles[:-1], *gstyles, styles[-1], g[0], *self.get_frame(),
+        fstyles, frame = self.get_frame()
+        seq = (hdr[0], *styles[:-1], *gstyles, *fstyles, styles[-1], g[0], *frame,
                *rgs, *p, *gs, g[1], hdr[1], '')
         return '\n'.join(seq)
 
