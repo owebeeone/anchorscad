@@ -133,6 +133,7 @@ class SvgGraduationRenderer(object):
     grad_lengths_px: float = (3, 5, 10)
     grad_text_offset_px: tuple = (5, 5)
     grad_text_scale: float = 1
+    grad_text_colour: str = '#101010'
     grad_line_colour: str = '#0000af'
     grad_multiples_log10: tuple = (0, LOG10_5, LOG10_25)
     grad_grid_attrs: tuple = (
@@ -176,7 +177,7 @@ class SvgGraduationRenderer(object):
 
         def add_text(grads):
             grads.append(
-                f'<text text-anchor="end" font-size="{sc:G}em" transform='
+                f'<text text-anchor="end" transform='
                 + f'"translate({st[0]:G} {st[1]:G}) rotate({angle}) scale(1, -1)">{v:G}</text>')
 
         for d, od, angle, sign in ((0, 1, 270, -1), (1, 0, 0, 1)):
@@ -197,7 +198,6 @@ class SvgGraduationRenderer(object):
                 elif np.modf(abs(v) / (divider / 2) + GRAD_EPSILON / 10)[0] < 2 * GRAD_EPSILON:
                     grad_size_idx = 1
 
-                gw = w[grad_size_idx]
                 gclass = self.GRAD_NAMES[grad_size_idx]
 
                 sp[d] = v
@@ -223,14 +223,14 @@ class SvgGraduationRenderer(object):
                     alc = grad_attrs.axis_colour
                     sp[od] = end_1
                     grads.append(
-                        f'<path d="M {sp[0]:G} {sp[1]:G} L {ep[0]:G} {ep[1]:G}" stroke="{alc}" stroke-width="{aw}"/>')
+                        f'<path d="M {sp[0]:G} {sp[1]:G} L {ep[0]:G} {ep[1]:G}" class="{grad_attrs.css_class_name}"/>')
 
                 if abs(v) < GRAD_EPSILON and self.grad_axis_attr:
                     aw = self.grad_axis_attr.axis_width_px / self.img_scale
                     alc = self.grad_axis_attr.axis_colour
                     sp[od] = end_1
                     grid_axes.append(
-                        f'<path d="M {sp[0]:G} {sp[1]:G} L {ep[0]:G} {ep[1]:G}" stroke="{alc}" stroke-width="{aw}"/>')
+                        f'<path d="M {sp[0]:G} {sp[1]:G} L {ep[0]:G} {ep[1]:G}" class="{self.grad_axis_attr.css_class_name}"/>')
 
                 current += 1
 
@@ -246,7 +246,13 @@ class SvgGraduationRenderer(object):
 
         grid_styles = tuple(self.grad_grid_attrs[i].get_style(
             self.img_scale) for i in range(3) if self.grad_grid_attrs[i])
-        return grad_styles + grid_styles
+
+        axis_styles = (self.grad_axis_attr.get_style(self.img_scale),)
+        text_styles = (f'''text {{
+            fill: {self.grad_text_colour};
+            font-size: {self.grad_text_scale / self.img_scale}em;
+            }}''',)
+        return grad_styles + grid_styles + axis_styles + text_styles
 
 
 @dt.datatree
