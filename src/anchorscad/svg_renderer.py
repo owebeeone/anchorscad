@@ -439,19 +439,19 @@ class SvgRenderer(object):
             stroke-width: {self.stroke_width_px / self.img_scale:G};
             fill: {self.fill_color};
         }}'''
-        seg_style = f'''.segment {{
+        seg_styles = (f'''.segment {{
             stroke: {self.stroke_colour};
             stroke-width: {self.stroke_width_px / self.img_scale:G};
             fill: none;
             pointer-events: stroke;
-        }}''' \
-        + f'''.segment:hover {{
+        }}''',
+        f'''.segment:hover {{
             stroke: {self.stroke_hover_colour};
             stroke-width: {self.stroke_hover_width_px / self.img_scale:G};
             fill: #0000;
             pointer-events: stroke;
-        }}'''
-        return ("<style>", shape_style, seg_style, "</style>")
+        }}''')
+        return ("<style>", shape_style, *seg_styles, "</style>")
 
     def to_svg_string(self):
         '''Returns the SVG image as a string.'''
