@@ -47,25 +47,26 @@ class SvgPathRenderer(object):
             self._paths.append(' '.join(self._builder))
             self._builder = None
 
-    def moveto(self, end_point, name):
+
+    def moveto(self, end_point, name, trace=None):
         # Starting a new path means closing the current if any.
         self._finish_path()
         self._set_last_position(end_point)
         self._builder.append(f'M {end_point[0]:G} {end_point[1]:G}')
 
-    def lineto(self, end_point, name):
+    def lineto(self, end_point, name, trace=None):
         self._set_last_position(end_point)
         self._builder.append(f'L {end_point[0]:G} {end_point[1]:G}')
-        pass
 
-    def arcto1(self, radius, sweep_angle, sweep_flag, end_point, name):
+    
+    def arcto1(self, radius, sweep_angle, sweep_flag, end_point, name, trace=None):
         self._set_last_position(end_point)
         large_arc = int(sweep_angle > 180)
         self._builder.append(
             f'A {radius:G} {radius:G} 0 {large_arc:d} {sweep_flag:d} '
             f'{end_point[0]:G} {end_point[1]:G}')
-
-    def splineto(self, points, name):
+    
+    def splineto(self, points, name, trace=None):
         self._set_last_position(points[2])
         self._builder.append(
             f'C ' + ' '.join(f'{p[0]:G} {p[1]:G}' for p in points))
