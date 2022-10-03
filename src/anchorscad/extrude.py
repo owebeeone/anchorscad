@@ -225,8 +225,8 @@ class OpBase:
     # Implementation state should consist of control points that can be easily 
     # transformed via a matrix multiplication.
     
-    trace: tb.StackSummary=field(
-        default_factory=lambda: tb.extract_stack(limit=10), 
+    trace: tb.FrameSummary=field(
+        default_factory=lambda: tb.extract_stack(limit=5)[-4], 
         init=False, 
         repr=False,
         compare=False)
