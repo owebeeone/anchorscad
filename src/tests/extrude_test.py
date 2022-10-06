@@ -3,6 +3,7 @@ Created on 8 Jan 2021
 
 @author: gianni
 '''
+from textwrap import indent
 import anchorscad.svg_renderer as sr
 import numpy as np
 from test_tools import iterable_assert
@@ -827,6 +828,7 @@ class ExtrudeTest(TestCase):
         model = sr.SvgRenderer(path, img_margin_size=150,
                                target_image_size=(700, 700))
         model.write('testSvgRender.svg')
+        print(model.path_render._segs.to_json(indent=2))
 
     def testSvgRender2(self):
         path = self.makeTestObject(scale=11).path

@@ -4,18 +4,26 @@ Created on 26 Sept 2022
 @author: gianni
 '''
 
+from importlib.metadata import metadata
 import numpy as np
 import anchorscad.linear as l
 import anchorscad.datatrees as dt
+from dataclasses_json import dataclass_json, config
 
 
 LIST_3_FLOAT_0 = l.list_of(l.strict_float, len_min_max=(3, 3), fill_to_min=0.0)
 
 
+def get_path_and_line_number(trace):
+    return trace.filename, trace.lineno
+
+
+@dataclass_json
 @dt.datatree
 class Segment(object):
     name: object
-    trace: object
+    trace: object = dt.dtfield(
+        metadata=config(encoder=get_path_and_line_number))
     shape_type: str
     path: str
     points: tuple
@@ -29,13 +37,25 @@ class Segment(object):
         return f'seg_id{cls.curr_idx}'
 
 
+@dataclass_json
+@dt.datatree
+class Segments(object):
+    segdict: dict = dt.dtfield(default_factory=dict)
+
+    def append(self, seg):
+        self.segdict[seg.id] = seg
+
+    def items(self):
+        return self.segdict.items()
+
+
 @dt.datatree
 class SvgPathRenderer(object):
     '''Render visitor/builder for anchorscad.Path. Creates an SVG path string.'''
     last_position: np.array = None
     _builder: list = dt.dtfield(default=None, init=False, repr=False)
     _paths: list = dt.dtfield(default_factory=list, init=False)
-    _segs: list = dt.dtfield(default_factory=list, init=False)
+    _segs: list = dt.dtfield(default_factory=Segments, init=False)
 
     def _set_last_position(self, new_last_position):
         if self.last_position is None:
@@ -103,7 +123,7 @@ class SvgPathRenderer(object):
     def get_paths(self):
         self.finish()
         return self._paths
-    
+
     def get_segments(self):
         return self._segs
 
@@ -425,12 +445,12 @@ class SvgRenderer(object):
         paths = list(
             f'<path d="{p}" class="shape"/>'
             for p in ps)
-        
+
         segments = []
-        for seg in self.path_render.get_segments():
+        for seg in self.path_render.get_segments().items():
             segments.append(
-                f'<path d="{seg.path}" id="{seg.id}" class="segment"/>')
-        
+                f'<path d="{seg[1].path}" id="{seg[1].id}" class="segment"/>')
+
         return paths + segments
 
     def get_svg_styles(self):
@@ -445,7 +465,7 @@ class SvgRenderer(object):
             fill: none;
             pointer-events: stroke;
         }}''',
-        f'''.segment:hover {{
+                      f'''.segment:hover {{
             stroke: {self.stroke_hover_colour};
             stroke-width: {self.stroke_hover_width_px / self.img_scale:G};
             fill: #0000;
