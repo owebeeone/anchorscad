@@ -320,9 +320,8 @@ class AnchorScadRunner(core.ExampleCommandLineRenderer):
     def __init__(self, *args, **kwargs):
         
         core.ExampleCommandLineRenderer.__init__(self, *args, **kwargs)
-        this_module = sys.modules[__name__]
         self.env = dict(os.environ)
-        self.this_module_file = path.basename(inspect.getfile(this_module))
+        self.this_module_file = get_this_module_file()
         self.proc_mgr = ProcessManager()
         self.time_start = 0
         self.time_end = 0
@@ -515,7 +514,7 @@ class AnchorScadRunner(core.ExampleCommandLineRenderer):
                 sys.executable,
                 self.this_module_file,) 
             + sub_argv) 
-        
+
         entry = AnchorScadRunnerEntry(
             filename=filename, mod_name=mod_name, env=env, as_runner=self)
         self.proc_mgr.run_proc(
@@ -553,7 +552,7 @@ class AnchorScadRunner(core.ExampleCommandLineRenderer):
 
 
 
-def get_this_module():
+def get_this_module_file():
     this_module = sys.modules[__name__]
     try:
         return inspect.getfile(this_module)
