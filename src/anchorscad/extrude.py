@@ -599,8 +599,15 @@ class CircularArc:
         return np.array([np.cos(angle), np.sin(angle)]) * self.radius + self.centre
 
 
+def optional_arrayeq(ary1, ary2):
+    if ary1 is None:
+        return ary2 is None
+    return np.array_equal(ary1, ary2)
+
+
 @dataclass()
 class PathBuilder():
+    '''Builds a Path from a series of points, lines, splines and arcs.'''
     ops: list
     name_map: dict
     multi: bool=False
@@ -653,7 +660,16 @@ class PathBuilder():
         
         def render_as_svg(self, svg_model):
             svg_model.lineto(self.point, self.name, self.trace)
-
+            
+        def __eq__(self, other):
+            if self.__class__ != other.__class__:
+                return False
+            return (
+                (self.point == other.point).all()
+                and self.name == other.name)
+            
+        def __hash__(self):
+            return hash((tuple(self.point.flatten()), self.name))
 
     @dataclass(frozen=True)
     class _MoveTo(OpBase):
@@ -668,6 +684,11 @@ class PathBuilder():
             compare=False, 
             metadata=None)
         name: str=None
+        
+        def __post_init__(self):
+            self.point.setflags(write=False)
+            if not (self.dir is None):
+                self.dir.setflags(write=False)
             
         def lastPosition(self):
             return self.point
@@ -707,6 +728,19 @@ class PathBuilder():
         def render_as_svg(self, svg_model):
             svg_model.moveto(self.point, self.name, self.trace)
 
+        def __eq__(self, other):
+            if self.__class__ != other.__class__:
+                return False
+            return (
+                (self.point == other.point).all()
+                and optional_arrayeq(self.dir, other.dir)
+                and self.name == other.name)
+            
+        def __hash__(self):
+            return hash((
+                tuple(self.point.flatten()), 
+                tuple(self.dir.flatten()) if self.dir else None, 
+                self.name))
 
     @dataclass(frozen=True)
     class _SplineTo(OpBase):
@@ -723,6 +757,7 @@ class PathBuilder():
         meta_data: object=None
         
         def __post_init__(self):
+            self.points.setflags(write=False)
             to_cat = [[self.prev_op.lastPosition()],  self.points]
             spline_points = np.concatenate(to_cat)
             object.__setattr__(self, 'spline', CubicSpline(spline_points))
@@ -775,7 +810,17 @@ class PathBuilder():
 
         def render_as_svg(self, svg_model):
             svg_model.splineto(self.points, self.name, self.trace)
+            
+        def __eq__(self, other):
+            if self.__class__ != other.__class__:
+                return False
+            return (
+                (self.points == other.points).all()
+                and self.name == other.name
+                and self.meta_data == other.meta_data)
 
+        def __hash__(self):
+            return hash((tuple(self.points.flatten()), self.name, self.meta_data))
 
     @dataclass(frozen=True)
     class _ArcTo(OpBase):
@@ -794,7 +839,8 @@ class PathBuilder():
         meta_data: object=None
         
         def __post_init__(self):
-            
+            self.centre.setflags(write=False)
+            self.end_point.setflags(write=False)
             start_point = self.prev_op.lastPosition()
             r_start = start_point - self.centre
             radius_start = _vlen(r_start)
@@ -882,6 +928,24 @@ class PathBuilder():
                 self.end_point,
                 self.name,
                 self.trace)
+            
+        def __eq__(self, other):
+            if self.__class__ != other.__class__:
+                return False
+            return (
+                (self.end_point == other.end_point).all()
+                and (self.centre == other.centre).all()
+                and self.path_direction == other.path_direction
+                and self.name == other.name
+                and self.meta_data == other.meta_data)
+        
+        def __hash__(self):
+            return hash(
+                (tuple(self.end_point),
+                 tuple(self.centre), 
+                 self.path_direction, 
+                 self.name, 
+                 self.meta_data))
 
 
     @dataclass(frozen=True)
@@ -1193,6 +1257,7 @@ class PathBuilder():
     def arc_points_radius(self, last, radius, is_left=True, direction=None, name=None, metadata=None):
         '''Defines a circular arc starting at the previous operator's end point
         and ending at last with the given radius.'''
+        last = np.array(last)
         start = self.last_op().lastPosition()
         centre, _ = solve_circle_points_radius(start, last, radius, is_left)
         if centre is None:
@@ -1206,6 +1271,7 @@ class PathBuilder():
     def arc_points(self, middle, last, name=None, direction=None, metadata=None):
         '''Defines a circular arc starting at the previous operator's end point
         and passing through middle and ending at last.'''
+        last = np.array(last)
         start = self.last_op().lastPosition()
         centre, radius = solve_circle_3_points(start, middle, last)
         n_points = np.array([start - centre, middle - centre, last - centre]) / radius
@@ -1246,6 +1312,7 @@ class PathBuilder():
         and ending at last. The tangent (vector given by the direction parameter or
         if not provided by the last segment's direction vector) may be optionally
         rotated by the given angle (degrees or radians).'''
+        last = np.array(last)
         start = self.last_op().lastPosition()
         if direction is None:
             direction = self.last_op().direction_normalized(1.0)
