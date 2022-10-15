@@ -92,6 +92,8 @@ class PipeCrossBracket(core.CompositeShape):
         outer_hole_x = hole_x - self.thickness
         rhs_outer_hole_x = outer_radius * 2.0 + outer_hole_x
         centre_height = self.padding + self.radius2
+        
+        metadata = core.ModelAttributes(fn=self.fn)
     
         path = (extrude.PathBuilder()
             .move([hole_x, 0])
@@ -101,7 +103,7 @@ class PipeCrossBracket(core.CompositeShape):
             .line([outer_hole_x, centre_height], 'edge3')
             .arc_points_radius(
                 [rhs_outer_hole_x, centre_height], 
-                self.radius2 + self.thickness, name='edge4', metadata=self)
+                self.radius2 + self.thickness, name='edge4', metadata=metadata)
             .line([rhs_outer_hole_x, self.screw_depth], 'edge5')
             .line([size_x, self.screw_depth], 'edge6')
             .line([size_x, 0], 'edge7')
@@ -110,7 +112,7 @@ class PipeCrossBracket(core.CompositeShape):
             .line([size_x / 2 + self.radius2, centre_height], 'edge10')
             .arc_points_radius(
                 [hole_x, centre_height], 
-                self.radius2, direction=True, name='edge11', metadata=self)
+                self.radius2, direction=True, name='edge11', metadata=metadata)
             .line([hole_x, 0], 'edge12')
             .build())
         

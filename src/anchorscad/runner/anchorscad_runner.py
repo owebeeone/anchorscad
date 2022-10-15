@@ -123,6 +123,8 @@ class ExampleRunner:
     status_file_name: str=None
     examples_with_errors: list=field(default_factory=list)
     cumulative_error_text: list=field(default_factory=list)
+    old_stderr: object=None
+    old_stdout: object=None
     
     def __post_init__(self):
         self.module_dir = os.path.sep.join(self.module_name.split('.'))
@@ -199,6 +201,9 @@ class ExampleRunner:
 
         graph.write_svg(full_svg_path, example_name)
         graph.write(full_graph_path, example_name)
+        
+    def paths_file_writer(self, paths, clz, example_name, base_example_name):
+        pass
         
     def shape_writer(self, maker, shape, clz, example_name, base_example_name):
         rel_filename, runner_example, full_path = self.gen_filenames_and_runner(
@@ -402,6 +407,7 @@ class AnchorScadRunner(core.ExampleCommandLineRenderer):
             self.options, 
             ex_runner.file_writer,
             ex_runner.graph_file_writer,
+            ex_runner.paths_file_writer,
             ex_runner.shape_writer,
             ex_runner.start_example,
             ex_runner.end_example)

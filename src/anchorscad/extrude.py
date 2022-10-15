@@ -739,7 +739,7 @@ class PathBuilder():
         def __hash__(self):
             return hash((
                 tuple(self.point.flatten()), 
-                tuple(self.dir.flatten()) if self.dir else None, 
+                None if self.dir is None else tuple(self.dir.flatten()), 
                 self.name))
 
     @dataclass(frozen=True)
@@ -1741,6 +1741,7 @@ class LinearExtrude(ExtrudedShape):
         }
 
     def render(self, renderer):
+        renderer.add_path(self.path)
         if self.use_polyhedrons or (self.use_polyhedrons is None and
             renderer.get_current_attributes().use_polyhedrons):
             return self.render_as_polyhedron(renderer)
@@ -1946,6 +1947,7 @@ class RotateExtrude(ExtrudedShape):
         return self.select_attrs(renderer)
     
     def render(self, renderer):
+        renderer.add_path(self.path)
         if self.use_polyhedrons or (self.use_polyhedrons is None and
             renderer.get_current_attributes().use_polyhedrons):
             return self.render_as_polyhedron(renderer)

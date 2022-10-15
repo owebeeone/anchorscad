@@ -14,7 +14,7 @@ from frozendict import frozendict
 from anchorscad import linear as l
 from anchorscad.core import Box, Colour, Text, Cone, Arrow, Coordinates, \
     Sphere, AnnotatedCoordinates, at_spec, lazy_shape, args, CoordinatesCage
-from anchorscad.renderer import render, render_graph
+from anchorscad.renderer import render
 import numpy as np
 import pythonopenscad as posc
 
@@ -36,14 +36,15 @@ class CoreTest(unittest.TestCase):
         self.points = []
 
     def write(self, maker, test):
-        obj, graph = render_graph(maker)
+        result = render(maker)
+        obj, graph = result.rendered_shape, result.graph
         filename = f'test_{test}.scad'
         obj.write(filename)
         print(f'written scad file: {filename}')
         dot_filename = f'test_{test}.dot'
         graph.write(dot_filename)
         print(f'written graphviz file: {dot_filename}')
-
+        
     def testSimple(self):
         b1 = Box([1, 1, 1])
         maker = b1.solid('outer').at('centre', post=l.rotZ(45))

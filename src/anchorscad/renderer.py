@@ -5,6 +5,7 @@ Created on 4 Jan 2021
 '''
 
 import copy
+from collections import defaultdict
 from dataclasses import dataclass
 
 from anchorscad import core, graph_model
@@ -291,6 +292,7 @@ class Renderer():
         self.context = Context(self)
         self.result = None
         self.graph = graph_model.DirectedGraph()
+        self.paths = defaultdict(list)
         root_node = self.graph.new_node('root') 
         # Push an item on the stack that will collect the final objects.
         self.context.push(core.ModeShapeFrame.SOLID, initial_frame, initial_attrs, None, root_node)
@@ -320,14 +322,23 @@ class Renderer():
         
     def add(self, *obj):
         self.context.get_last_container().add_solid(*obj)
+        
+    def add_path(self, path):
+        '''Adds a Path to the set of paths used to render the model.'''
+        self.paths[path].append(self.context.get_current_graph_node())
 
 
-def render_graph(shape, initial_frame=None, initial_attrs=None):
-    '''Renders a shape and returns the model root object.'''
+@dataclass(frozen=True)
+class RenderResult():
+    '''A result of rendering.'''
+    shape: object  # The Ancohdra shape that was rendered.
+    rendered_shape: object  # The resulting POSC shape.
+    graph: graph_model.DirectedGraph  # The graph of the rendered shape.
+    paths: dict  # A dictionary of Path to list of anchors in the graph.
+    
+    
+def render(shape, initial_frame=None, initial_attrs=None):
+    '''Renders a shape and returns a RenderResult.'''
     renderer = Renderer(initial_frame, initial_attrs)
     shape.render(renderer)
-    return renderer.close(), renderer.graph
-
-def render(shape, initial_frame=None, initial_attrs=None):
-    '''Renders a shape and returns the model root object.'''
-    return render_graph(shape, initial_frame, initial_attrs)[0]
+    return RenderResult(shape, renderer.close(), renderer.graph, renderer.paths)

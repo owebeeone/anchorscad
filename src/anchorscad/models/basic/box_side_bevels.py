@@ -101,6 +101,7 @@ class BoxSideBevels(ad.CompositeShape):
         shape = ad.Box(self.size)
         maker = self.cageof_node(shape, cage_name='shell').at('centre')
         
+        
         r = self.bevel_radius
         if r <= EPSILON:
             maker.add_at(shape.solid('hull').at('centre'), 'centre')
@@ -108,16 +109,17 @@ class BoxSideBevels(ad.CompositeShape):
             sx = self.size[0]
             sy = self.size[1]
             sz = self.size[2]
+            metadata = ad.ModelAttributes(fn=self.fn, fa=self.fa, fs=self.fs)
             path = (ad.PathBuilder()
                     .move([r, 0])
                     .line([sx - r, 0], 'face_0')
-                    .arc_tangent_point([sx, r], name='edge_0_5', metadata=self)
+                    .arc_tangent_point([sx, r], name='edge_0_5', metadata=metadata)
                     .line([sx, sy - r], 'face_5')
-                    .arc_tangent_point([sx - r, sy], name='edge_5_3', metadata=self)
+                    .arc_tangent_point([sx - r, sy], name='edge_5_3', metadata=metadata)
                     .line([r, sy], 'face_3')
-                    .arc_tangent_point([0, sy - r], name='edge_3_2', metadata=self)
+                    .arc_tangent_point([0, sy - r], name='edge_3_2', metadata=metadata)
                     .line([0, r], 'face_2')
-                    .arc_tangent_point([r, 0], name='edge_3_0', metadata=self)
+                    .arc_tangent_point([r, 0], name='edge_3_0', metadata=metadata)
                     .build())
             
             maker.add_at(

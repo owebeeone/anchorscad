@@ -2076,6 +2076,7 @@ def render_examples(module,
                     render_options, 
                     consumer, 
                     graph_consumer,
+                    paths_consumer,
                     shape_consumer=None,
                     start_example=None,
                     end_example=None):
@@ -2097,12 +2098,14 @@ def render_examples(module,
                 try:
                     maker, shape = clz.example(e)
                     name = nameof(e, shape.get_example_version())
-                    poscobj, graph = renderer.render_graph(
+                    result = renderer.render(
                         maker, 
                         initial_frame=None, 
                         initial_attrs=render_options.render_attributes)
-                    consumer(poscobj, clz, name, e)
-                    graph_consumer(graph, clz, name, e)
+                
+                    consumer(result.rendered_shape, clz, name, e)
+                    graph_consumer(result.graph, clz, name, e)
+                    paths_consumer(result.paths, clz, name, e)
                     if shape_consumer:
                         shape_consumer(maker, shape, clz, name, e)
                 except BaseException as ex:
@@ -2418,13 +2421,17 @@ class ExampleCommandLineRenderer():
             strv = repr(graph)
             sys.stdout.write(
                 f'Shape graph: {clz.__name__} {example_name} {len(strv)}\n')
+            
+    def path_file_writer(self, paths_dict, clz, example_name, base_example_name):
+        pass
         
     def invoke_render_examples(self):
         self.counts = render_examples(
             self.module, 
             self.options, 
             self.file_writer,
-            self.graph_file_writer)
+            self.graph_file_writer,
+            self.path_file_writer)
     
     def list_shapes(self):
         classes = find_all_shape_classes(self.module)
