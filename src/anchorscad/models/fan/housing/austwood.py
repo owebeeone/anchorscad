@@ -319,7 +319,9 @@ class FanHousing(ad.CompositeShape):
         ad.ShapeNode(ad.Cylinder, prefix='mount_screw_'),
         init=False)
     
-    EXAMPLE_SHAPE_ARGS=ad.args(as_cage=False, fn=128)
+    mount_screw_margin: float=ad.dtfield(10, 'Mount screw margin')
+    
+    EXAMPLE_SHAPE_ARGS=ad.args(as_cage=True, fn=128)
     SCREW_ANCHORS=(
         ad.surface_args('mount_screw', 0,),
         ad.surface_args('mount_screw', 1,),
@@ -401,7 +403,10 @@ class FanHousing(ad.CompositeShape):
             result_maker.add_at(
                 mount_screw_shape.hole(('mount_screw', i)).at('base'),
                 'base_plate', 'face_corner', 'top', i, 
-                post=ad.translate((10, 10, self.epsilon)))
+                post=ad.translate(
+                    (self.mount_screw_margin, 
+                     self.mount_screw_margin, 
+                     self.epsilon)))
         
         return result_maker
 

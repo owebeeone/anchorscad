@@ -4,6 +4,8 @@ Created on 8 Jan 2021
 @author: gianni
 '''
 from textwrap import indent
+
+from anchorscad.extrude import LinearExtrude
 import anchorscad.svg_renderer as sr
 import numpy as np
 from test_tools import iterable_assert
@@ -13,6 +15,8 @@ import anchorscad.extrude as extrude
 import unittest
 from unittest import TestCase
 from dataclasses import dataclass
+import anchorscad.renderer as renderer
+import anchorscad.core as core
 
 
 @dataclass
@@ -23,9 +27,9 @@ class TestMetaData:
 class ExtrudeTest(TestCase):
 
     def write(self, maker, test):
-        obj = render(maker)
+        result = render(maker)
         filename = f'test_{test}.scad'
-        obj.write(filename)
+        result.rendered_shape.write(filename)
         print(f'written scad file: {filename}')
 
     def testBezierExtents2D(self):
@@ -835,6 +839,16 @@ class ExtrudeTest(TestCase):
         model = sr.SvgRenderer(path)
 
         model.write('testSvgRender2.svg')
+
+    def testSvgRender3(self):
+        import anchorscad.models.cases.rpi.rpi3 as rpi3
+        maker, shape = rpi3.RaspberryPi3Case.example('default')
+        result = renderer.render(
+                        maker, 
+                        initial_frame=None, 
+                        initial_attrs=core.ModelAttributes())
+        html_renderer = sr.HtmlRenderer(result.paths.paths)
+        html_renderer.write('testSvgRender3.html')
 
 
 if __name__ == "__main__":

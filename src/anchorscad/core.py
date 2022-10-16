@@ -2423,6 +2423,9 @@ class ExampleCommandLineRenderer():
                 f'Shape graph: {clz.__name__} {example_name} {len(strv)}\n')
             
     def path_file_writer(self, paths_dict, clz, example_name, base_example_name):
+        # print paths_dict
+        for p, v in paths_dict.paths.items():
+            print(p, v.to_json())
         pass
         
     def invoke_render_examples(self):

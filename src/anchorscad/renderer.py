@@ -6,7 +6,9 @@ Created on 4 Jan 2021
 
 import copy
 from collections import defaultdict
-from dataclasses import dataclass
+from dataclasses import dataclass, field
+
+from dataclasses_json import dataclass_json, config
 
 from anchorscad import core, graph_model
 from anchorscad import linear as l
@@ -191,8 +193,38 @@ class Container():
     def propagate(self, mode, parent_container):
         solids = self.build_combine()
         parent_container.add_solid(*solids)
-        
-            
+
+
+@dataclass_json
+@dataclass(frozen=True)
+class ShapePath:
+    shape_path: tuple = field(metadata=config(
+        encoder=lambda shape_path: tuple(str(v.label) for v in shape_path)))
+    
+    def to_path(self):
+        return tuple(v.label for v in self.shape_path)
+    
+    def __str__(self):
+        return f'{self.to_path()}'
+    
+@dataclass_json
+@dataclass
+class ShapePathCollection:
+    
+    anchor_paths: list = field(default_factory=list)
+    
+    def append(self, path):
+        self.anchor_paths.append(path)
+
+
+@dataclass
+class ShapePathDict:
+    
+    paths: dict = field(default_factory=lambda: defaultdict(ShapePathCollection))
+    
+    def add(self, path, anchor_path):
+        self.paths[path].append(anchor_path)
+
 
 @dataclass(frozen=True)
 class ContextEntry():
@@ -265,6 +297,9 @@ class Context():
         if self.stack:
             return self.stack[-1].graph_node
         return None
+    
+    def get_current_graph_path(self):
+        return ShapePath(tuple([entry.graph_node for entry in self.stack]))
         
     def createNamedUnion(self, mode, name):
         result = self.model.Union()
@@ -292,7 +327,7 @@ class Renderer():
         self.context = Context(self)
         self.result = None
         self.graph = graph_model.DirectedGraph()
-        self.paths = defaultdict(list)
+        self.paths = ShapePathDict()
         root_node = self.graph.new_node('root') 
         # Push an item on the stack that will collect the final objects.
         self.context.push(core.ModeShapeFrame.SOLID, initial_frame, initial_attrs, None, root_node)
@@ -325,7 +360,7 @@ class Renderer():
         
     def add_path(self, path):
         '''Adds a Path to the set of paths used to render the model.'''
-        self.paths[path].append(self.context.get_current_graph_node())
+        self.paths.add(path, self.context.get_current_graph_path())
 
 
 @dataclass(frozen=True)

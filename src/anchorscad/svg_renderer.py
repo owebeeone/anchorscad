@@ -5,10 +5,12 @@ Created on 26 Sept 2022
 '''
 
 from importlib.metadata import metadata
+from anchorscad.core import anchor
 import numpy as np
 import anchorscad.linear as l
 import anchorscad.datatrees as dt
 from dataclasses_json import dataclass_json, config
+from dataclasses import dataclass
 
 
 LIST_3_FLOAT_0 = l.list_of(l.strict_float, len_min_max=(3, 3), fill_to_min=0.0)
@@ -377,6 +379,9 @@ class SvgRenderer(object):
         dt.Node(SvgGraduationRenderer), init=False)
     frame_render_node: dt.Node = dt.dtfield(
         dt.Node(SvgFrameRenderer, prefix='frame_'), init=False)
+    
+    svg_id: str=None
+    svg_class: str=None
 
     def __post_init__(self):
         self.path.svg_path_render(self.path_render)
@@ -427,8 +432,14 @@ class SvgRenderer(object):
     def get_svg_header(self):
         w = self.target_image_size[0]
         h = self.target_image_size[1]
+        elems = (
+            f'width="{w}"',
+            f'height="{h}"',
+            f'id="{self.svg_id}"' if self.svg_id else None,
+            f'class="{self.svg_class}"' if self.svg_class else None,)
+        elems_str = ' '.join(e for e in elems if e)
         return (
-            f'<svg width="{w}" height="{h}" xmlns="http://www.w3.org/2000/svg">',
+            f'<svg {elems_str} xmlns="http://www.w3.org/2000/svg">',
             '</svg>')
 
     def get_svg_transform(self):
@@ -492,3 +503,95 @@ class SvgRenderer(object):
         '''
         with open(filename, 'w', encoding=encoding) as fp:
             return fp.write(self.to_svg_string())
+
+
+
+@dataclass_json
+@dataclass
+class SvgMetadataEntry:
+    id: str
+    div_id: str
+    path_id: str
+    anchors: object
+    
+
+@dataclass_json
+@dataclass
+class SvgMetadataCollection:
+    map_ids: dict=dt.field(default_factory=dict)
+    
+    def insert(self, id, div_id, path_id, anchors):
+        self.map_ids[id] = SvgMetadataEntry(id, div_id, path_id, anchors)
+    
+
+HTML_TEMPLATE = '''\
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="utf-8" />
+    <title>AnchorSCAD SVG Rendering</title>
+    <style type="text/css">
+        body {{
+            font-family: Arial, Helvetica, sans-serif;
+            font-size: 12px;
+            margin: 0;
+            padding: 0;
+        }}
+        .tooltip {{
+            position: absolute;
+            background-color: #ffffff;
+            box-shadow: 0px 0px 5px rgba(0, 0, 0, 0.5);
+            font-family: Arial, Helvetica, sans-serif;
+            font-size: 12px;
+            padding: 5px;
+            border: 1px solid #ffffff;
+            z-index: 100;
+        }}
+    </style>
+    <script src="https://ajax.googleapis.com/ajax/libs/jquery/3.6.1/jquery.min.js"></script>
+    <script type="text/javascript">
+        image_metadata = {image_metadata};
+    </script>
+</head>
+<body>
+</body>
+  {svg_divs}
+</html>
+'''
+
+# Class to render a collection of paths to a single html page.
+@dt.datatree
+class HtmlRenderer:
+    paths_dict: dict
+    svg_renderer_node: dt.Node=dt.Node(SvgRenderer, exclude=('path',))
+    metadata_collection: SvgMetadataCollection=dt.field(default_factory=SvgMetadataCollection)
+    svg_divs: list=dt.field(default_factory=list)
+    
+    def __post_init__(self):
+        for i, (path, anchors) in enumerate(self.paths_dict.items()):
+            path_id = f'path{i}'
+            div_id = f'div{i}'
+            self.metadata_collection.insert(i, div_id, path_id, anchors)
+            self.svg_divs.append(self._create_div_from_path(div_id, path_id, path))
+    
+    def _create_div_from_path(self, div_id, path_id, path):
+        '''Create a div containing the svg image for a path.'''
+        svg_renderer = self.svg_renderer_node(
+            path=path, svg_class='svg_path', svg_id=path_id)
+        
+        svg_str = svg_renderer.to_svg_string()
+        
+        return f'''<div class="svg-path" id="{div_id}">
+    <div class="svg">{svg_str}</div></div>'''
+    
+    def create_html(self):
+        '''Create the html page.'''
+        svg_divs = '\n'.join(self.svg_divs)
+        json_src = self.metadata_collection.to_json()
+        return HTML_TEMPLATE.format(image_metadata=json_src, svg_divs=svg_divs)
+
+    def write(self, filename, encoding="utf-8"):
+        '''Writes the html page to a file.
+        '''
+        with open(filename, 'w', encoding=encoding) as fp:
+            return fp.write(self.create_html())
