@@ -5,7 +5,6 @@ Created on 26 Sept 2022
 '''
 
 from importlib.metadata import metadata
-from anchorscad.core import anchor
 import numpy as np
 import anchorscad.linear as l
 import anchorscad.datatrees as dt
@@ -380,6 +379,7 @@ class SvgRenderer(object):
     frame_render_node: dt.Node = dt.dtfield(
         dt.Node(SvgFrameRenderer, prefix='frame_'), init=False)
     
+    json_indent: int=2
     svg_id: str=None
     svg_class: str=None
 
@@ -529,7 +529,7 @@ HTML_TEMPLATE = '''\
 <html>
 <head>
     <meta charset="utf-8" />
-    <title>AnchorSCAD SVG Rendering</title>
+    <title>{name}</title>
     <style type="text/css">
         body {{
             font-family: Arial, Helvetica, sans-serif;
@@ -584,14 +584,14 @@ class HtmlRenderer:
         return f'''<div class="svg-path" id="{div_id}">
     <div class="svg">{svg_str}</div></div>'''
     
-    def create_html(self):
+    def create_html(self, name='AnchorScad Paths'):
         '''Create the html page.'''
         svg_divs = '\n'.join(self.svg_divs)
-        json_src = self.metadata_collection.to_json()
-        return HTML_TEMPLATE.format(image_metadata=json_src, svg_divs=svg_divs)
+        json_src = self.metadata_collection.to_json(indent=self.json_indent)
+        return HTML_TEMPLATE.format(name=name, image_metadata=json_src, svg_divs=svg_divs)
 
-    def write(self, filename, encoding="utf-8"):
+    def write(self, filename, name='AnchorScad Paths', encoding="utf-8"):
         '''Writes the html page to a file.
         '''
         with open(filename, 'w', encoding=encoding) as fp:
-            return fp.write(self.create_html())
+            return fp.write(self.create_html(name))

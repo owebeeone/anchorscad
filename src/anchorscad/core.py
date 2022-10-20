@@ -23,6 +23,7 @@ from abc import abstractmethod
 from anchorscad import linear as l
 from anchorscad.datatrees import Node, BoundNode, datatree, dtfield,\
                                  METADATA_DOCS_NAME, _field_assign
+from anchorscad.svg_renderer import HtmlRenderer
 import numpy as np
 import pythonopenscad as posc
 
@@ -2134,6 +2135,7 @@ class ModuleDefault():
     write_files: bool=False
     write_graph_files: bool=False
     write_graph_svg_files: bool=False
+    write_path_files: bool=False
     
     def apply(self, obj):
         '''Apply the default values to obj.'''
@@ -2328,6 +2330,26 @@ class ExampleCommandLineRenderer():
             help='The GraphViz shape_name graph output filename.')
         
         self.argq.add_argument(
+            '--no_write_path_files', 
+            dest='write_path_files',
+            action='store_false',
+            help='No creation of html files containg 2D paths if any are used.')
+        
+        self.argq.add_argument(
+            '--write_path_files', 
+            dest='write_path_files',
+            action='store_true',
+            help='Produces an html file containg 2D paths if any are used.')
+        self.argq.set_defaults(write_path_files=None)
+        
+        self.argq.add_argument(
+            '--paths_file_name', 
+            type=str,
+            default=os.path.join(
+                'examples_out', 'anchorcad_{class_name}_{example}_example.html'),
+            help='File name for the 2D paths rendered in html.')
+        
+        self.argq.add_argument(
             '--level', 
             type=int,
             default=10,
@@ -2423,10 +2445,24 @@ class ExampleCommandLineRenderer():
                 f'Shape graph: {clz.__name__} {example_name} {len(strv)}\n')
             
     def path_file_writer(self, paths_dict, clz, example_name, base_example_name):
-        # print paths_dict
-        for p, v in paths_dict.paths.items():
-            print(p, v.to_json())
-        pass
+        '''Render all the paths used in the shape to an html file.'''
+        if not paths_dict:
+            return  # No paths to render, get out quickly.
+        
+        fname = self.argp.paths_file_name.format(
+            class_name=clz.__name__, example=example_name)
+        html_renderer = HtmlRenderer(paths_dict.paths)
+        path = pathlib.Path(fname)
+        if self.argp.write_path_files:
+            path.parent.mkdir(parents=True, exist_ok=True)
+            html_renderer.write(path, example_name)
+        else:
+            if not path.parent in self.set_mkdir and not path.parent.exists():
+                self.set_mkdir.add(path.parent)
+                sys.stderr.write(f'directory "{path.parent}" does not exist. Will be created.\n')
+            strv = html_renderer.create_html(example_name)
+            sys.stdout.write(
+                f'Paths html render: {clz.__name__} {example_name} {len(strv)}\n')
         
     def invoke_render_examples(self):
         self.counts = render_examples(

@@ -135,5 +135,6 @@ class ConeEndedHull(ad.CompositeShape):
         return maker
 
 
+MAIN_DEFAULT=ad.ModuleDefault(True, write_path_files=True)
 if __name__ == '__main__':
     ad.anchorscad_main(False)

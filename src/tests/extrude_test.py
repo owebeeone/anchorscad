@@ -841,8 +841,9 @@ class ExtrudeTest(TestCase):
         model.write('testSvgRender2.svg')
 
     def testSvgRender3(self):
-        import anchorscad.models.cases.rpi.rpi3 as rpi3
-        maker, shape = rpi3.RaspberryPi3Case.example('default')
+        import anchorscad.models.tools.funnel.FilterFunnel as funnel
+        clz = funnel.FilterFunnel
+        maker, shape = clz.example('default')
         result = renderer.render(
                         maker, 
                         initial_frame=None, 

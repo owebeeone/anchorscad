@@ -86,5 +86,6 @@ class BoxCylinder(an.CompositeShape):
         return self.maker.at('cylinder', 'top', h=h, rh=rh)
 
 
+MAIN_DEFAULT=an.ModuleDefault(True, write_path_files=True)
 if __name__ == '__main__':
     an.anchorscad_main()
