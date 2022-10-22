@@ -25,7 +25,7 @@ class ConeEndedPrism(ad.CompositeShape):
     '''
     h: float=110
     w: float=50
-    r_base: float=33 * 4 / np.pi, 5,
+    r_base: float=33 * 4 / np.pi
     r_top: float = 5
     cone_node: ad.Node=ad.ShapeNode(ad.Cone)
     extrude_node: ad.Node=ad.ShapeNode(ad.LinearExtrude, {'h': 'w'})
