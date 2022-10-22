@@ -98,7 +98,6 @@ class SvgPathRenderer(object):
         self._builder.append(
             f'A {radius:G} {radius:G} 0 {large_arc:d} {sweep_flag:d} '
             f'{end_point[0]:G} {end_point[1]:G}')
-        print(f'arcto1: radius={radius}, sweep_angle={sweep_angle}, large_arc={large_arc}, sweep_flag={sweep_flag}, end_point={end_point} name={name}')
         seg = Segment(name=name, trace=trace, shape_type='arcto1',
                       path=last_path + self._builder[-1], points=(last_pos, end_point))
         self._segs.append(seg)
