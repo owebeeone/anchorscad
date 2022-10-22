@@ -2129,6 +2129,11 @@ class ModuleDefault():
     
     MAIN_DEFAULT=ModuleDefault(True)
     
+    If you want to change the default to provide all resources, you can
+    set the all flag to True. e.g.
+    
+    MAIN_DEFAULT=ModuleDefault(all=True)
+    
     Similarly, write_graph_files and write_graph_svg_files apply
     as well.
     '''
@@ -2136,10 +2141,20 @@ class ModuleDefault():
     write_graph_files: bool=False
     write_graph_svg_files: bool=False
     write_path_files: bool=False
+    all: bool=False
+    
+    def __post_init__(self):
+        if self.all:
+            for f in self.__dataclass_fields__: 
+                if f == 'all':
+                    continue
+                setattr(self, f, True)
     
     def apply(self, obj):
         '''Apply the default values to obj.'''
         for f in self.__dataclass_fields__:
+            if f == 'all':
+                continue
             curval = getattr(obj, f)
             if curval is None:
                 setattr(obj, f, getattr(self, f))
@@ -2346,7 +2361,7 @@ class ExampleCommandLineRenderer():
             '--paths_file_name', 
             type=str,
             default=os.path.join(
-                'examples_out', 'anchorcad_{class_name}_{example}_example.html'),
+                'examples_out', 'anchorcad_{class_name}_{example}_example.paths.html'),
             help='File name for the 2D paths rendered in html.')
         
         self.argq.add_argument(

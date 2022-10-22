@@ -5,6 +5,8 @@ Created on 15 Jan 2022
 '''
 
 from dataclasses import dataclass, field
+
+from anchorscad.svg_renderer import HtmlRenderer
 import anchorscad.core as core
 from subprocess import Popen
 
@@ -202,8 +204,17 @@ class ExampleRunner:
         graph.write_svg(full_svg_path, example_name)
         graph.write(full_graph_path, example_name)
         
-    def paths_file_writer(self, paths, clz, example_name, base_example_name):
-        pass
+    def paths_file_writer(self, paths_dict, clz, example_name, base_example_name):
+        '''Render all the paths used in the shape to an html file.'''
+        if not paths_dict:
+            return  # No paths to render, get out quickly.
+        
+        rel_pathhtml_filename, runner_example, full_pathhtml_path = self.gen_filenames_and_runner(
+            clz, example_name, base_example_name, 'paths.html')
+        
+        runner_example.path_html_file = rel_pathhtml_filename
+        html_renderer = HtmlRenderer(paths_dict.paths)
+        html_renderer.write(full_pathhtml_path)
         
     def shape_writer(self, maker, shape, clz, example_name, base_example_name):
         rel_filename, runner_example, full_path = self.gen_filenames_and_runner(
