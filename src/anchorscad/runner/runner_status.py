@@ -27,6 +27,7 @@ class RunnerExampleResults(object):
     graph_file: Optional[str]=None
     graph_svg_dot_file: Optional[str]=None
     graph_svg_file: Optional[str]=None
+    path_html_file: Optional[str]=None
     shape_pickle_file: Optional[str]=None
     stl_file: Optional[str]=None
 

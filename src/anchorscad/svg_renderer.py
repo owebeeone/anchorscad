@@ -174,8 +174,8 @@ class SvgAxisAttributes(object):
     axis_width_px: float = 2
     axis_colour: str = '#1010103f'
 
-    def get_style(self, scale):
-        return f'''.{self.css_class_name} {{
+    def get_style(self, scale, style_prefix):
+        return f'''{style_prefix}.{self.css_class_name} {{
             stroke: {self.axis_colour};
             stroke-width: {self.axis_width_px / scale};
             }}'''
@@ -298,19 +298,19 @@ class SvgGraduationRenderer(object):
 
         return grid_axes, grads
 
-    def get_styles(self):
+    def get_styles(self, style_prefix):
         '''Returns a string containing the CSS for the graduations.'''
-        grad_styles = tuple(f'''.{self.GRAD_NAMES[i]} {{
+        grad_styles = tuple(f'''{style_prefix}.{self.GRAD_NAMES[i]} {{
             stroke: {self.grad_line_colour};
             stroke-width: {self.grad_width_px[i] / self.img_scale};
             fill: none;
         }}''' for i in range(3))
 
         grid_styles = tuple(self.grad_grid_attrs[i].get_style(
-            self.img_scale) for i in range(3) if self.grad_grid_attrs[i])
+            self.img_scale, style_prefix) for i in range(3) if self.grad_grid_attrs[i])
 
-        axis_styles = (self.grad_axis_attr.get_style(self.img_scale),)
-        text_styles = (f'''text {{
+        axis_styles = (self.grad_axis_attr.get_style(self.img_scale, style_prefix),)
+        text_styles = (f'''{style_prefix}text {{
             fill: {self.grad_text_colour};
             font-size: {self.grad_text_scale / self.img_scale}em;
             }}''',)
@@ -334,9 +334,9 @@ class SvgFrameRenderer(object):
         w = self.width_px / scale
         return (f'<path d="M {l} {t} L {r} {t} L {r} {b} L {l} {b} Z" class="frame"/>',)
 
-    def get_styles(self, scale):
+    def get_styles(self, scale, style_prefix):
         '''Returns a string containing the CSS for the frame.'''
-        styles = (f'''.frame {{
+        styles = (f'''{style_prefix}.frame {{
             stroke: {self.line_colour};
             stroke-width: {self.width_px / scale};
             fill: {self.fill_colour};
@@ -380,9 +380,12 @@ class SvgRenderer(object):
     frame_render_node: dt.Node = dt.dtfield(
         dt.Node(SvgFrameRenderer, prefix='frame_'), init=False)
     
-    json_indent: int=2
-    svg_id: str=None
-    svg_class: str=None
+    json_indent: int = 2
+    svg_id: str = None
+    svg_class: str = None
+    style_prefix: str = dt.dtfield(
+        init=False,
+        self_default=lambda s: f'#{s.svg_id} > g > ' if s.svg_id else '')
 
     def __post_init__(self):
         self.path.svg_path_render(self.path_render)
@@ -421,12 +424,12 @@ class SvgRenderer(object):
 
     def get_grads(self):
         renderer = self.grad_render_node()
-        styles = renderer.get_styles()
+        styles = renderer.get_styles(self.style_prefix)
         return (styles, *renderer.render())
 
     def get_frame(self):
         renderer = self.frame_render_node()
-        styles = renderer.get_styles(self.img_scale)
+        styles = renderer.get_styles(self.img_scale, self.style_prefix)
         return (styles, renderer.render(
             self.grad_top_left_ms, self.grad_bot_right_ms, self.img_scale))
 
@@ -466,18 +469,18 @@ class SvgRenderer(object):
         return paths + segments
 
     def get_svg_styles(self):
-        shape_style = f'''.shape {{
+        shape_style = f'''{self.style_prefix}.shape {{
             stroke: {self.stroke_colour};
             stroke-width: {self.stroke_width_px / self.img_scale:G};
             fill: {self.fill_color};
         }}'''
-        seg_styles = (f'''.segment {{
+        seg_styles = (f'''{self.style_prefix}.segment {{
             stroke: {self.stroke_colour};
             stroke-width: {self.stroke_width_px / self.img_scale:G};
             fill: none;
             pointer-events: stroke;
         }}''',
-                      f'''.segment:hover {{
+        f'''{self.style_prefix}.segment:hover {{
             stroke: {self.stroke_hover_colour};
             stroke-width: {self.stroke_hover_width_px / self.img_scale:G};
             fill: #0000;
