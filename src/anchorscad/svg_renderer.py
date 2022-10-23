@@ -586,7 +586,9 @@ class HtmlRenderer:
         svg_str = svg_renderer.to_svg_string()
         
         return f'''<div class="svg-path" id="{div_id}">
-    <div class="svg">{svg_str}</div></div>'''
+    <div class="svg">
+        {'        '.join(svg_str.splitlines(True))}
+    </div>\n</div>'''
     
     def create_html(self, name='AnchorScad Paths'):
         '''Create the html page.'''
