@@ -618,12 +618,10 @@ class PathBuilder():
         '''Line segment from current position.'''
         point: np.array
         prev_op: object=field(
-            default=None, 
-            init=True, 
+            default=None,
             repr=False, 
             hash=False, 
-            compare=False, 
-            metadata=None)
+            compare=False)
         name: str=None
             
         def lastPosition(self):
@@ -677,12 +675,10 @@ class PathBuilder():
         point: np.array
         dir: np.array=None
         prev_op: object=field(
-            default=None, 
-            init=True, 
+            default=None,
             repr=False, 
             hash=False, 
-            compare=False, 
-            metadata=None)
+            compare=False)
         name: str=None
         
         def __post_init__(self):
@@ -747,12 +743,10 @@ class PathBuilder():
         '''Cubic Bezier Spline to.'''
         points: np.array
         prev_op: object=field(
-            default=None, 
-            init=True, 
+            default=None,
             repr=False, 
             hash=False, 
-            compare=False, 
-            metadata=None)
+            compare=False)
         name: str=None
         meta_data: object=None
         
@@ -829,12 +823,10 @@ class PathBuilder():
         centre: np.array
         path_direction: bool
         prev_op: object=field(
-            default=None, 
-            init=True, 
+            default=None,
             repr=False, 
             hash=False, 
-            compare=False, 
-            metadata=None)
+            compare=False)
         name: str=None
         meta_data: object=None
         
@@ -955,12 +947,10 @@ class PathBuilder():
         centre: np.array
         path_direction: bool
         prev_op: object=field(
-            default=None, 
-            init=True, 
+            default=None,
             repr=False, 
             hash=False, 
-            compare=False, 
-            metadata=None)
+            compare=False)
         name: str=None
         meta_data: object=None
         
