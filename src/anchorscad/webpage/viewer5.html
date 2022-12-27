@@ -1,0 +1,175 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<script src="https://ajax.googleapis.com/ajax/libs/jquery/3.6.1/jquery.min.js"></script>
+<link rel="stylesheet" href="https://ajax.googleapis.com/ajax/libs/jquerymobile/1.4.5/jquery.mobile.min.css">
+<script src="https://ajax.googleapis.com/ajax/libs/jquerymobile/1.4.5/jquery.mobile.min.js"></script>
+<style>
+
+
+div::-webkit-scrollbar {
+    display: none;
+}
+
+div::-moz-scrollbar {
+    display: none;
+}
+
+div::-ms-scrollbar {
+    display: none;
+}
+
+div::-o-scrollbar {
+    display: none;
+}
+
+
+.horiz-scrolling {
+  background-color: #333;
+  overflow: auto;
+  white-space: nowrap;
+}
+
+.menu-element {
+    border: 5px solid darkblue;
+    height: 10vw;
+    width: 20%;
+    display: inline-block;
+    color: white;
+    text-align: center;
+    padding: 14px;
+    text-decoration: none;
+}
+
+.menu-element:hover {
+    border: 5px solid rgb(139, 0, 132);
+    background-color: #777;
+}
+
+.current-menu-element {
+    border: 5px solid rgb(0, 139, 76);
+    background-color: rgb(230, 204, 204);
+}
+
+.current-menu-element:hover {
+    border: 5px solid rgb(0, 139, 76);
+    background-color: rgb(230, 204, 204);
+}
+
+.chevron-element {
+    border: 2px solid rgb(0, 139, 23);
+    background-color: rgb(240, 240, 240);
+    position: absolute;
+    opacity: 0.5;
+    transition: opacity 0.2s;
+    /* Hide by default*/
+    display: none;
+    vertical-align: middle;
+    text-align: center;
+    align-items: center;
+    justify-content: center;
+    font-size: 8vw;
+}
+
+</style>
+<script src="interpolators.js"></script>
+<script src="animators.js"></script>
+<script>
+
+    $(document).ready(function() {
+
+        var scrollable = $(".scrollmenu");
+        var itemsContainer = $("#items-container");
+        var menuItems = $("#items-container > .menu-element");
+        scrollable.data(
+            'scroller', new ScrollingElement(scrollable, itemsContainer));
+
+        menuItems.on("click", function(event) {
+            // If the click was actually a scrolling movement, do nothing.
+            if (!scrollable.data('scroller').wasClick) {
+                return;
+            }
+            window.location = "#" + this.id;
+            // Add current-menu-element class to the clicked item.
+            $(".scrollmenu .current-menu-element").removeClass("current-menu-element");
+            $(this).addClass("current-menu-element");
+        });
+
+        var mainScrollable = $(".main-scrollmenu");
+        var mainItemsContainer = $("#main-items-container");
+        var mainMenuItems = $("#main-items-container > .menu-element");
+        var mainChevronLeft = $("#acheveron-left");
+        var mainChevronRight = $("#acheveron-right");
+        mainScrollable.data(
+            'scroller', 
+            new ScrollingChevronElement(
+                mainScrollable, 
+                mainItemsContainer,
+                mainMenuItems,
+                mainChevronLeft,
+                mainChevronRight));
+
+        mainMenuItems.on("click", function(event) {
+            // If the click was actually a scrolling movement, do nothing.
+            if (!mainScrollable.data('scroller').wasClick) {
+                return;
+            }
+            window.location = "#" + this.id;
+            // Add current-menu-element class to the clicked item.
+            $(".main-scrollmenu .current-menu-element").removeClass("current-menu-element");
+            $(this).addClass("current-menu-element");
+        });
+
+    });
+</script>
+</head>
+<body>
+
+<div class="main-scrollmenu horiz-scrolling">
+    <div id="main-items-container">
+        <div class="chevron-element" id="acheveron-left">&lsaquo;</div>
+        <div class="menu-element" id="ahome">Home</div>
+        <div class="menu-element" id="anews">News</div>
+        <div class="menu-element" id="acontact">Contact</div>
+        <div class="menu-element" id="aabout">About</div>
+        <div class="menu-element" id="asupport">Support</div>
+        <div class="menu-element" id="ablog">Blog</div>
+        <div class="menu-element" id="atools">Tools</div>  
+        <div class="menu-element" id="abase">Base</div>
+        <div class="menu-element" id="acustom">Custom</div>
+        <div class="menu-element" id="amore">More</div>
+        <div class="menu-element" id="alogo">Logo</div>
+        <div class="menu-element" id="afriends">Friends</div>
+        <div class="menu-element" id="apartners">Partners</div>
+        <div class="menu-element" id="apeople">People</div>
+        <div class="menu-element" id="awork">Work</div>
+        <div class="chevron-element" id="acheveron-right">&rsaquo;</div>
+    </div>
+</div>
+
+<div class="scrollmenu horiz-scrolling">
+    <div id="items-container">
+        <div class="menu-element" id="home">Home</div>
+        <div class="menu-element" id="news">News</div>
+        <div class="menu-element" id="contact">Contact</div>
+        <div class="menu-element" id="about">About</div>
+        <div class="menu-element" id="support">Support</div>
+        <div class="menu-element" id="blog">Blog</div>
+        <div class="menu-element" id="tools">Tools</div>  
+        <div class="menu-element" id="base">Base</div>
+        <div class="menu-element" id="custom">Custom</div>
+        <div class="menu-element" id="more">More</div>
+        <div class="menu-element" id="logo">Logo</div>
+        <div class="menu-element" id="friends">Friends</div>
+        <div class="menu-element" id="partners">Partners</div>
+        <div class="menu-element" id="people">People</div>
+        <div class="menu-element" id="work">Work</div>
+    </div>
+</div>
+
+<h2>Horizontal Scrollable Menu Tester</h2>
+<p>Resize, drag and click on chevrons to test.</p>
+
+</body>
+</html>
