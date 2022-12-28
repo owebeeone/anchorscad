@@ -72,6 +72,16 @@ div::-o-scrollbar {
     font-size: 8vw;
 }
 
+.no-select {
+    -webkit-touch-callout: none; /* iOS Safari */
+    -webkit-user-select: none; /* Safari */
+    -khtml-user-select: none; /* Konqueror HTML */
+    -moz-user-select: none; /* Firefox */
+    -ms-user-select: none; /* Internet Explorer/Edge */
+    user-select: none; /* Non-prefixed version, currently
+                                    supported by Chrome and Opera */
+}
+
 </style>
 <script src="interpolators.js"></script>
 <script src="animators.js"></script>
@@ -128,7 +138,7 @@ div::-o-scrollbar {
 
 <div class="main-scrollmenu horiz-scrolling">
     <div id="main-items-container">
-        <div class="chevron-element" id="acheveron-left">&lsaquo;</div>
+        <div class="chevron-element no-select" id="acheveron-left">&lsaquo;</div>
         <div class="menu-element" id="ahome">Home</div>
         <div class="menu-element" id="anews">News</div>
         <div class="menu-element" id="acontact">Contact</div>
@@ -144,7 +154,7 @@ div::-o-scrollbar {
         <div class="menu-element" id="apartners">Partners</div>
         <div class="menu-element" id="apeople">People</div>
         <div class="menu-element" id="awork">Work</div>
-        <div class="chevron-element" id="acheveron-right">&rsaquo;</div>
+        <div class="chevron-element no-select" id="acheveron-right">&rsaquo;</div>
     </div>
 </div>
 

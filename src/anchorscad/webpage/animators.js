@@ -86,6 +86,7 @@ class ScrollingElement {
         this.inertialStartPosition = -1;
         this.inertialSpeedPxPerSec = -1;
         this.inertialInterpolator = null;
+        this.doingIntertialAnimation = false;
         this.wasClick = false;
 
         // The bound function that was last used for a requestAnimationFrame callback.
@@ -184,6 +185,7 @@ class ScrollingElement {
         this.inertialStartPosition = this.currentPosition;
         this.inertialSpeedPxPerSec = speedPxPerSec;
         this.inertialInterpolator = new TimedDecay(INERTIA_ANIMATION_DURATION_MILLIS);
+        this.doingIntertialAnimation = true;
 
         this.setAnimator(this.boundFunctions.inertialAnimate);
     }
@@ -193,6 +195,7 @@ class ScrollingElement {
         const interpValue = this.inertialInterpolator.getFactor();
         if (interpValue <= 0.0) {
             // Scroll is done.
+            this.doingIntertialAnimation = false;
             return;
         }
 
@@ -238,6 +241,11 @@ class ScrollingElement {
 
         // Update swiper position
         jthis.scrollLeft(currentPos);
+        this.updateViews();
+    }
+
+    updateViews() {
+        // override this.
     }
 }
 
@@ -271,14 +279,19 @@ class ScrollingChevronElement extends ScrollingElement {
         this.jqMenuItems = jqMenuItems;
         this.jqChevronLeft = jqChevronLeft;
         this.jqChevronRight = jqChevronRight;
-        this.updateChevrons();
-        this.boundUpdateChevrons = this.updateChevrons.bind(this);
-        this.boundonChevronLeftClick = this.onChevronLeftClick.bind(this);
-        this.boundonChevronRightClick = this.onChevronRightClick.bind(this);
+        const boundFunctions = this.boundFunctions;
+        boundFunctions.updateChevrons = this.updateChevrons.bind(this);
+        boundFunctions.onChevronLeftClick = this.onChevronLeftClick.bind(this);
+        boundFunctions.onChevronRightClick = this.onChevronRightClick.bind(this);
+        boundFunctions.onChevronMouseDown = this.onChevronMouseDown.bind(this);
+        requestAnimationFrame(boundFunctions.updateChevrons);
         
         $(window).resize(this.boundUpdateChevrons);
-        this.jqChevronLeft.click(this.boundonChevronLeftClick);
-        this.jqChevronRight.click(this.boundonChevronRightClick);
+        this.jqChevronLeft.click(boundFunctions.onChevronLeftClick);
+        this.jqChevronRight.click(boundFunctions.onChevronRightClick);
+
+        this.jqChevronLeft.mousedown(boundFunctions.onChevronMouseDown);
+        this.jqChevronRight.mousedown(boundFunctions.onChevronMouseDown);
     }
 
     // Updates the chevron visibility based on the current scroll 
@@ -291,39 +304,81 @@ class ScrollingChevronElement extends ScrollingElement {
  
         const containerHeight = this.jqMenuItemsContainer.height();
         const containerWidth = this.jqMenuItemsContainer.width();
-        const containerOffset = this.jqMenuItemsContainer.offset();
+        const scrollerOffset = this.jqElement.offset();
         const menuItemWidth = this.jqMenuItems.width();
 
         const chevronWidth = menuItemWidth * CHEVRON_SIZE_FACTOR;
-
-        this.jqChevronLeft.css({
-            position: 'absolute',
-            top: containerOffset.top,
-            left: containerOffset.left,
-            display: 'flex',
-            height: containerHeight - borderHeightTotal,
-            width: chevronWidth - borderWidthTotal,
-        });
         
-        this.jqChevronRight.css({
-            position: 'absolute',
-            top: containerOffset.top,
-            left: containerOffset.left + containerWidth - chevronWidth,
-            display: 'flex',
-            height: containerHeight - borderHeightTotal,
-            width: chevronWidth - borderWidthTotal,
-        });
+        const jthis = this.jqElement;
+        const currentScrollPos = jthis.scrollLeft();
+        const maxPos = this.jqElement.prop('scrollWidth') - this.jqElement.width();
+
+        if (currentScrollPos <= 0) {
+            this.jqChevronLeft.css({display: 'none'});
+        } else {
+            this.jqChevronLeft.css({
+                position: 'absolute',
+                top: scrollerOffset.top,
+                left: scrollerOffset.left,
+                display: 'block',
+                height: containerHeight - borderHeightTotal,
+                width: chevronWidth - borderWidthTotal,
+            });
+        }
+        
+        if (currentScrollPos >= (maxPos - 2)) {
+            this.jqChevronRight.css({display: 'none'});
+        } else {
+            this.jqChevronRight.css({
+                position: 'absolute',
+                top: scrollerOffset.top,
+                left: scrollerOffset.left + containerWidth - chevronWidth,
+                display: 'block',
+                height: containerHeight - borderHeightTotal,
+                width: chevronWidth - borderWidthTotal,
+            });
+        }
+    }
+
+    performScroll(scrollSize) {
+        const seconds = INERTIA_ANIMATION_DURATION_MILLIS / 1000.0;
+
+        this.startScrollLeft = this.jqElement.scrollLeft();
+        if (this.doingIntertialAnimation) {
+            this.inertialSpeedPxPerSec = 1.5 * scrollSize / seconds;
+        } else {
+            this.inertialSpeedPxPerSec = scrollSize / seconds;
+        }
+        this.inertialStartPosition = this.jqElement.scrollLeft();
+        
+        this.startPosition = this.inertialStartPosition;
+        this.inertialInterpolator = new TimedDecay(INERTIA_ANIMATION_DURATION_MILLIS);
+        this.doingIntertialAnimation = true;
+
+        this.setAnimator(this.boundFunctions.inertialAnimate);
+
     }
 
     // Called when the left chevron is clicked.
     onChevronLeftClick() {
         const scrollSize = this.jqMenuItems.width();
-        this.jqElement.animate({scrollLeft: "+=" + -scrollSize}, INERTIA_ANIMATION_DURATION_MILLIS);
+        this.performScroll(scrollSize);
     }
 
+    // Called when the right chevron is clicked.
     onChevronRightClick() {
         const scrollSize = this.jqMenuItems.width();
-        this.jqElement.animate({scrollLeft: "+=" + scrollSize}, INERTIA_ANIMATION_DURATION_MILLIS);
+        this.performScroll(-scrollSize);
     }
 
+    // Updates the chevron views.
+    updateViews() {
+        super.updateViews();
+        requestAnimationFrame(this.boundFunctions.updateChevrons);
+    }
+
+    // Prevents scrolling when the chevron is clicked.
+    onChevronMouseDown(event) {
+        event.stopPropagation();
+    }
 }
