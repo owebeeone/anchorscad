@@ -31,15 +31,29 @@ div::-o-scrollbar {
   white-space: nowrap;
 }
 
+.align-vertical {
+    display: inline-block;
+    vertical-align: middle;
+    text-align: center;
+    align-items: center;
+    justify-content: space-between;
+}
+
 .menu-element {
     border: 5px solid darkblue;
     height: 10vw;
     width: 20%;
-    display: inline-block;
     color: white;
-    text-align: center;
     padding: 14px;
     text-decoration: none;
+}
+
+.elastic-element {
+    border: none;
+    background-color: antiquewhite;
+    width: 0%;
+    text-decoration: none;
+    padding: 0px;
 }
 
 .menu-element:hover {
@@ -131,50 +145,101 @@ div::-o-scrollbar {
             $(this).addClass("current-menu-element");
         });
 
+        var mainbScrollable = $(".mainb-scrollmenu");
+        var mainbItemsContainer = $("#mainb-items-container");
+        var mainbMenuItems = $("#mainb-items-container > .menu-element");
+        var mainbChevronLeft = $("#bcheveron-left");
+        var mainbChevronRight = $("#bcheveron-right");
+        var mainbScrollableElement = new ScrollingChevronElement(
+            mainbScrollable, 
+            mainbItemsContainer,
+            mainbMenuItems,
+            mainbChevronLeft,
+            mainbChevronRight);
+        mainbScrollable.data(
+            'scroller', mainbScrollableElement);
+        mainbScrollableElement.setElasticElements(
+            $("#left-elastic"), $("#right-elastic"));
+
+        mainbMenuItems.on("click", function(event) {
+            // If the click was actually a scrolling movement, do nothing.
+            if (!mainbScrollable.data('scroller').wasClick) {
+                return;
+            }
+            window.location = "#" + this.id;
+            // Add current-menu-element class to the clicked item.
+            $(".mainb-scrollmenu .current-menu-element").removeClass("current-menu-element");
+            $(this).addClass("current-menu-element");
+        });
+
     });
 </script>
 </head>
 <body>
 
+<div class="mainb-scrollmenu horiz-scrolling">
+    <div id="mainb-items-container">
+        <div class="elastic-element align-vertical" id="left-elastic"></div>
+        <div class="menu-element align-vertical" id="bhome">Home</div>
+        <div class="menu-element align-vertical" id="bnews">News</div>
+        <div class="menu-element align-vertical" id="bcontact">Contact</div>
+        <div class="menu-element align-vertical" id="babout">About</div>
+        <div class="menu-element align-vertical" id="bsupport">Support</div>
+        <div class="menu-element align-vertical" id="bblog">Blog</div>
+        <div class="menu-element align-vertical" id="btools">Tools</div>  
+        <div class="menu-element align-vertical" id="bbase">Base</div>
+        <div class="menu-element align-vertical" id="bcustom">Custom</div>
+        <div class="menu-element align-vertical" id="bmore">More</div>
+        <div class="menu-element align-vertical" id="blogo">Logo</div>
+        <div class="menu-element align-vertical" id="bfriends">Friends</div>
+        <div class="menu-element align-vertical" id="bpartners">Partners</div>
+        <div class="menu-element align-vertical" id="bpeople">People</div>
+        <div class="menu-element align-vertical" id="bwork">Work</div>
+        <div class="elastic-element align-vertical" id="right-elastic"></div>
+        <div class="chevron-element no-select" id="bcheveron-left">&lsaquo;</div>
+        <div class="chevron-element no-select" id="bcheveron-right">&rsaquo;</div>
+    </div>
+</div>
+    
 <div class="main-scrollmenu horiz-scrolling">
     <div id="main-items-container">
+        <div class="menu-element align-vertical" id="ahome">Home</div>
+        <div class="menu-element align-vertical" id="anews">News</div>
+        <div class="menu-element align-vertical" id="acontact">Contact</div>
+        <div class="menu-element align-vertical" id="aabout">About</div>
+        <div class="menu-element align-vertical" id="asupport">Support</div>
+        <div class="menu-element align-vertical" id="ablog">Blog</div>
+        <div class="menu-element align-vertical" id="atools">Tools</div>  
+        <div class="menu-element align-vertical" id="abase">Base</div>
+        <div class="menu-element align-vertical" id="acustom">Custom</div>
+        <div class="menu-element align-vertical" id="amore">More</div>
+        <div class="menu-element align-vertical" id="alogo">Logo</div>
+        <div class="menu-element align-vertical" id="afriends">Friends</div>
+        <div class="menu-element align-vertical" id="apartners">Partners</div>
+        <div class="menu-element align-vertical" id="apeople">People</div>
+        <div class="menu-element align-vertical" id="awork">Work</div>
         <div class="chevron-element no-select" id="acheveron-left">&lsaquo;</div>
-        <div class="menu-element" id="ahome">Home</div>
-        <div class="menu-element" id="anews">News</div>
-        <div class="menu-element" id="acontact">Contact</div>
-        <div class="menu-element" id="aabout">About</div>
-        <div class="menu-element" id="asupport">Support</div>
-        <div class="menu-element" id="ablog">Blog</div>
-        <div class="menu-element" id="atools">Tools</div>  
-        <div class="menu-element" id="abase">Base</div>
-        <div class="menu-element" id="acustom">Custom</div>
-        <div class="menu-element" id="amore">More</div>
-        <div class="menu-element" id="alogo">Logo</div>
-        <div class="menu-element" id="afriends">Friends</div>
-        <div class="menu-element" id="apartners">Partners</div>
-        <div class="menu-element" id="apeople">People</div>
-        <div class="menu-element" id="awork">Work</div>
         <div class="chevron-element no-select" id="acheveron-right">&rsaquo;</div>
     </div>
 </div>
 
 <div class="scrollmenu horiz-scrolling">
     <div id="items-container">
-        <div class="menu-element" id="home">Home</div>
-        <div class="menu-element" id="news">News</div>
-        <div class="menu-element" id="contact">Contact</div>
-        <div class="menu-element" id="about">About</div>
-        <div class="menu-element" id="support">Support</div>
-        <div class="menu-element" id="blog">Blog</div>
-        <div class="menu-element" id="tools">Tools</div>  
-        <div class="menu-element" id="base">Base</div>
-        <div class="menu-element" id="custom">Custom</div>
-        <div class="menu-element" id="more">More</div>
-        <div class="menu-element" id="logo">Logo</div>
-        <div class="menu-element" id="friends">Friends</div>
-        <div class="menu-element" id="partners">Partners</div>
-        <div class="menu-element" id="people">People</div>
-        <div class="menu-element" id="work">Work</div>
+        <div class="menu-element align-vertical" id="home">Home</div>
+        <div class="menu-element align-vertical" id="news">News</div>
+        <div class="menu-element align-vertical" id="contact">Contact</div>
+        <div class="menu-element align-vertical" id="about">About</div>
+        <div class="menu-element align-vertical" id="support">Support</div>
+        <div class="menu-element align-vertical" id="blog">Blog</div>
+        <div class="menu-element align-vertical" id="tools">Tools</div>  
+        <div class="menu-element align-vertical" id="base">Base</div>
+        <div class="menu-element align-vertical" id="custom">Custom</div>
+        <div class="menu-element align-vertical" id="more">More</div>
+        <div class="menu-element align-vertical" id="logo">Logo</div>
+        <div class="menu-element align-vertical" id="friends">Friends</div>
+        <div class="menu-element align-vertical" id="partners">Partners</div>
+        <div class="menu-element align-vertical" id="people">People</div>
+        <div class="menu-element align-vertical" id="work">Work</div>
     </div>
 </div>
 

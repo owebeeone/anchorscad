@@ -70,6 +70,8 @@ const MIN_SPEED_FOR_INTERIA_PX_PER_SEC = 10;
 const INERTIA_ANIMATION_DURATION_MILLIS = 500;
 const MIN_PX_FOR_CLICK_EVENT = 5;
 
+const MAX_ELASTIC_WIDTH = 200;
+
 // Constructor function for a scrolling object.
 class ScrollingElement {
     // jqElement: the jQuery element to scroll. This may include
@@ -88,6 +90,9 @@ class ScrollingElement {
         this.inertialInterpolator = null;
         this.doingIntertialAnimation = false;
         this.wasClick = false;
+        this.elasticElements = null;
+        this.elasticElementWidth = 0;
+        this.elasticElementIndex = 0;
 
         // The bound function that was last used for a requestAnimationFrame callback.
         this.lastAnimateCallbackFunction = null;
@@ -103,6 +108,16 @@ class ScrollingElement {
 
         // Binds the mouse down event to the scrolling element.
         jqMenuItemsContainer.on('mousedown', this.boundFunctions.onMouseDown);
+    }
+
+    setElasticElements(leftElaticElement, rightElaticElement) {
+        this.elasticElements = [leftElaticElement, rightElaticElement];
+        const containerHeight = this.jqMenuItemsContainer.height();
+        const borderHeightTotal = getCssSize(leftElaticElement, CSS_BORDER_HEIGHT_PROPOERTIES);
+        const elasticHeight = containerHeight - borderHeightTotal;
+        const style = { width: 0, height: elasticHeight};
+        leftElaticElement.css(style);
+        rightElaticElement.css(style)
     }
 
     // Adds a sample value to the speed determinator.
@@ -178,7 +193,8 @@ class ScrollingElement {
     startInertialAnimation() {
         const speedPxPerSec = this.speedDeterminator.getSpeed() * 1000;
 
-        if (Math.abs(speedPxPerSec) < MIN_SPEED_FOR_INTERIA_PX_PER_SEC) {
+        if (Math.abs(speedPxPerSec) < MIN_SPEED_FOR_INTERIA_PX_PER_SEC
+            && !(this.elasticElementWidth > 0)) {
             return;
         }
 
@@ -196,7 +212,15 @@ class ScrollingElement {
         if (interpValue <= 0.0) {
             // Scroll is done.
             this.doingIntertialAnimation = false;
+            this.stretchElastic(0, 0);
             return;
+        }
+
+        // If there is a stretch elastic element, then release it.
+        if (this.elasticElementWidth > 0) {
+            this.stretchElastic(
+                this.elasticElementWidth * interpValue,
+                this.elasticElementIndex);
         }
 
         const scaler = interpValue  * interpValue * interpValue;
@@ -217,9 +241,40 @@ class ScrollingElement {
     onMouseMove(event) {
         this.addSample(event);
         event.preventDefault();
+        event.stopPropagation();
         this.absoluteMovement += Math.abs(event.clientX - this.currentPosition);
         this.currentPosition = event.clientX;
         this.setAnimator(this.boundFunctions.scrollAnimator);
+    }
+
+    // Returns true if the elastic element at index is stretched.
+    isStretched(index) {
+        return this.elasticElementWidth > 0 && this.elasticElementIndex == index;
+    }
+
+    // Stretch the elastic element by amount on the side of index.
+    // The amount will be modulated between 0 and MAX_ELASTIC_WIDTH
+    // for any value of amount.
+    stretchElastic(amount, index) {
+        if (this.elasticElements == null) {
+            return;  // Nothing to stretch.
+        }
+        const stretchElem = this.elasticElements[index];
+        const otherElem = this.elasticElements[index ? 0 : 1];
+        if (amount <= 0) {
+            // We don't stretch negative amounts.
+            this.elasticElementWidth = 0;
+            stretchElem.width(0);
+            otherElem.width(0);
+            return;
+        }
+        this.elasticElementWidth = amount;
+        this.elasticElementIndex = index;
+
+        const factor = amount / MAX_ELASTIC_WIDTH;
+        const scale = factor / (1 + factor);
+        stretchElem.width(MAX_ELASTIC_WIDTH * scale)
+        otherElem.width(0);
     }
 
     scrollAnimator() {
@@ -233,9 +288,15 @@ class ScrollingElement {
         const maxPos = jthis.prop('scrollWidth') - jthis.width();
 
         // Snap to boundaries if outside of bounds
-        if (currentPos < 0) {
+        if (currentPos < this.elasticElementWidth) {
+            if (!this.doingIntertialAnimation) {
+                this.stretchElastic(-currentPos, 0);
+            }
             currentPos = 0;
         } else if (currentPos > maxPos) {
+            if (!this.doingIntertialAnimation) {
+                this.stretchElastic(currentPos - maxPos, 1);
+            }
             currentPos = maxPos;
         }
 
@@ -313,7 +374,7 @@ class ScrollingChevronElement extends ScrollingElement {
         const currentScrollPos = jthis.scrollLeft();
         const maxPos = this.jqElement.prop('scrollWidth') - this.jqElement.width();
 
-        if (currentScrollPos <= 0) {
+        if (currentScrollPos <= 0 || this.isStretched(0)) {
             this.jqChevronLeft.css({display: 'none'});
         } else {
             this.jqChevronLeft.css({
@@ -326,7 +387,7 @@ class ScrollingChevronElement extends ScrollingElement {
             });
         }
         
-        if (currentScrollPos >= (maxPos - 2)) {
+        if (currentScrollPos >= (maxPos - 2) || this.isStretched(1)) {
             this.jqChevronRight.css({display: 'none'});
         } else {
             this.jqChevronRight.css({
