@@ -102,22 +102,33 @@ class ScrollingElement {
             onMouseDown: this.onMouseDown.bind(this),
             onMouseMove: this.onMouseMove.bind(this),
             onMouseUp: this.onMouseUp.bind(this),
+            updateViews: this.updateViews.bind(this),
             inertialAnimate: this.makeAnimatorBinding(this.inertialAnimate),
             scrollAnimator: this.makeAnimatorBinding(this.scrollAnimator)
         };
 
         // Binds the mouse down event to the scrolling element.
         jqMenuItemsContainer.on('mousedown', this.boundFunctions.onMouseDown);
+        
+        $(window).resize(this.boundFunctions.updateViews);
     }
 
     setElasticElements(leftElaticElement, rightElaticElement) {
         this.elasticElements = [leftElaticElement, rightElaticElement];
-        const containerHeight = this.jqMenuItemsContainer.height();
-        const borderHeightTotal = getCssSize(leftElaticElement, CSS_BORDER_HEIGHT_PROPOERTIES);
-        const elasticHeight = containerHeight - borderHeightTotal;
-        const style = { width: 0, height: elasticHeight};
-        leftElaticElement.css(style);
-        rightElaticElement.css(style)
+        this.updateOnResize();
+    }
+
+    updateOnResize() {
+        if (this.elasticElements != null) {
+            const leftElaticElement = this.elasticElements[0];
+            const rightElaticElement = this.elasticElements[1];
+            const containerHeight = this.jqMenuItems.outerHeight(true);
+            const borderHeightTotal = getCssSize(leftElaticElement, CSS_BORDER_HEIGHT_PROPOERTIES);
+            const elasticHeight = containerHeight - borderHeightTotal;
+            const style = {height: elasticHeight};
+            leftElaticElement.css(style);
+            rightElaticElement.css(style)
+        }
     }
 
     // Adds a sample value to the speed determinator.
@@ -306,7 +317,7 @@ class ScrollingElement {
     }
 
     updateViews() {
-        // override this.
+        this.updateOnResize();
     }
 }
 
@@ -347,7 +358,6 @@ class ScrollingChevronElement extends ScrollingElement {
         boundFunctions.onChevronMouseDown = this.onChevronMouseDown.bind(this);
         requestAnimationFrame(boundFunctions.updateChevrons);
         
-        $(window).resize(this.boundUpdateChevrons);
         this.jqChevronLeft.click(boundFunctions.onChevronLeftClick);
         this.jqChevronRight.click(boundFunctions.onChevronRightClick);
 
@@ -363,7 +373,7 @@ class ScrollingChevronElement extends ScrollingElement {
         const borderWidthTotal = getCssSize(this.jqChevronLeft, CSS_BORDER_WIDTH_PROPERTIES);
         const borderHeightTotal = getCssSize(this.jqChevronLeft, CSS_BORDER_HEIGHT_PROPOERTIES);
  
-        const containerHeight = this.jqMenuItemsContainer.height();
+        const containerHeight = this.jqMenuItems.outerHeight(true);
         const containerWidth = this.jqMenuItemsContainer.width();
         const scrollerOffset = this.jqElement.offset();
         const menuItemWidth = this.jqMenuItems.width();
