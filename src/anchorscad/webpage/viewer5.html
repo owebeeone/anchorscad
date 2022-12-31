@@ -145,24 +145,16 @@ div::-o-scrollbar {
             $(this).addClass("current-menu-element");
         });
 
-        var mainbScrollable = $(".mainb-scrollmenu");
-        var mainbItemsContainer = $("#mainb-items-container");
-        var mainbMenuItems = $("#mainb-items-container > .menu-element");
-        var mainbChevronLeft = $("#bcheveron-left");
-        var mainbChevronRight = $("#bcheveron-right");
-        var mainbScrollableElement = new ScrollingChevronElement(
-            mainbScrollable, 
-            mainbItemsContainer,
-            mainbMenuItems,
-            mainbChevronLeft,
-            mainbChevronRight,
-            {inertiaAnimationDurationMillis:1000});
-        mainbScrollable.data(
-            'scroller', mainbScrollableElement);
-        mainbScrollableElement.setElasticElements(
-            $("#left-elastic"), $("#right-elastic"));
+        var mainbScrollableElement = new ScrollingElementBuilder()
+            .setScrollingElement(".mainb-scrollmenu")
+            .setMenuItemsContainer($("#mainb-items-container"))
+            .setMenuItems($("#mainb-items-container > .menu-element"))
+            .setChevronElements($("#bcheveron-left"), $("#bcheveron-right"))
+            .setOverscrollElements($("#left-elastic"), $("#right-elastic"))
+            .setParams({inertiaAnimationDurationMillis:1000})
+            .build();
 
-        mainbMenuItems.on("click", function(event) {
+        mainbScrollableElement.jqMenuItems.on("click", function(event) {
             // If the click was actually a scrolling movement, do nothing.
             if (!mainbScrollable.data('scroller').wasClick) {
                 return;

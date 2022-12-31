@@ -541,3 +541,95 @@ class ScrollingChevronElement extends ScrollingElement {
         event.stopPropagation();
     }
 }
+
+function translateToJqElement(element) {
+    var jqElement = null;
+    if (typeof element === 'string') {
+        jqElement = $(element);
+    } else {
+        jqElement = element;
+    }
+    // Verify the element is valid jquery object.
+    if (jqElement.length === 0) {
+        throw 'Invalid element';
+    }
+    return jqElement;
+}
+
+// Builder for the ScrollingElement class.
+class ScrollingElementBuilder {
+    constructor() {
+        this.params = {};
+    }
+
+    setParams(params) {
+        this.params = params;
+        return this;
+    }
+
+    setScrollingElement(scrollingElement) {
+        this.scrollingElement = translateToJqElement(scrollingElement);
+        return this;
+    }
+
+    setMenuItemsContainer(menuItemsContainer) {
+        this.menuItemsContainer = translateToJqElement(menuItemsContainer);
+        return this;
+    }
+    
+    setMenuItems(menuItems) {     
+        this.menuItems = translateToJqElement(menuItems);
+        return this;
+    }
+
+    setChevronElements(chevronLeft, chevronRight) {
+        this.chevronLeft = translateToJqElement(chevronLeft);
+        this.chevronRight = translateToJqElement(chevronRight);
+        return this;
+    }
+
+    setOverscrollElements(overscrollLeft, overscrollRight) {
+        this.overscrollLeft = translateToJqElement(overscrollLeft);
+        this.overscrollRight = translateToJqElement(overscrollRight);
+        return this;
+    }
+
+    build() {
+        // Make sure we have all the required elements.
+        if (!this.scrollingElement) {
+            throw 'Scrolling element not set';
+        }
+        if (!this.menuItemsContainer) {
+            throw 'Menu items container not set';
+        }
+        if (!this.menuItems) {
+            throw 'Menu items not set';
+        }
+        var result = null;
+        if (!this.chevronLeft) {
+            result = new ScrollingElement(
+                this.scrollingElement, 
+                this.menuItemsContainer,
+                this.params);
+        } else {
+            result = new ScrollingChevronElement(
+                this.scrollingElement,
+                this.menuItemsContainer,
+                this.menuItems,
+                this.chevronLeft,
+                this.chevronRight,
+                this.params);
+        }
+        if (this.overscrollLeft) {
+            result.setElasticElements(
+                this.overscrollLeft, this.overscrollRight);
+        }
+
+        if (this.scrollingElement.data('scrollingElement')) {
+            throw 'Scrolling element already has a ScrollingElement associated with it';
+        }
+
+        this.scrollingElement.data('scrollingElement', result);
+        return result;
+    }
+}
