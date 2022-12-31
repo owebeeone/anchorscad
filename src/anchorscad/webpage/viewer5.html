@@ -150,7 +150,7 @@ div::-o-scrollbar {
             .setMenuItemsContainer($("#mainb-items-container"))
             .setMenuItems($("#mainb-items-container > .menu-element"))
             .setChevronElements($("#bcheveron-left"), $("#bcheveron-right"))
-            .setOverscrollElements($("#left-elastic"), $("#right-elastic"))
+            .setOverscrollElements("#left-elastic", $("#right-elastic"))
             .setParams({inertiaAnimationDurationMillis:1000})
             .build();
 
@@ -170,6 +170,7 @@ div::-o-scrollbar {
 </head>
 <body>
 
+<p>Overscroll + chevrons enabled (1 second animations)</p>
 <div class="mainb-scrollmenu horiz-scrolling">
     <div id="mainb-items-container">
         <div class="elastic-element align-vertical" id="left-elastic"></div>
@@ -193,7 +194,8 @@ div::-o-scrollbar {
         <div class="chevron-element no-select" id="bcheveron-right">&rsaquo;</div>
     </div>
 </div>
-    
+
+<p>Chevrons enabled 1/2 second animations.</p>
 <div class="main-scrollmenu horiz-scrolling">
     <div id="main-items-container">
         <div class="menu-element align-vertical" id="ahome">Home</div>
@@ -216,6 +218,7 @@ div::-o-scrollbar {
     </div>
 </div>
 
+<p>Plain scrolling</p>
 <div class="scrollmenu horiz-scrolling">
     <div id="items-container">
         <div class="menu-element align-vertical" id="home">Home</div>
@@ -237,7 +240,7 @@ div::-o-scrollbar {
 </div>
 
 <h2>Horizontal Scrollable Menu Tester</h2>
-<p>Resize, drag and click on chevrons to test.</p>
+<p>Resize, drag menu items and/or click on chevrons to test.</p>
 
 </body>
 </html>

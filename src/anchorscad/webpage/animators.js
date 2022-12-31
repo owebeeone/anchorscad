@@ -101,6 +101,7 @@ const ELASTIC_ANIMATION_DURATION_MILLIS = 400;
 const MIN_PX_FOR_CLICK_EVENT = 5;
 const MAX_ELASTIC_WIDTH = 200;
 const CHEVRON_SIZE_FACTOR = 1.0 / 4.0;
+const DATA_IDENTIFIER_FOR_SCROLLING_ELEMENT = "scrollingElement";
 
 // Default parameters for the scrolling element.
 const SCROLLING_ELEMENT_PARAMERTERS = {
@@ -110,7 +111,8 @@ const SCROLLING_ELEMENT_PARAMERTERS = {
     elasticAnimationDurationMillis: ELASTIC_ANIMATION_DURATION_MILLIS,
     minPxForClickEvent: MIN_PX_FOR_CLICK_EVENT,
     maxElasticWidth: MAX_ELASTIC_WIDTH,
-    chevronSizeFactor: CHEVRON_SIZE_FACTOR
+    chevronSizeFactor: CHEVRON_SIZE_FACTOR,
+    dataIdentifierForScrollingElement: DATA_IDENTIFIER_FOR_SCROLLING_ELEMENT
 };
 
 function scrollingElementParameters(options) {
@@ -127,10 +129,11 @@ class ScrollingElement {
     // jqElement: the jQuery element to scroll. This may include
     // an actaul scrollable bar.
     // jqMenuItems: the jQuery element that contains the menu items.
-    constructor(jqElement, jqMenuItemsContainer, params) {
+    constructor(jqElement, jqMenuItemsContainer, jqMenuItems, params) {
         this.params = scrollingElementParameters(params);
         this.jqElement = jqElement;
         this.jqMenuItemsContainer = jqMenuItemsContainer;
+        this.jqMenuItems = jqMenuItems;
         this.speedDeterminator = new SpeedDeterminator(this.params.speedSampleSpanMillis);
         this.startPosition = -1;
         this.startScrollLeft = -1;
@@ -428,8 +431,7 @@ class ScrollingChevronElement extends ScrollingElement {
     // jqChevronLeft: jQuery element for the left chevron.
     // jqChevronRight: jQuery element for the right chevron.
     constructor(jqElement, jqMenuItemsContainer, jqMenuItems, jqChevronLeft, jqChevronRight, params) {
-        super(jqElement, jqMenuItemsContainer, params);
-        this.jqMenuItems = jqMenuItems;
+        super(jqElement, jqMenuItemsContainer, jqMenuItems, params);
         this.jqChevronLeft = jqChevronLeft;
         this.jqChevronRight = jqChevronRight;
         const boundFunctions = this.boundFunctions;
@@ -594,22 +596,33 @@ class ScrollingElementBuilder {
         return this;
     }
 
+    getDataIdentifier() {
+        if (!this?.params?.dataIdentifierForScrollingElement) {
+            return SCROLLING_ELEMENT_PARAMERTERS.dataIdentifierForScrollingElement;
+        }
+        return this.params.dataIdentifierForScrollingElement;
+    }
+
     build() {
         // Make sure we have all the required elements.
         if (!this.scrollingElement) {
             throw 'Scrolling element not set';
         }
+
         if (!this.menuItemsContainer) {
             throw 'Menu items container not set';
         }
+
         if (!this.menuItems) {
             throw 'Menu items not set';
         }
+
         var result = null;
         if (!this.chevronLeft) {
             result = new ScrollingElement(
                 this.scrollingElement, 
                 this.menuItemsContainer,
+                this.menuItems,
                 this.params);
         } else {
             result = new ScrollingChevronElement(
@@ -620,16 +633,20 @@ class ScrollingElementBuilder {
                 this.chevronRight,
                 this.params);
         }
+
         if (this.overscrollLeft) {
             result.setElasticElements(
                 this.overscrollLeft, this.overscrollRight);
         }
 
-        if (this.scrollingElement.data('scrollingElement')) {
-            throw 'Scrolling element already has a ScrollingElement associated with it';
+        const dataIdentifier = this.getDataIdentifier();
+        if (this.scrollingElement.data(dataIdentifier)) {
+            throw 'Scrolling element already has a ' 
+                + dataIdentifier 
+                + '/ScrollingElement associated with it';
         }
 
-        this.scrollingElement.data('scroller', result);
+        this.scrollingElement.data(dataIdentifier, result);
         return result;
     }
 }
