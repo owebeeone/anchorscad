@@ -65,30 +65,82 @@ class SpeedDeterminator {
     }
 }
 
+function deepMerge(options, defaultValues) {
+    // Create a new object to store the merged properties
+    let merged = {};
+    
+    for (let key of Object.keys(defaultValues)) {
+        if (defaultValues[key] instanceof Object) {
+            if (!options[key]) {
+                // If the property doesn't exist in the target object,
+                // just copy the value from the source object
+                merged[key] = { ...defaultValues[key] };
+            } else {
+                // Recursively merge the nested properties
+                merged[key] = deepMerge(options[key], defaultValues[key]);
+            }
+        } else {
+            if (!options[key]) {
+                merged[key] = defaultValues[key];
+            } else {
+                merged[key] = options[key];
+            }
+        }
+    }
+    
+    // Return the merged object
+    return merged;
+}
+
+var STACK_SAMPLES = [];
+
 const SPEED_SAMPLE_SPAN_MILLIS = 100;
 const MIN_SPEED_FOR_INTERIA_PX_PER_SEC = 10;
 const INERTIA_ANIMATION_DURATION_MILLIS = 500;
+const ELASTIC_ANIMATION_DURATION_MILLIS = 400;
 const MIN_PX_FOR_CLICK_EVENT = 5;
-
 const MAX_ELASTIC_WIDTH = 200;
+const CHEVRON_SIZE_FACTOR = 1.0 / 4.0;
+
+// Default parameters for the scrolling element.
+const SCROLLING_ELEMENT_PARAMERTERS = {
+    speedSampleSpanMillis: SPEED_SAMPLE_SPAN_MILLIS,
+    minSpeedForInteriaPxPerSec: MIN_SPEED_FOR_INTERIA_PX_PER_SEC,
+    inertiaAnimationDurationMillis: INERTIA_ANIMATION_DURATION_MILLIS,
+    elasticAnimationDurationMillis: ELASTIC_ANIMATION_DURATION_MILLIS,
+    minPxForClickEvent: MIN_PX_FOR_CLICK_EVENT,
+    maxElasticWidth: MAX_ELASTIC_WIDTH,
+    chevronSizeFactor: CHEVRON_SIZE_FACTOR
+};
+
+function scrollingElementParameters(options) {
+    if (options) {
+        return deepMerge(options, SCROLLING_ELEMENT_PARAMERTERS);
+        // var copy = { ...SCROLLING_ELEMENT_PARAMERTERS };
+        // return Object.assign(copy, options);
+    }
+    return SCROLLING_ELEMENT_PARAMERTERS;
+}
 
 // Constructor function for a scrolling object.
 class ScrollingElement {
     // jqElement: the jQuery element to scroll. This may include
     // an actaul scrollable bar.
     // jqMenuItems: the jQuery element that contains the menu items.
-    constructor(jqElement, jqMenuItemsContainer) {
+    constructor(jqElement, jqMenuItemsContainer, params) {
+        this.params = scrollingElementParameters(params);
         this.jqElement = jqElement;
         this.jqMenuItemsContainer = jqMenuItemsContainer;
-        this.speedDeterminator = new SpeedDeterminator(SPEED_SAMPLE_SPAN_MILLIS);
+        this.speedDeterminator = new SpeedDeterminator(this.params.speedSampleSpanMillis);
         this.startPosition = -1;
         this.startScrollLeft = -1;
         this.absoluteMovement = 0;
         this.currentPosition = -1;
         this.inertialStartPosition = -1;
-        this.inertialSpeedPxPerSec = -1;
+        this.inertialFinalOffset = -1;
         this.inertialInterpolator = null;
         this.doingIntertialAnimation = false;
+        this.inertialElasticElementWidth = 0;
         this.wasClick = false;
         this.elasticElements = null;
         this.elasticElementWidth = 0;
@@ -182,7 +234,7 @@ class ScrollingElement {
         this.startScrollLeft = this.jqElement.scrollLeft();
         this.absoluteMovement = 0;
         this.cancelAnimator(); // Stops interial scrolling if any.
-
+        this.doingIntertialAnimation = false;
 
         // Grabs mouse move and up events on the whole document.
         $(document).on('mousemove', this.boundFunctions.onMouseMove);
@@ -194,7 +246,7 @@ class ScrollingElement {
         this.cancelAnimator(); // Stops any prior scroll animations.
         this.addSample(event);
         this.currentPosition = event.clientX;
-        this.wasClick = this.absoluteMovement < MIN_PX_FOR_CLICK_EVENT;
+        this.wasClick = this.absoluteMovement < this.params.minPxForClickEvent;
         $(document).off('mousemove', this.boundFunctions.onMouseMove);
         $(document).off('mouseup', this.boundFunctions.onMouseUp);
         this.startInertialAnimation();
@@ -204,43 +256,49 @@ class ScrollingElement {
     startInertialAnimation() {
         const speedPxPerSec = this.speedDeterminator.getSpeed() * 1000;
 
-        if (Math.abs(speedPxPerSec) < MIN_SPEED_FOR_INTERIA_PX_PER_SEC
+        if (Math.abs(speedPxPerSec) < this.params.minSpeedForInteriaPxPerSec
             && !(this.elasticElementWidth > 0)) {
             return;
         }
 
+        this.inertialFinalOffset = speedPxPerSec;
+        this.startScrollLeft = this.jqElement.scrollLeft();
         this.inertialStartPosition = this.currentPosition;
-        this.inertialSpeedPxPerSec = speedPxPerSec;
-        this.inertialInterpolator = new TimedDecay(INERTIA_ANIMATION_DURATION_MILLIS);
         this.doingIntertialAnimation = true;
+        this.inertialElasticElementWidth = this.elasticElementWidth;
 
+        const animationTimeMillis = 
+            this.inertialElasticElementWidth > 0 
+            ? this.params.elasticAnimationDurationMillis
+            : this.params.inertiaAnimationDurationMillis;
+
+        this.inertialInterpolator = new TimedDecay(animationTimeMillis);
         this.setAnimator(this.boundFunctions.inertialAnimate);
     }
 
     // Called to animate the inertial scrolling once the mouse has been released.
     inertialAnimate() {
         const interpValue = this.inertialInterpolator.getFactor();
-        if (interpValue <= 0.0) {
+        if (interpValue <= 0.0 || !this.doingIntertialAnimation) {
             // Scroll is done.
             this.doingIntertialAnimation = false;
+            this.inertialElasticElementWidth = 0;
             this.stretchElastic(0, 0);
             return;
         }
 
+        // Cubic interpolation. Starts fast and slows down towards the end.
+        const scaler = interpValue * interpValue * interpValue;
+
         // If there is a stretch elastic element, then release it.
-        if (this.elasticElementWidth > 0) {
+        if (this.inertialElasticElementWidth > 0) {
             this.stretchElastic(
-                this.elasticElementWidth * interpValue,
+                this.inertialElasticElementWidth * scaler,
                 this.elasticElementIndex);
         }
+        const distance = (1 - scaler) * this.inertialFinalOffset;
 
-        const scaler = interpValue  * interpValue * interpValue;
-
-        this.currentPosition = this.inertialStartPosition +
-            (1 - scaler) * this.inertialSpeedPxPerSec;
-
-        // Moves scroll position based on current position.
-        this.scrollAnimator();
+        this.scrollBy(distance);
         // Reschedule this callback function.
         this.setAnimator(this.boundFunctions.inertialAnimate);
     }
@@ -282,37 +340,61 @@ class ScrollingElement {
         this.elasticElementWidth = amount;
         this.elasticElementIndex = index;
 
-        const factor = amount / MAX_ELASTIC_WIDTH;
+        const factor = amount / this.params.maxElasticWidth;
+        // x/(1+x) is a sigmoid function that goes from 0 to 1 for x from 0 to infinity.
+        // This is used to modulate the amount of stretch and makes it look more natural.
         const scale = factor / (1 + factor);
-        stretchElem.width(MAX_ELASTIC_WIDTH * scale)
+        stretchElem.width(this.params.maxElasticWidth * scale);
         otherElem.width(0);
     }
 
+    
     scrollAnimator() {
-        const jthis = this.jqElement;
         const distance = this.currentPosition - this.startPosition;
+        this.scrollBy(distance);
+    }
+
+    scrollBy(distance) {
+        
+        // var stack = {};
+        // Error.captureStackTrace(stack);
+        // STACK_SAMPLES.push(stack);
+        // console.log("scrollBy " + distance);
+        // if (Math.abs(this.lastDistance - distance) > 20 && STACK_SAMPLES.length > 2) {
+        //     console.log("scrollBy different " + Math.abs(this.lastDistance - distance));
+        //     console.log(STACK_SAMPLES[STACK_SAMPLES.length - 2].stack);
+        //     console.log("this frame's stack:");
+        //     console.log(STACK_SAMPLES[STACK_SAMPLES.length - 1].stack);
+        // }
+        // this.lastDistance = distance;
+
+        const jthis = this.jqElement;
 
         // Update current position based on swipe distance and sensitivity
-        var currentPos = this.startScrollLeft - distance / 1;
+        var newScrollPos = this.startScrollLeft - distance;
 
         // Set boundaries for swiper
         const maxPos = jthis.prop('scrollWidth') - jthis.width();
 
         // Snap to boundaries if outside of bounds
-        if (currentPos < this.elasticElementWidth) {
+        if (newScrollPos < this.elasticElementWidth) {
             if (!this.doingIntertialAnimation) {
-                this.stretchElastic(-currentPos, 0);
+                this.stretchElastic(-newScrollPos, 0);
             }
-            currentPos = 0;
-        } else if (currentPos > maxPos) {
+            newScrollPos = 0;
+        } else if (newScrollPos > maxPos) {
             if (!this.doingIntertialAnimation) {
-                this.stretchElastic(currentPos - maxPos, 1);
+                this.stretchElastic(newScrollPos - maxPos, 1);
             }
-            currentPos = maxPos;
+            newScrollPos = maxPos;
+        } else if (this.inertialElasticElementWidth > 0) {
+            if (this.elasticElementIndex == 1) {
+                newScrollPos = maxPos;
+            }
         }
 
         // Update swiper position
-        jthis.scrollLeft(currentPos);
+        jthis.scrollLeft(newScrollPos);
         this.updateViews();
     }
 
@@ -323,7 +405,6 @@ class ScrollingElement {
 
 const CSS_BORDER_WIDTH_PROPERTIES = [ 'border-left-width', 'border-right-width' ];
 const CSS_BORDER_HEIGHT_PROPOERTIES = [ 'border-top-width', 'border-bottom-width' ];
-const CHEVRON_SIZE_FACTOR = 1.0 / 4.0;
 
 function parseCssSize(cssSize) {
     if (cssSize == null) {
@@ -346,8 +427,8 @@ function getCssSize(jqElement, cssProperties) {
 class ScrollingChevronElement extends ScrollingElement {
     // jqChevronLeft: jQuery element for the left chevron.
     // jqChevronRight: jQuery element for the right chevron.
-    constructor(jqElement, jqMenuItemsContainer, jqMenuItems, jqChevronLeft, jqChevronRight) {
-        super(jqElement, jqMenuItemsContainer);
+    constructor(jqElement, jqMenuItemsContainer, jqMenuItems, jqChevronLeft, jqChevronRight, params) {
+        super(jqElement, jqMenuItemsContainer, params);
         this.jqMenuItems = jqMenuItems;
         this.jqChevronLeft = jqChevronLeft;
         this.jqChevronRight = jqChevronRight;
@@ -378,7 +459,7 @@ class ScrollingChevronElement extends ScrollingElement {
         const scrollerOffset = this.jqElement.offset();
         const menuItemWidth = this.jqMenuItems.width();
 
-        const chevronWidth = menuItemWidth * CHEVRON_SIZE_FACTOR;
+        const chevronWidth = menuItemWidth * this.params.chevronSizeFactor;
         
         const jthis = this.jqElement;
         const currentScrollPos = jthis.scrollLeft();
@@ -412,19 +493,26 @@ class ScrollingChevronElement extends ScrollingElement {
     }
 
     performScroll(scrollSize) {
-        const seconds = INERTIA_ANIMATION_DURATION_MILLIS / 1000.0;
+        const seconds = this.params.inertiaAnimationDurationMillis / 1000.0;
 
-        this.startScrollLeft = this.jqElement.scrollLeft();
         if (this.doingIntertialAnimation) {
-            this.inertialSpeedPxPerSec = 1.5 * scrollSize / seconds;
+            this.inertialFinalOffset = 1.5 * scrollSize / seconds;
         } else {
-            this.inertialSpeedPxPerSec = scrollSize / seconds;
+            this.inertialFinalOffset = scrollSize / seconds;
         }
-        this.inertialStartPosition = this.jqElement.scrollLeft();
-        
-        this.startPosition = this.inertialStartPosition;
-        this.inertialInterpolator = new TimedDecay(INERTIA_ANIMATION_DURATION_MILLIS);
+        const jthis = this.jqElement;
+        const maxPos = jthis.prop('scrollWidth') - jthis.width();
+        this.startScrollLeft = this.jqElement.scrollLeft();
+        const finalPos = this.startScrollLeft - this.inertialFinalOffset;
+        if ( finalPos < 0) {
+            this.inertialFinalOffset += finalPos;
+        } else if (finalPos > maxPos) {
+            this.inertialFinalOffset -= finalPos - maxPos;
+        }
+        this.inertialStartPosition = this.startScrollLeft + this.inertialFinalOffset;
+        this.inertialInterpolator = new TimedDecay(this.params.inertiaAnimationDurationMillis);
         this.doingIntertialAnimation = true;
+        this.inertialElasticElementWidth = 0;
 
         this.setAnimator(this.boundFunctions.inertialAnimate);
 
