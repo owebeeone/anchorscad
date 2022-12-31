@@ -145,7 +145,7 @@ div::-o-scrollbar {
             $(this).addClass("current-menu-element");
         });
 
-        var mainbScrollableElement = new ScrollingElementBuilder()
+        var scrollerb = new ScrollingElementBuilder()
             .setScrollingElement(".mainb-scrollmenu")
             .setMenuItemsContainer($("#mainb-items-container"))
             .setMenuItems($("#mainb-items-container > .menu-element"))
@@ -154,9 +154,9 @@ div::-o-scrollbar {
             .setParams({inertiaAnimationDurationMillis:1000})
             .build();
 
-        mainbScrollableElement.jqMenuItems.on("click", function(event) {
+        scrollerb.jqMenuItems.on("click", function(event) {
             // If the click was actually a scrolling movement, do nothing.
-            if (!mainbScrollable.data('scroller').wasClick) {
+            if (!scrollerb.wasClick) {
                 return;
             }
             window.location = "#" + this.id;

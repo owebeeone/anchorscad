@@ -629,7 +629,7 @@ class ScrollingElementBuilder {
             throw 'Scrolling element already has a ScrollingElement associated with it';
         }
 
-        this.scrollingElement.data('scrollingElement', result);
+        this.scrollingElement.data('scroller', result);
         return result;
     }
 }
