@@ -166,6 +166,16 @@ function scrollingElementParameters(options) {
     return SCROLLING_ELEMENT_PARAMERTERS;
 }
 
+const EPSILONPX = 0.1;
+const LARGE_EPSILONPX = 1.0;
+
+function approxEqual(a, b, epsilon) {
+    if (epsilon == null) {
+        epsilon = EPSILONPX;
+    }
+    return Math.abs(a - b) < epsilon;
+}
+
 // Constructor function for a scrolling object.
 class ScrollingElement {
     // jqElement: the jQuery element to scroll. This may include
@@ -305,23 +315,26 @@ class ScrollingElement {
         return null;
     }
 
-    findNextSnapPosition(scrollerLeftSide, snapOffsets) {
+    findNextSnapPosition(scrollerLeftSide, scrollerRightSide, snapOffsets) {
+        if (snapOffsets.length <= 1) {
+            return 0;
+        }
         // If the first snapOffset is greater than the current position, then
         // then snap use the first snapOffset.
-        if (snapOffsets[0].left >= scrollerLeftSide) {
+        if (snapOffsets[1].left + EPSILONPX >= scrollerLeftSide) {
             return 0;
         }
         // If the last snapOffset is less than the current position, then
         // then snap use the last snapOffset.
         const last = snapOffsets[snapOffsets.length - 1];
-        if (last.rightElaticElement <= scrollerLeftSide) {
+        if (last.right - LARGE_EPSILONPX <= scrollerRightSide) {
             return snapOffsets.length - 1;
         }
         // Find the first snapOffset whose left is less than the current position.
-        for (let i = 0; i < snapOffsets.length - 1; i++) {
+        for (let i = 1; i < snapOffsets.length; i++) {
+            const snapOffsetPrev = snapOffsets[i - 1];
             const snapOffset = snapOffsets[i];
-            const snapOffsetNext = snapOffsets[i + 1];
-            if (snapOffset.left <= scrollerLeftSide && snapOffsetNext.left >= scrollerLeftSide) {
+            if (snapOffsetPrev.right - EPSILONPX <= scrollerLeftSide && snapOffset.right + EPSILONPX >= scrollerLeftSide) {
                 return i;
             }
         }
@@ -330,9 +343,6 @@ class ScrollingElement {
 
     findIntertialFinalOffset() {
         const proposedOffset = this.speedDeterminator.getSpeed() * 1000;
-        if (Math.abs(proposedOffset) < this.params.minSpeedForInteriaPxPerSec) {
-            return 0;
-        }
         return this.findIntertialFinalOffsetFor(
             proposedOffset, this.speedDeterminator.direction());
     }
@@ -353,11 +363,14 @@ class ScrollingElement {
             ? this.elasticElementWidth : -this.elasticElementWidth;
         
         var scrollerLeftSide = this.jqElement.offset().left + elsaticCorrection;
+        var scrollerRightSide = scrollerLeftSide + this.jqElement.width();
         const nextSnapPositionIndex = this.findNextSnapPosition(
-            scrollerLeftSide - proposedOffset, snapPositions);
+            scrollerLeftSide - proposedOffset, 
+            scrollerRightSide - proposedOffset,
+            snapPositions);
         
 
-        if (direction >= 0) {
+        if (direction >= 0 && !Math.abs(proposedOffset) < this.params.minSpeedForInteriaPxPerSec) {
             return scrollerLeftSide - snapPositions[nextSnapPositionIndex].left;
         }
         if (nextSnapPositionIndex == snapPositions.length - 1) {
