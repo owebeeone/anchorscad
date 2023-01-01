@@ -20,11 +20,15 @@ class TimedSampleClientXEvent extends TimedSampleValue {
 class SpeedDeterminator {
     constructor(spanMillis) {
         this.spanMillis = spanMillis;
+        this.initialSample = null;
         this.samples = [];
     }
 
     // Adds a new sample value.
     addSample(sampleValue) {
+        if (this.initialSample == null) {
+            this.initialSample = sampleValue;
+        }
         // If the latest sample has the same timestamp, replace it.
         if (this.samples.length > 0) {
             const latestSample = this.samples[this.samples.length - 1];
@@ -50,7 +54,7 @@ class SpeedDeterminator {
     }
 
     // Returns the speed in pixels per millisecond.
-    getSpeed = function () {
+    getSpeed() {
         if (this.samples.length < 2) {
             return 0;
         }
@@ -63,6 +67,15 @@ class SpeedDeterminator {
         const distance = sampleB.value - sampleA.value;
         return distance / elapsedMillis;
     }
+
+    direction() {
+        const speed = this.getSpeed();
+        if (speed != 0) {
+            return Math.sign(speed);
+        }
+        const lastSample = this.samples[this.samples.length - 1];
+        return Math.sign(lastSample.value - this.initialSample.value);
+    }
 }
 
 function deepMerge(options, defaultValues) {
@@ -70,7 +83,14 @@ function deepMerge(options, defaultValues) {
     let merged = {};
     
     for (let key of Object.keys(defaultValues)) {
-        if (defaultValues[key] instanceof Object) {
+        if (typeof defaultValues[key] == "function") {
+            // If the property is a function, just copy it
+            if (!options[key]) {
+                merged[key] = defaultValues[key];
+            } else {
+                merged[key] = options[key];
+            }
+        } else if (defaultValues[key] instanceof Object) {
             if (!options[key]) {
                 // If the property doesn't exist in the target object,
                 // just copy the value from the source object
@@ -92,9 +112,25 @@ function deepMerge(options, defaultValues) {
     return merged;
 }
 
+// Returns an ordered set of offsets for the menu items.
+function defaultSnapToResolver(scroller) {
+    const menuItems = scroller.jqMenuItems;
+    return $.map(menuItems, function(element) {
+        const offset = $(element).offset();
+        return {
+            top: offset.top,
+            left: offset.left,
+            right: offset.left + $(element).outerWidth(),
+            bottom: offset.top + $(element).outerHeight(),
+        };
+    }).sort(function(a, b) {
+        return a.left - b.left;
+    });
+}
+  
 var STACK_SAMPLES = [];
 
-const SPEED_SAMPLE_SPAN_MILLIS = 100;
+const SPEED_SAMPLE_SPAN_MILLIS = 300;
 const MIN_SPEED_FOR_INTERIA_PX_PER_SEC = 10;
 const INERTIA_ANIMATION_DURATION_MILLIS = 500;
 const ELASTIC_ANIMATION_DURATION_MILLIS = 400;
@@ -112,8 +148,21 @@ const SCROLLING_ELEMENT_PARAMERTERS = {
     minPxForClickEvent: MIN_PX_FOR_CLICK_EVENT,
     maxElasticWidth: MAX_ELASTIC_WIDTH,
     chevronSizeFactor: CHEVRON_SIZE_FACTOR,
-    dataIdentifierForScrollingElement: DATA_IDENTIFIER_FOR_SCROLLING_ELEMENT
+    dataIdentifierForScrollingElement: DATA_IDENTIFIER_FOR_SCROLLING_ELEMENT,
+    snapToItemsOffsetsFunction: defaultSnapToResolver
 };
+
+// Returns an ordered set of offsets for the menu items.
+function func(scroller) {
+    console.log("func" + scroller);
+}
+// Default parameters for the scrolling element.
+const PARAMS = {
+    speedSampleSpanMillis: SPEED_SAMPLE_SPAN_MILLIS,
+    dafunc: func
+};
+
+PARAMS.dafunc(11)
 
 function scrollingElementParameters(options) {
     if (options) {
@@ -255,16 +304,69 @@ class ScrollingElement {
         this.startInertialAnimation();
     }
 
+    maybeFindSnapPositions() {
+        if (this.params.snapToItemsOffsetsFunction) {
+            return this.params.snapToItemsOffsetsFunction(this);
+        }
+        return null;
+    }
+
+    findNextSnapPosition(scrollerLeftSide, snapOffsets) {
+        // If the first snapOffset is greater than the current position, then
+        // then snap use the first snapOffset.
+        if (snapOffsets[0].left >= scrollerLeftSide) {
+            return snapOffsets[0];
+        }
+        // If the last snapOffset is less than the current position, then
+        // then snap use the last snapOffset.
+        const last = snapOffsets[snapOffsets.length - 1];
+        if (last.rightElaticElement <= scrollerLeftSide) {
+            return last;
+        }
+        // Find the first snapOffset whose left is less than the current position.
+        for (let i = 0; i < snapOffsets.length; i++) {
+            const snapOffset = snapOffsets[i];
+            if (snapOffset.left <= scrollerLeftSide && snapOffset.right >= scrollerLeftSide) {
+                return snapOffset;
+            }
+        }
+        return last;
+    }
+
+    findIntertialFinalOffset() {
+        const proposedOffset = this.speedDeterminator.getSpeed() * 1000;
+        const snapPositions = this.maybeFindSnapPositions();
+        if (snapPositions == null) {
+
+            if (Math.abs(speedPxPerSec) < this.params.minSpeedForInteriaPxPerSec
+                && !(this.elasticElementWidth > 0)) {
+                return 0;
+            }
+            return speedPxPerSec;
+        }
+
+        const elsaticCorrection = 
+            this.elasticElementIndex == 0 
+            ? this.elasticElementWidth : -this.elasticElementWidth;
+        
+        var scrollerLeftSide = this.jqElement.offset().left + elsaticCorrection;
+        const nextSnapPosition = this.findNextSnapPosition(
+            scrollerLeftSide - proposedOffset, snapPositions);
+
+        if (this.speedDeterminator.direction() >= 0) {
+            return scrollerLeftSide - nextSnapPosition.left;
+        }
+        return scrollerLeftSide - nextSnapPosition.right;
+    }
+
     // Called to start the animation of inertial scrolling.
     startInertialAnimation() {
-        const speedPxPerSec = this.speedDeterminator.getSpeed() * 1000;
-
-        if (Math.abs(speedPxPerSec) < this.params.minSpeedForInteriaPxPerSec
-            && !(this.elasticElementWidth > 0)) {
+        const inertialFinalOffset = this.findIntertialFinalOffset();
+        if (inertialFinalOffset == 0) {
             return;
         }
 
-        this.inertialFinalOffset = speedPxPerSec;
+        this.inertialFinalOffset = inertialFinalOffset;
         this.startScrollLeft = this.jqElement.scrollLeft();
         this.inertialStartPosition = this.currentPosition;
         this.doingIntertialAnimation = true;
