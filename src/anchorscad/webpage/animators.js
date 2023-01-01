@@ -24,6 +24,11 @@ class SpeedDeterminator {
         this.samples = [];
     }
 
+    reset() {
+        this.initialSample = null;
+        this.samples = [];
+    }
+
     // Adds a new sample value.
     addSample(sampleValue) {
         if (this.initialSample == null) {
@@ -84,7 +89,7 @@ function deepMerge(options, defaultValues) {
     
     for (let key of Object.keys(defaultValues)) {
         if (typeof defaultValues[key] == "function") {
-            // If the property is a function, just copy it
+            // If the property is a function, use it as is.
             if (!options[key]) {
                 merged[key] = defaultValues[key];
             } else {
@@ -151,18 +156,6 @@ const SCROLLING_ELEMENT_PARAMERTERS = {
     dataIdentifierForScrollingElement: DATA_IDENTIFIER_FOR_SCROLLING_ELEMENT,
     snapToItemsOffsetsFunction: defaultSnapToResolver
 };
-
-// Returns an ordered set of offsets for the menu items.
-function func(scroller) {
-    console.log("func" + scroller);
-}
-// Default parameters for the scrolling element.
-const PARAMS = {
-    speedSampleSpanMillis: SPEED_SAMPLE_SPAN_MILLIS,
-    dafunc: func
-};
-
-PARAMS.dafunc(11)
 
 function scrollingElementParameters(options) {
     if (options) {
@@ -281,6 +274,7 @@ class ScrollingElement {
 
     // To be called whenever the mouse is pressed on the scrolling element.
     onMouseDown(event) {
+        this.speedDeterminator.reset();
         this.addSample(event);
         this.startPosition = event.clientX;
         this.startScrollLeft = this.jqElement.scrollLeft();
@@ -315,34 +309,43 @@ class ScrollingElement {
         // If the first snapOffset is greater than the current position, then
         // then snap use the first snapOffset.
         if (snapOffsets[0].left >= scrollerLeftSide) {
-            return snapOffsets[0];
+            return 0;
         }
         // If the last snapOffset is less than the current position, then
         // then snap use the last snapOffset.
         const last = snapOffsets[snapOffsets.length - 1];
         if (last.rightElaticElement <= scrollerLeftSide) {
-            return last;
+            return snapOffsets.length - 1;
         }
         // Find the first snapOffset whose left is less than the current position.
-        for (let i = 0; i < snapOffsets.length; i++) {
+        for (let i = 0; i < snapOffsets.length - 1; i++) {
             const snapOffset = snapOffsets[i];
-            if (snapOffset.left <= scrollerLeftSide && snapOffset.right >= scrollerLeftSide) {
-                return snapOffset;
+            const snapOffsetNext = snapOffsets[i + 1];
+            if (snapOffset.left <= scrollerLeftSide && snapOffsetNext.left >= scrollerLeftSide) {
+                return i;
             }
         }
-        return last;
+        return snapOffsets.length - 1;
     }
 
     findIntertialFinalOffset() {
         const proposedOffset = this.speedDeterminator.getSpeed() * 1000;
+        if (Math.abs(proposedOffset) < this.params.minSpeedForInteriaPxPerSec) {
+            return 0;
+        }
+        return this.findIntertialFinalOffsetFor(
+            proposedOffset, this.speedDeterminator.direction());
+    }
+
+    findIntertialFinalOffsetFor(proposedOffset, direction) {
         const snapPositions = this.maybeFindSnapPositions();
         if (snapPositions == null) {
 
-            if (Math.abs(speedPxPerSec) < this.params.minSpeedForInteriaPxPerSec
+            if (Math.abs(proposedOffset) < this.params.minSpeedForInteriaPxPerSec
                 && !(this.elasticElementWidth > 0)) {
                 return 0;
             }
-            return speedPxPerSec;
+            return proposedOffset;
         }
 
         const elsaticCorrection = 
@@ -350,18 +353,26 @@ class ScrollingElement {
             ? this.elasticElementWidth : -this.elasticElementWidth;
         
         var scrollerLeftSide = this.jqElement.offset().left + elsaticCorrection;
-        const nextSnapPosition = this.findNextSnapPosition(
+        const nextSnapPositionIndex = this.findNextSnapPosition(
             scrollerLeftSide - proposedOffset, snapPositions);
+        
 
-        if (this.speedDeterminator.direction() >= 0) {
-            return scrollerLeftSide - nextSnapPosition.left;
+        if (direction >= 0) {
+            return scrollerLeftSide - snapPositions[nextSnapPositionIndex].left;
         }
-        return scrollerLeftSide - nextSnapPosition.right;
+        if (nextSnapPositionIndex == snapPositions.length - 1) {
+            return scrollerLeftSide - snapPositions[nextSnapPositionIndex].right;
+        }
+        return scrollerLeftSide - snapPositions[nextSnapPositionIndex + 1].left;
     }
 
     // Called to start the animation of inertial scrolling.
     startInertialAnimation() {
         const inertialFinalOffset = this.findIntertialFinalOffset();
+        this.startAnimationForOffset(inertialFinalOffset);
+    }
+
+    startAnimationForOffset(inertialFinalOffset) {
         if (inertialFinalOffset == 0) {
             return;
         }
@@ -597,29 +608,30 @@ class ScrollingChevronElement extends ScrollingElement {
     }
 
     performScroll(scrollSize) {
-        const seconds = this.params.inertiaAnimationDurationMillis / 1000.0;
+        const offset = this.findIntertialFinalOffsetFor(scrollSize, Math.sign(scrollSize));
+        this.startAnimationForOffset(offset)
+        // const seconds = this.params.inertiaAnimationDurationMillis / 1000.0;
 
-        if (this.doingIntertialAnimation) {
-            this.inertialFinalOffset = 1.5 * scrollSize / seconds;
-        } else {
-            this.inertialFinalOffset = scrollSize / seconds;
-        }
-        const jthis = this.jqElement;
-        const maxPos = jthis.prop('scrollWidth') - jthis.width();
-        this.startScrollLeft = this.jqElement.scrollLeft();
-        const finalPos = this.startScrollLeft - this.inertialFinalOffset;
-        if ( finalPos < 0) {
-            this.inertialFinalOffset += finalPos;
-        } else if (finalPos > maxPos) {
-            this.inertialFinalOffset -= finalPos - maxPos;
-        }
-        this.inertialStartPosition = this.startScrollLeft + this.inertialFinalOffset;
-        this.inertialInterpolator = new TimedDecay(this.params.inertiaAnimationDurationMillis);
-        this.doingIntertialAnimation = true;
-        this.inertialElasticElementWidth = 0;
+        // if (this.doingIntertialAnimation) {
+        //     this.inertialFinalOffset = 1.5 * scrollSize / seconds;
+        // } else {
+        //     this.inertialFinalOffset = scrollSize / seconds;
+        // }
+        // const jthis = this.jqElement;
+        // const maxPos = jthis.prop('scrollWidth') - jthis.width();
+        // this.startScrollLeft = this.jqElement.scrollLeft();
+        // const finalPos = this.startScrollLeft - this.inertialFinalOffset;
+        // if ( finalPos < 0) {
+        //     this.inertialFinalOffset += finalPos;
+        // } else if (finalPos > maxPos) {
+        //     this.inertialFinalOffset -= finalPos - maxPos;
+        // }
+        // this.inertialStartPosition = this.startScrollLeft + this.inertialFinalOffset;
+        // this.inertialInterpolator = new TimedDecay(this.params.inertiaAnimationDurationMillis);
+        // this.doingIntertialAnimation = true;
+        // this.inertialElasticElementWidth = 0;
 
-        this.setAnimator(this.boundFunctions.inertialAnimate);
-
+        // this.setAnimator(this.boundFunctions.inertialAnimate);
     }
 
     // Called when the left chevron is clicked.

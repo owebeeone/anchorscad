@@ -107,7 +107,7 @@ div::-o-scrollbar {
         var itemsContainer = $("#items-container");
         var menuItems = $("#items-container > .menu-element");
         scrollable.data(
-            'scroller', new ScrollingElement(scrollable, itemsContainer));
+            'scroller', new ScrollingElement(scrollable, itemsContainer, menuItems));
 
         menuItems.on("click", function(event) {
             // If the click was actually a scrolling movement, do nothing.
