@@ -10,7 +10,7 @@ class TimedSampleValue {
 
 class TimedSampleClientXEvent extends TimedSampleValue {
     constructor(event) {
-        super(event.clientX, Date.now());
+        super(getClientXPosition(event), Date.now());
     }
 }
 
@@ -31,6 +31,9 @@ class SpeedDeterminator {
 
     // Adds a new sample value.
     addSample(sampleValue) {
+        if (sampleValue.value == null) {
+            return;
+        }
         if (this.initialSample == null) {
             this.initialSample = sampleValue;
         }
@@ -77,6 +80,9 @@ class SpeedDeterminator {
         const speed = this.getSpeed();
         if (speed != 0) {
             return Math.sign(speed);
+        }
+        if (this.samples.length < 2) {
+            return 0;
         }
         const lastSample = this.samples[this.samples.length - 1];
         return Math.sign(lastSample.value - this.initialSample.value);
@@ -166,15 +172,21 @@ function scrollingElementParameters(options) {
     return SCROLLING_ELEMENT_PARAMERTERS;
 }
 
+
+// Grabs the X position from an event.
+function getClientXPosition(eventValue) {
+    if (eventValue.type.startsWith('mouse')) {
+        return eventValue.clientX;
+    } else if (eventValue.type == 'touchstart' || eventValue.type == 'touchend') {
+        return null;
+    } else if (eventValue.type.startsWith('touch')){
+        return eventValue.originalEvent.touches[0].clientX;
+    }
+    throw new Error('Unsupported event type: ' + eventValue.type);
+}
+
 const EPSILONPX = 0.1;
 const LARGE_EPSILONPX = 1.0;
-
-function approxEqual(a, b, epsilon) {
-    if (epsilon == null) {
-        epsilon = EPSILONPX;
-    }
-    return Math.abs(a - b) < epsilon;
-}
 
 // Constructor function for a scrolling object.
 class ScrollingElement {
@@ -216,6 +228,7 @@ class ScrollingElement {
 
         // Binds the mouse down event to the scrolling element.
         jqMenuItemsContainer.on('mousedown', this.boundFunctions.onMouseDown);
+        jqMenuItemsContainer.on('touchstart', this.boundFunctions.onMouseDown);
         
         $(window).resize(this.boundFunctions.updateViews);
     }
@@ -286,25 +299,28 @@ class ScrollingElement {
     onMouseDown(event) {
         this.speedDeterminator.reset();
         this.addSample(event);
-        this.startPosition = event.clientX;
+        this.startPosition = getClientXPosition(event);
         this.startScrollLeft = this.jqElement.scrollLeft();
         this.absoluteMovement = 0;
         this.cancelAnimator(); // Stops interial scrolling if any.
         this.doingIntertialAnimation = false;
 
         // Grabs mouse move and up events on the whole document.
-        $(document).on('mousemove', this.boundFunctions.onMouseMove);
-        $(document).on('mouseup', this.boundFunctions.onMouseUp);
+        $(document).bind(
+            'mousemove touchmove', 
+            this.boundFunctions.onMouseMove);
+        $(document).bind(
+            'mouseup touchend',
+            this.boundFunctions.onMouseUp);
     }
 
     // To be called whenever the mouse is released.
     onMouseUp(event) {
         this.cancelAnimator(); // Stops any prior scroll animations.
         this.addSample(event);
-        this.currentPosition = event.clientX;
         this.wasClick = this.absoluteMovement < this.params.minPxForClickEvent;
-        $(document).off('mousemove', this.boundFunctions.onMouseMove);
-        $(document).off('mouseup', this.boundFunctions.onMouseUp);
+        $(document).unbind('mousemove touchmove', this.boundFunctions.onMouseMove);
+        $(document).unbind('mouseup touchend', this.boundFunctions.onMouseUp);
         this.startInertialAnimation();
     }
 
@@ -440,8 +456,12 @@ class ScrollingElement {
         this.addSample(event);
         event.preventDefault();
         event.stopPropagation();
-        this.absoluteMovement += Math.abs(event.clientX - this.currentPosition);
-        this.currentPosition = event.clientX;
+        var currentPosition = getClientXPosition(event);
+        if (this.startPosition == null) {
+            this.startPosition = currentPosition;
+        }
+        this.absoluteMovement += Math.abs(currentPosition - this.currentPosition);
+        this.currentPosition = currentPosition;
         this.setAnimator(this.boundFunctions.scrollAnimator);
     }
 
