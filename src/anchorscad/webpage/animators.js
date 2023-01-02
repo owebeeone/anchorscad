@@ -398,7 +398,7 @@ class ScrollingElement {
                 && !(this.elasticElementWidth > 0)) {
                 return 0;
             }
-            return proposedOffset;
+            return proposedOffset + this.elasticElementWidth;
         }
 
         const elsaticCorrection = 
