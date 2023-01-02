@@ -10,7 +10,7 @@ class TimedSampleValue {
 
 class TimedSampleClientXEvent extends TimedSampleValue {
     constructor(event) {
-        super(getClientXPosition(event), Date.now());
+        super(getClientXPosition(event), performance.now());
     }
 }
 
@@ -63,12 +63,21 @@ class SpeedDeterminator {
 
     // Returns the speed in pixels per millisecond.
     getSpeed() {
+        return this.getSpeedAt(performance.now());
+    }
+
+    getSpeedAt(timestampMillis) {
         if (this.samples.length < 2) {
             return 0;
         }
         const sampleA = this.samples[0];
         const sampleB = this.samples[this.samples.length - 1];
-        const elapsedMillis = sampleB.timestampMillis - sampleA.timestampMillis;
+        var elapsedMillis;
+        if (timestampMillis != null) {
+            elapsedMillis = timestampMillis - sampleA.timestampMillis;
+        } else {
+            elapsedMillis = sampleB.timestampMillis - sampleA.timestampMillis;
+        }
         if (elapsedMillis <= 0) {
             return 0;
         }
@@ -141,7 +150,7 @@ function defaultSnapToResolver(scroller) {
   
 var STACK_SAMPLES = [];
 
-const SPEED_SAMPLE_SPAN_MILLIS = 300;
+const SPEED_SAMPLE_SPAN_MILLIS = 500;
 const MIN_SPEED_FOR_INTERIA_PX_PER_SEC = 10;
 const INERTIA_ANIMATION_DURATION_MILLIS = 500;
 const ELASTIC_ANIMATION_DURATION_MILLIS = 400;
@@ -149,6 +158,7 @@ const MIN_PX_FOR_CLICK_EVENT = 5;
 const MAX_ELASTIC_WIDTH = 200;
 const CHEVRON_SIZE_FACTOR = 1.0 / 4.0;
 const DATA_IDENTIFIER_FOR_SCROLLING_ELEMENT = "scrollingElement";
+const INERTIA_SPEED_FACTOR = 0.75;
 
 // Default parameters for the scrolling element.
 const SCROLLING_ELEMENT_PARAMERTERS = {
@@ -160,7 +170,8 @@ const SCROLLING_ELEMENT_PARAMERTERS = {
     maxElasticWidth: MAX_ELASTIC_WIDTH,
     chevronSizeFactor: CHEVRON_SIZE_FACTOR,
     dataIdentifierForScrollingElement: DATA_IDENTIFIER_FOR_SCROLLING_ELEMENT,
-    snapToItemsOffsetsFunction: defaultSnapToResolver
+    snapToItemsOffsetsFunction: defaultSnapToResolver,
+    inertiaSpeedFactor: INERTIA_SPEED_FACTOR,
 };
 
 function scrollingElementParameters(options) {
@@ -358,7 +369,7 @@ class ScrollingElement {
     }
 
     findIntertialFinalOffset() {
-        const proposedOffset = this.speedDeterminator.getSpeed() * 1000;
+        const proposedOffset = this.speedDeterminator.getSpeed() * 1000 * this.params.inertiaSpeedFactor;
         return this.findIntertialFinalOffsetFor(
             proposedOffset, this.speedDeterminator.direction());
     }
