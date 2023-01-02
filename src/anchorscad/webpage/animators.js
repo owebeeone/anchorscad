@@ -223,6 +223,7 @@ class ScrollingElement {
         this.elasticElements = null;
         this.elasticElementWidth = 0;
         this.elasticElementIndex = 0;
+        this.snapToPositionDisabled = false;
 
         // The bound function that was last used for a requestAnimationFrame callback.
         this.lastAnimateCallbackFunction = null;
@@ -244,8 +245,8 @@ class ScrollingElement {
         $(window).resize(this.boundFunctions.updateViews);
     }
 
-    setElasticElements(leftElaticElement, rightElaticElement) {
-        this.elasticElements = [leftElaticElement, rightElaticElement];
+    setElasticElements(leftElaticElement, rightElaticElement, fillerElement) {
+        this.elasticElements = [leftElaticElement, rightElaticElement, fillerElement];
         this.updateOnResize();
     }
 
@@ -259,6 +260,19 @@ class ScrollingElement {
             const style = {height: elasticHeight};
             leftElaticElement.css(style);
             rightElaticElement.css(style)
+            // find the rightmost menu item.
+            const rightmostItem = this.jqMenuItems.last();
+            const rightmostItemRight = rightmostItem.offset().left + rightmostItem.outerWidth(true);
+            const containerRight = this.jqMenuItemsContainer.offset().left + this.jqMenuItemsContainer.outerWidth(true);
+            const fillerWidth = containerRight - rightmostItemRight;
+            if (fillerWidth < 0) {
+                this.elasticElements[2].hide();
+                this.snapToPositionDisabled = false;
+            } else {
+                this.snapToPositionDisabled = true;
+                this.elasticElements[2].show();
+                this.elasticElements[2].css({width: fillerWidth});
+            }
         }
     }
 
@@ -376,7 +390,9 @@ class ScrollingElement {
 
     findIntertialFinalOffsetFor(proposedOffset, direction) {
         const snapPositions = this.maybeFindSnapPositions();
-        if (snapPositions == null) {
+        if (snapPositions == null 
+            || snapPositions.length < 2 
+            || this.snapToPositionDisabled) {
 
             if (Math.abs(proposedOffset) < this.params.minSpeedForInteriaPxPerSec
                 && !(this.elasticElementWidth > 0)) {
@@ -710,7 +726,7 @@ function translateToJqElement(element) {
         jqElement = element;
     }
     // Verify the element is valid jquery object.
-    if (jqElement.length === 0) {
+    if (jqElement?.length === 0) {
         throw 'Invalid element';
     }
     return jqElement;
@@ -748,9 +764,10 @@ class ScrollingElementBuilder {
         return this;
     }
 
-    setOverscrollElements(overscrollLeft, overscrollRight) {
+    setOverscrollElements(overscrollLeft, overscrollRight, overscrollFiller) {
         this.overscrollLeft = translateToJqElement(overscrollLeft);
         this.overscrollRight = translateToJqElement(overscrollRight);
+        this.overscrollFiller = translateToJqElement(overscrollFiller);
         return this;
     }
 
@@ -794,7 +811,7 @@ class ScrollingElementBuilder {
 
         if (this.overscrollLeft) {
             result.setElasticElements(
-                this.overscrollLeft, this.overscrollRight);
+                this.overscrollLeft, this.overscrollRight, this.overscrollFiller);
         }
 
         const dataIdentifier = this.getDataIdentifier();

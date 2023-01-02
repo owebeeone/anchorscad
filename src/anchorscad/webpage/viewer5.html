@@ -65,6 +65,13 @@ div::-o-scrollbar {
     padding: 0px;
 }
 
+.elastic-filler-element {
+    border: none;
+    width: 0%;
+    text-decoration: none;
+    padding: 0px;
+}
+
 .menu-element:hover {
     border: 5px solid rgb(139, 0, 132);
     background-color: #777;
@@ -159,7 +166,7 @@ div::-o-scrollbar {
             .setMenuItemsContainer($("#mainb-items-container"))
             .setMenuItems($("#mainb-items-container > .menu-element"))
             .setChevronElements($("#bcheveron-left"), $("#bcheveron-right"))
-            .setOverscrollElements("#left-elastic", $("#right-elastic"))
+            .setOverscrollElements("#left-elastic", $("#right-elastic"), $("#elastic-filler"))
             .setParams({inertiaAnimationDurationMillis:1000})
             .build();
 
@@ -198,6 +205,7 @@ div::-o-scrollbar {
         <div class="menu-element align-vertical" id="bpartners">Partners</div>
         <div class="menu-element align-vertical" id="bpeople">People</div>
         <div class="menu-element align-vertical" id="bwork">Work</div>
+        <div class="elastic-filler-element align-vertical" id="elastic-filler"></div>
         <div class="elastic-element align-vertical" id="right-elastic"></div>
         <div class="chevron-element no-select" id="bcheveron-left">&lsaquo;</div>
         <div class="chevron-element no-select" id="bcheveron-right">&rsaquo;</div>
