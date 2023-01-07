@@ -1,8 +1,6 @@
 name: build-and-push-anchorscad-landing
 on:
   push:
-    branches:
-      - 'main'
     paths:
       - 'website/**'
 

@@ -1,6 +1,9 @@
 {
   "compilerOptions": {
     "baseUrl": ".",
+    "module": "ES6",
+    "jsx": "preserve",
+    "checkJs": true,
     "paths": {
       "@/*": ["src/*"]
     }

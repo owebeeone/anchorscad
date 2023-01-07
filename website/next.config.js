@@ -5,6 +5,15 @@ const nextConfig = {
     scrollRestoration: true,
   },
   output: 'standalone',
+  images: {
+    remotePatterns: [
+      {
+        protocol: 'https',
+        hostname: 'cdn.thingiverse.com',
+        port: '',
+      },
+    ],
+  },
 }
 
 module.exports = nextConfig

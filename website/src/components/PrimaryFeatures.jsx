@@ -385,7 +385,6 @@ function FeaturesDesktop() {
       className="grid grid-cols-12 items-center gap-8 lg:gap-16 xl:gap-24"
       selectedIndex={selectedIndex}
       onChange={onChange}
-      vertical
     >
       <Tab.List className="relative z-10 order-last col-span-6 space-y-6">
         {features.map((feature, featureIndex) => (
