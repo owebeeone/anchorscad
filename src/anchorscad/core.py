@@ -107,7 +107,7 @@ def args_to_str(args):
 
 def surface_anchor_renderer(maker, anchor_args):
     '''Helper to crate example anchor coordinates on surface of objects.'''
-    label = args_to_str(anchor_args.args)
+    label = anchor_args.label
     xform = anchor_args.apply(maker)
     maker.add_at(
         AnnotatedCoordinates(label=label)
@@ -125,6 +125,7 @@ def inner_anchor_renderer(maker, anchor_args):
 class AnchorArgs():
     args_: tuple=args()
     scale_anchor: object=None
+    label_anchor: object=None
     
     def apply(self, maker):
         result = apply_at_args(
@@ -143,6 +144,10 @@ class AnchorArgs():
     @property
     def name(self):
         return self.args_[1][0][0]
+    
+    @property
+    def label(self):
+        return self.label_anchor if self.label_anchor else args_to_str(self.args)
         
     @property
     def args(self):
@@ -161,10 +166,11 @@ class AnchorArgs():
         return self.args_[0]
 
 
-def surface_args(*args_, scale_anchor=None, **kwds):
+def surface_args(*args_, scale_anchor=None, label_anchor=None, **kwds):
     '''Defines an instance of an anchor example.'''
     return AnchorArgs((surface_anchor_renderer, (args_, kwds)),
-                      scale_anchor=scale_anchor)
+                      scale_anchor=scale_anchor,
+                      label_anchor=label_anchor)
 
 def inner_args(*args, **kwds):
     '''Defines an instance of an anchor example for anchors inside an object.'''
@@ -331,8 +337,10 @@ def apply_post_pre(reference_frame, post: l.GMatrix=None, pre: l.GMatrix=None):
 
 def apply_at_args(
         shape, *pargs, 
-        pre=None, post=None, alter_pre=None, alter_post=None, **kwds):
+        pre=None, post=None, alter_pre=None, alter_post=None, descale=None, **kwds):
     local_frame = shape.at(*pargs, **kwds) if pargs or kwds else l.IDENTITY
+    if descale:
+        local_frame = local_frame.descale()
     local_frame = apply_post_pre(local_frame, pre=pre, post=post)
     if alter_pre or alter_post:
         local_frame = apply_post_pre(
@@ -441,6 +449,7 @@ class NamedShape(NamedShapeBase):
            pre: l.GMatrix=None, 
            args=None,
            anchor=None, 
+           descale=None,
            **kwds) -> l.GMatrix:
         '''Creates a shape containing the nominated shape at the reference frame given.
         *args, **kwds: Parameters for the shape given. If none is provided then IDENTITY is used.
@@ -466,6 +475,9 @@ class NamedShape(NamedShapeBase):
             reference_frame = l.IDENTITY
         else:
             reference_frame = self.shape.at(*pargs, **kwds)
+        
+        if descale:
+            reference_frame = reference_frame.descale()
         
         reference_frame = apply_post_pre(reference_frame, pre=pre, post=post)
         if alter_pre or alter_post:
@@ -1843,19 +1855,23 @@ class CompositeShape(Shape):
 
 
 @shape('anchorscad/core/arrow')
-@dataclass(frozen=True)
+@datatree(frozen=True)
 class Arrow(CompositeShape):
     ''''arrow' shape with two end to end cones.'''
     r_stem_top: float=1.0
-    r_stem_base: float=None # Defaults to r_stem_top
+    r_stem_base: float=dtfield(self_default=lambda s : s.r_stem_top)
     l_stem: float=6.0
     l_head: float=3
     r_head_base: float=2
     r_head_top: float=0.0
-    fn: int=None
-    fa: float=None
-    fs: float=None
     
+    head_cone: Node=field(
+        init=False, 
+        default=ShapeNode(Cone, {'h':'l_head', 'r_base':'r_head_base', 'r_top':'r_head_top'}))
+    stem_cone: Node=field(
+        init=False, 
+        default=ShapeNode(Cone, {'h':'l_stem', 'r_base':'r_stem_base', 'r_top':'r_stem_top'}))
+
     EXAMPLE_ANCHORS=(
         surface_args('base'),
         surface_args('top'),
@@ -1864,13 +1880,8 @@ class Arrow(CompositeShape):
         r_stem_top=4, r_stem_base=6, l_stem=35, l_head=20, r_head_base=10, fn=30)
     
     def build(self) -> Maker:
-        if self.r_stem_base is None:
-            _field_assign(self, 'r_stem_base', self.r_stem_top)
-            
-        f_args = non_defaults_dict(self, include=ARGS_XLATION_TABLE)
-        
-        head = Cone(h=self.l_head, r_base=self.r_head_base, r_top=self.r_head_top, **f_args)
-        stem = Cone(h=self.l_stem, r_base=self.r_stem_base, r_top=self.r_stem_top, **f_args)
+        head = self.head_cone()
+        stem = self.stem_cone()
         maker = stem.solid('stem').at('base')
         maker.add_at(head.solid('head').at('base', post=l.rotX(180)), 'top')
         return maker
@@ -1914,7 +1925,7 @@ class CoordinatesCage(Shape):
     
 
 @shape('anchorscad/core/coordinates')
-@dataclass(frozen=True)
+@datatree(frozen=True)
 class Coordinates(CompositeShape):
     
     overlap: float=3.0
@@ -1927,15 +1938,12 @@ class Coordinates(CompositeShape):
     l_head: float=3
     r_head_base: float=1.5
     r_head_top: float=0.0
-    fn: int=None
-    fa: float=None
-    fs: float=None
+    arrow_node: Node=field(init=False, default=ShapeNode(Arrow))
     
     def build(self) -> Maker:
         if self.r_stem_base is None:
             builtins.object.__setattr__(self, 'r_stem_base', self.r_stem_top)
-        exclude=('overlap', 'colour_x', 'colour_y', 'colour_z', )
-        arrow = Arrow(**non_defaults_dict(self, exclude=exclude))
+        arrow = self.arrow_node()
         maker = CoordinatesCage().cage('origin').at('origin')
             
         t = l.translate([0, 0, -self.overlap])

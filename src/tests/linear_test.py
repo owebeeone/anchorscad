@@ -18,6 +18,30 @@ class TestLinear(unittest.TestCase):
     def tearDown(self):
         pass
     
+    def testTransform(self):
+        w = 300
+        h = 200
+        translate_to_corner = linear.translate((1, 1, 0))
+        window_scale = linear.scale((0.5 * w, 0.5 * h, 1))
+        flip_y_axis = linear.scale((1, -1, 1))
+        translate_y_to_tl = linear.translate((0, h, 0))
+        
+        view_mat = translate_y_to_tl * flip_y_axis * window_scale * translate_to_corner
+        view_mat_I = view_mat.I
+        
+        v_translate_to_corner = translate_to_corner * linear.GVector((0, 0, 0))
+        v_window_scale = window_scale * linear.GVector((1, 1, 0))
+        v_flip_y_axis = flip_y_axis * linear.GVector(v_window_scale)
+        v_translate_y_to_tl = translate_y_to_tl * v_flip_y_axis
+        
+        
+        centre = view_mat_I * linear.GVector((w / 2, h / 2, 0))
+        self.assertTrue(linear.GVector([0., 0., 0.]) == centre, "Transform failed")
+        
+        # Left top corner world to screen
+        left_top_corner = view_mat * linear.GVector((-1, 1, 0))
+        self.assertTrue(linear.GVector([0., 0., 0.]) == left_top_corner, "Transform failed")
+    
     def testVectorEquality(self):
         v1 = linear.GVector([1., 0, 0, 1])
         v2 = linear.GVector([1., 0, 0])
