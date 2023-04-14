@@ -486,7 +486,7 @@ class GMatrix(object):
         return not self == other
     
     def descale(self):
-        '''Returns a matrix with a scale of 1.'''
+        '''Returns a matrix with a scale of 1 but unchanged rotation and translation.'''
         vecs = tuple(GVector(self.A[i][0:3]).N for i in range(3))
         return translate(self.A[0:3, -1]) * self.from_zyx_axis(*vecs)
 

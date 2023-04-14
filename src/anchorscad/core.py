@@ -109,8 +109,24 @@ def surface_anchor_renderer(maker, anchor_args):
     '''Helper to crate example anchor coordinates on surface of objects.'''
     label = anchor_args.label
     xform = anchor_args.apply(maker)
+    args_for_anchor = anchor_args.args_anchor
+    if args_for_anchor:
+        ac_args = args_for_anchor[0]
+        ac_kwds = args_for_anchor[1]
+    else:
+        ac_args = ()
+        ac_kwds = {}
+    
+    if label is not None:
+        if not ac_kwds:
+            ac_kwds = {'label': label}
+        else:
+            # If we have a label, but no label kwds, add it.
+            if 'label' not in ac_kwds:
+                ac_kwds = dict(ac_kwds)
+                ac_kwds['label'] = label
     maker.add_at(
-        AnnotatedCoordinates(label=label)
+        AnnotatedCoordinates(*ac_args, **ac_kwds)
             .solid(label).at('origin'), post=xform)
 
 def inner_anchor_renderer(maker, anchor_args):
@@ -126,6 +142,7 @@ class AnchorArgs():
     args_: tuple=args()
     scale_anchor: object=None
     label_anchor: object=None
+    args_anchor: object=None
     
     def apply(self, maker):
         result = apply_at_args(
@@ -166,15 +183,17 @@ class AnchorArgs():
         return self.args_[0]
 
 
-def surface_args(*args_, scale_anchor=None, label_anchor=None, **kwds):
+def surface_args(*args_, scale_anchor=None, label_anchor=None, args_anchor=args(), **kwds):
     '''Defines an instance of an anchor example.'''
     return AnchorArgs((surface_anchor_renderer, (args_, kwds)),
                       scale_anchor=scale_anchor,
-                      label_anchor=label_anchor)
+                      label_anchor=label_anchor,
+                      args_anchor=args_anchor)
 
-def inner_args(*args, **kwds):
+def inner_args(*args, scale_anchor=None, **kwds):
     '''Defines an instance of an anchor example for anchors inside an object.'''
-    return AnchorArgs((inner_anchor_renderer, (args, kwds)))
+    return AnchorArgs((inner_anchor_renderer, (args, kwds)),
+                      scale_anchor=scale_anchor)
 
 @dataclass(frozen=True)
 class Colour(object):
@@ -214,7 +233,7 @@ class ModelAttributes(object):
         self_value = getattr(self, attr)
         other_value = getattr(other, attr)
         if self_value == other_value:
-            return self_value;
+            return self_value
         if other_value == None:
             return self_value
         return other_value
@@ -520,6 +539,8 @@ class ShapeNamer:
 
     def named_shape_by_index(self, name, index, *modes):
         '''Select the shape mode by the index given over the provided modes.'''
+        if not index:
+            index = 0
         return self.named_shape(name, modes[index])
     
     def solid_hole(self, name, is_hole):
@@ -1932,6 +1953,9 @@ class Coordinates(CompositeShape):
     colour_x: Colour=Colour([1, 0, 0])
     colour_y: Colour=Colour([0, 1, 0])
     colour_z: Colour=Colour([0, 0, 1])
+    hide_x: bool=False
+    hide_y: bool=False
+    hide_z: bool=True
     r_stem_top: float=0.75
     r_stem_base: float=None # Defaults to r_stem_top
     l_stem: float=10.0
@@ -1948,11 +1972,11 @@ class Coordinates(CompositeShape):
             
         t = l.translate([0, 0, -self.overlap])
         
-        maker .add_at(arrow.solid('x_arrow').colour(self.colour_x).at(
+        maker .add_at(arrow.solid_cage('x_arrow', self.hide_x).colour(self.colour_x).at(
             'base', pre=t * l.rotZ(180)), 'x', pre=l.rotY(-90))
-        maker .add_at(arrow.solid('y_arrow').colour(self.colour_y).at(
+        maker .add_at(arrow.solid_cage('y_arrow', self.hide_y).colour(self.colour_y).at(
             'base', pre=t * l.rotZ(180)), 'y', pre=l.rotZ(-90))
-        maker .add_at(arrow.solid('z_arrow').colour(self.colour_z).at(
+        maker .add_at(arrow.solid_cage('z_arrow', self.hide_z).colour(self.colour_z).at(
             'base', pre=t * l.rotZ(180)), 'z', pre=l.rotX(-90))
         return maker
 
@@ -1969,29 +1993,39 @@ DEFAULT_ANNOTATED_LABELS=frozendict({'x': 'x', 'y': 'y', 'z': 'z'})
 @datatree(frozen=True)
 class AnnotatedCoordinates(CompositeShape):
     
-    coordinates: Coordinates=Coordinates()
-    coord_labels: frozendict=field(default_factory=lambda : DEFAULT_ANNOTATED_LABELS)
+    coord_labels: frozendict=dtfield(default_factory=lambda : DEFAULT_ANNOTATED_LABELS)
     text_stem_size_ratio:float = 0.3
     coord_label_at: tuple=args(post=l.translate([0, 0, 1]) * l.rotY(-90))
     label: str=None
     label_pos_ratio: l.GVector=l.GVector([0.5, 0.5, 0.5])
+    hide_x: bool=dtfield(self_default=lambda s: not 'x' in s.coord_labels)
+    hide_y: bool=dtfield(self_default=lambda s: not 'y' in s.coord_labels)
+    hide_z: bool=dtfield(self_default=lambda s: not 'z' in s.coord_labels)
+    coordinates_node: Coordinates=dtfield(init=False, default=ShapeNode(Coordinates))
     
     EXAMPLE_SHAPE_ARGS=args(label='This is label')
     
+    EXAMPLES_EXTENDED={
+        'x_y_only': ExampleParams(
+            shape_args=args(coord_labels=frozendict({'x': 'x', 'y': 'y'})),
+            anchors=()
+            )
+        }
     
     def build(self) -> Maker:
         
-        maker = self.coordinates.solid('coords').at('origin')
+        coordinates = self.coordinates_node()
+        maker = coordinates.solid('coords').at('origin')
         if self.coord_labels:
             for k, s in self.coord_labels.items():
-                txt = Text(s, size=self.text_stem_size_ratio * self.coordinates.l_stem)
+                txt = Text(s, size=self.text_stem_size_ratio * coordinates.l_stem)
                 maker.add_at(txt.solid(k).at('default', 'centre'), 
                              'within', f'{k}_arrow', 'top', 
                              *self.coord_label_at[0], **self.coord_label_at[1])
         if self.label:
             txt = Text(self.label, 
                        halign='left', 
-                       size=self.text_stem_size_ratio * self.coordinates.l_stem)
+                       size=self.text_stem_size_ratio * coordinates.l_stem)
             xform = l.translate(
                 [-10 * self.text_stem_size_ratio, -5 * -self.text_stem_size_ratio, 0]) * l.rotZ(-45)
             maker.add(txt.solid('label').colour([0, 1, 0.5]).at('default', 'centre', post=xform))
@@ -2553,6 +2587,10 @@ def anchorscad_main(do_exit_on_completion=None):
     clr.run()
     return clr.status
 
+
+# Uncomment the line below to default to writing OpenSCAD files
+# when anchorscad_main is run with no --write or --no-write options.
+MAIN_DEFAULT=ModuleDefault(True)
 
 if __name__ == "__main__":
     anchorscad_main()
