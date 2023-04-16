@@ -18,6 +18,7 @@ complex relationships that require a large number of parameters.
 '''
 
 from dataclasses import dataclass, field, Field, MISSING
+from typing import ForwardRef
 from frozendict import frozendict
 from types import FunctionType
 import inspect
@@ -148,7 +149,6 @@ def _get_abbreviated_source(func, max_size=75):
     src = ' '.join(s.strip() for s in CLEANER_REGEX.split(src) if s.strip())
     return (src[:max_size] + '...') if len(src) > (3 + max_size) else src
 
-
 @dataclass(frozen=True, repr=False)
 class BindingDefault:
     '''Like the dataclass field default_factory parameter but called after 
@@ -175,7 +175,9 @@ def field_docs(obj, field_name):
     return doc_metadata.get_doc()
 
 
-def dtfield(default=MISSING, doc=None, self_default=None, **kwargs):
+_Node = MISSING  # Forward declaration for Node.
+
+def dtfield(default=MISSING, doc=None, self_default=None, init=MISSING, **kwargs):
     '''Like dataclasses.field but also supports doc parameter.
     Args:
       default: The default value for the field.
@@ -190,8 +192,13 @@ def dtfield(default=MISSING, doc=None, self_default=None, **kwargs):
             raise SpecifiedMultipleDefaults(
                 'Cannot specify default and self_default.')
         default = BindingDefault(self_default)
+        
+    if init is MISSING:
+        # Don't make Node fields init by default.
+        if not _Node is MISSING:
+            init = not isinstance(default, _Node)
 
-    return field(**kwargs, default=default, metadata=metadata)
+    return field(**kwargs, default=default, metadata=metadata, init=init)
 
 
 @dataclass(frozen=True, repr=False)
@@ -430,7 +437,12 @@ def _apply_node_fields(clz):
         else:
             # By default don't compare node fields as they don't add
             # any value.
-            setattr(clz, name, field(default=anno_default, compare=False))
+            field_params = {'default':anno_default, 'compare':False}            
+            if isinstance(anno_default, Node):
+                # By default don't make Node parameters initializer fields.
+                field_params['init'] = False
+            setattr(clz, name, field(**field_params))
+
         if isinstance(anno_default, Node):
             nodes[name] = anno_default
             rev_map = anno_default.get_rev_map()
@@ -460,6 +472,7 @@ def _apply_node_fields(clz):
     setattr(clz, DATATREE_SENTIENEL_NAME, nodes)
     return clz
 
+_Node = Node
 
 @dataclass(frozen=True, repr=False)
 class BoundNode:

@@ -130,7 +130,9 @@ class TactileSwitchTL1105(core.CompositeShape):
     shaft_h: float=6.3
     between_leads: float=3.5
     shaft_node: Node=core.ShapeNode(core.Cone, prefix='shaft_')
-    leada_node: Node=core.ShapeNode(TactileSwitchTL1105Lead, prefix='leada_')
+    leada_node: Node=ad.dtfield(
+        init=True,
+        default=core.ShapeNode(TactileSwitchTL1105Lead, prefix='leada_'))
     leads_as_cages: bool=False
 
     leadx_cage_node: Node=core.CageOfNode(prefix='leadx_cage_')
@@ -230,7 +232,9 @@ class TactileSwitchTL59(core.CompositeShape):
     between_leads: float=5.0
     between_lead_centres: float=5.0
     shaft_node: Node=core.ShapeNode(core.Cone, prefix='shaft_')
-    leada_node: Node=core.ShapeNode(TactileSwitchTL59Lead, prefix='leada_')
+    leada_node: Node=ad.dtfield(
+        init=True,
+        default=core.ShapeNode(TactileSwitchTL59Lead, prefix='leada_'))
     leads_as_cages: bool=False
 
     leadx_cage_node: Node=core.CageOfNode(prefix='leadx_cage_')
