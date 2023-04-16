@@ -10,7 +10,7 @@ from anchorscad import datatree, Node
 
 EPSILON=1.0e-3
 
-@ad.shape('anchorscad.models.components.buttons.ButtonWings')
+@ad.shape
 @datatree
 class ButtonWings(ad.CompositeShape):
     '''
@@ -66,7 +66,7 @@ class ButtonWings(ad.CompositeShape):
         return maker
 
 
-@ad.shape('anchorscad.models.components.buttons.ButtonCap')
+@ad.shape
 @datatree
 class ButtonCap(ad.CompositeShape):
     '''
@@ -152,7 +152,7 @@ class ButtonCap(ad.CompositeShape):
         
         return maker
 
-@ad.shape('anchorscad.models.components.buttons.EngravedButtonCap')
+@ad.shape
 @datatree
 class EngravedButtonCap(ad.CompositeShape):
     '''

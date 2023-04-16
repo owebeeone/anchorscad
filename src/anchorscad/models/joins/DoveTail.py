@@ -9,7 +9,7 @@ import anchorscad.core as core
 import anchorscad.linear as l
 from anchorscad.extrude import PathBuilder, LinearExtrude
 
-@core.shape('anchorscad.models.joins')
+@core.shape
 @dataclass
 class DoveTail(core.CompositeShape):
     '''Creates a dovetail join.

@@ -1,4 +1,6 @@
 '''
+HDMI Type A connector utilities.
+
 Created on 2 Oct 2021
 
 @author: gianni
@@ -6,7 +8,7 @@ Created on 2 Oct 2021
 
 from anchorscad import args, datatree, dtfield, CompositeShape, \
     shape, surface_args, PathBuilder, LinearExtrude, Box, Shape, \
-    anchorscad_main, ShapeNode, Maker, ROTX_270, Node
+    anchorscad_main, ShapeNode, Maker, ROTX_270, Node, cageof
 import numpy as np
 
 
@@ -23,15 +25,16 @@ class HdmiOutline(CompositeShape):
     h3: float=4.3
     r: float=0.7
     plug_cutout: tuple=(18.2, 10, 8.2)
-    tolerance:float=0.4
-    show_cage: bool=False
-        
-    EXAMPLE_SHAPE_ARGS=args(show_cage=True)
+    as_cage: bool=False
+    
+    cage_shape: Shape=dtfield(ShapeNode(Box), init=False)
+
+    EXAMPLE_SHAPE_ARGS=args(as_cage=False)
     NOEXAMPLE_ANCHORS=(
         surface_args('face_edge', 0, 0),)
     
     def build(self) -> Maker:
-        cage_shape = self.cage_shape()
+        cage_shape = cageof(self.cage_shape(), self.as_cage, 'cage')
         maker = cage_shape.at('centre')
         y1 = self.size[2] - self.h3
         y2 = self.size[2] - self.h2
@@ -55,20 +58,14 @@ class HdmiOutline(CompositeShape):
                      'face_edge', 0, 0, post=ROTX_270)
         return maker
 
-    def cage_shape(self) -> Shape:
-        shape = Box(self.size)
-        if self.show_cage:
-            return shape.solid(
-                'cage').transparent(1).colour([0, 1, 0, 0.5])
-
-        return shape.cage('cage')
-
 
 @shape
 @datatree
 class HdmiOutlineTest(CompositeShape):
+    '''Test shape for HdmiOutline. Print this shape to check the
+    tolerances of the HdmiOutline shape work with your printer.'''
     outline: Shape=HdmiOutline()
-    w: float = dtfield(2.0, 'Width of the test walls.')
+    w: float=dtfield(2.0, 'Width of the test walls.')
     size: tuple=dtfield(
             self_default=lambda s: (
                 s.outline.size[0] + 2 * s.w, 

@@ -16,7 +16,7 @@ import anchorscad.models.components.buttons.button_cap as button_cap
 
 EPSILON=1.0e-3
 
-@shape('anchorscad.models.components.buttons.button_body')
+@shape
 @datatree
 class ButtonBody(CompositeShape):
     '''
@@ -150,7 +150,7 @@ class ButtonBody(CompositeShape):
         return self.maker.at('plate_cage', 'top', *args, **kwds)
 
 
-@shape('anchorscad.models.components.buttons.button_for_tactile_switch')
+@shape
 @datatree
 class ButtonForTactileSwitch(CompositeShape):
     '''
@@ -219,7 +219,7 @@ class ButtonForTactileSwitch(CompositeShape):
         
 
 
-@shape('anchorscad.models.components.buttons.button_for_tactile_switch')
+@shape
 @datatree
 class ButtonAssemblyTest(CompositeShape):
     '''

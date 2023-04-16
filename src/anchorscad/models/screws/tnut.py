@@ -13,7 +13,7 @@ import numpy as np
 epsilon=0.001
 epsilon2=2 * epsilon
 
-@core.shape('anchorscad/models/screws/tnut')
+@core.shape
 @dataclass
 class Tnut(core.CompositeShape):
     
@@ -88,7 +88,7 @@ class Tnut(core.CompositeShape):
         return self.maker.at('centre')
 
 
-@core.shape('anchorscad/models/screws/tnut_example')
+@core.shape
 @dataclass
 class TnutExample(core.CompositeShape):
     tnut_type: core.Shape=Tnut

@@ -8,7 +8,7 @@ import anchorscad as ad
 from anchorscad.models.basic.torus import Torus 
 
 
-@ad.shape('anchorscad.models.logos.Anchor')
+@ad.shape
 @ad.datatree
 class AnchorArm(ad.CompositeShape):
     '''
@@ -30,7 +30,7 @@ class AnchorArm(ad.CompositeShape):
     
 
 
-@ad.shape('anchorscad.models.logos.Anchor')
+@ad.shape
 @ad.datatree
 class Anchor(ad.CompositeShape):
     '''

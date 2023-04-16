@@ -14,7 +14,7 @@ import numpy as np
 MAX_SCALED = (135 * 2, 123.665, 1.45)
 MAX_ACTUAL = (22.75, 10.42, 1.45)
 
-@core.shape('anchorscad/models/clips/lace_clip/LaceClip')
+@core.shape
 @dataclass(frozen=True)
 class LaceClip(core.CompositeShape):
     '''A clip for holding shoe laces when using magnetic shoe lace ties. 

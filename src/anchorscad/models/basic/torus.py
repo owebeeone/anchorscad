@@ -9,7 +9,7 @@ from dataclasses import field
 import anchorscad as ad
 
 
-@ad.shape('anchorscad/models/basic/torus.Torus')
+@ad.shape
 @ad.datatree
 class Torus(ad.CompositeShape):
     '''

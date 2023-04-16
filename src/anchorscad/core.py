@@ -1360,7 +1360,7 @@ def _build_args_doc(clz, init_only=True):
                      )
     return with_docs, wo_docs
 
-def shape(clazz_or_name=None, /, *, name=None, level=10):
+def  shape(clazz_or_name=None, /, *, name=None, level=10):
     if isinstance(clazz_or_name, str):
         name = clazz_or_name
         clazz_or_name = None
@@ -1416,7 +1416,7 @@ def fabricator(clazz=None, /, *, level=10):
     return wrap(clazz)
 
 
-@shape('anchorscad/core/box')
+@shape
 @dataclass(frozen=True)
 class Box(Shape):
     '''Generates rectangular prisms (cubes where x=y=z).
@@ -1618,7 +1618,7 @@ def fill_params(
     return params
 
 
-@shape('anchorscad/core/text')
+@shape
 @datatree(frozen=True)
 class Text(Shape):
     '''Generates 3D text.'''
@@ -1669,7 +1669,7 @@ class Text(Shape):
     
 
 ANGLES_TYPE = l.list_of(l.strict_float, len_min_max=(3, 3), fill_to_min=0.0)
-@shape('anchorscad/core/sphere')
+@shape
 @dataclass(frozen=True)
 class Sphere(Shape):
     '''Generates a Sphere.'''
@@ -1721,7 +1721,7 @@ class Sphere(Shape):
              * l.ROTV111_120)
 
 CONE_ARGS_XLATION_TABLE={'r_base': 'r1', 'r_top': 'r2'}
-@shape('anchorscad/core/cone')
+@shape
 @dataclass(frozen=True)
 class Cone(Shape):
     '''Generates cones or horizontal conical slices and cylinders.'''
@@ -1793,7 +1793,7 @@ class Cone(Shape):
             m = l.ROTV111_120
         return l.rotZ(degrees=degrees, radians=radians) * l.translate([x, 0, h]) * m
     
-@shape('anchorscad/core/cone')
+@shape
 @datatree(frozen=True)
 class Cylinder(Cone):
     '''Creates a Cone that has the same top and base radius. 
@@ -1875,7 +1875,7 @@ class CompositeShape(Shape):
             'must implement function build().')
 
 
-@shape('anchorscad/core/arrow')
+@shape
 @datatree(frozen=True)
 class Arrow(CompositeShape):
     ''''arrow' shape with two end to end cones.'''
@@ -1920,7 +1920,7 @@ class Arrow(CompositeShape):
         return self.maker.at(*args, **kwds)
 
 
-@shape('anchorscad/core/coordinates_cage')
+@shape
 @dataclass
 class CoordinatesCage(Shape):
     base_frame: l.GMatrix=l.IDENTITY
@@ -1945,7 +1945,7 @@ class CoordinatesCage(Shape):
         return l.ROTV111_240 * self.base_frame
     
 
-@shape('anchorscad/core/coordinates')
+@shape
 @datatree(frozen=True)
 class Coordinates(CompositeShape):
     
@@ -1989,7 +1989,7 @@ class Coordinates(CompositeShape):
         return self.maker.at(*args, **kwds)
 
 DEFAULT_ANNOTATED_LABELS=frozendict({'x': 'x', 'y': 'y', 'z': 'z'})
-@shape('anchorscad/core/annotated_coordinates')
+@shape
 @datatree(frozen=True)
 class AnnotatedCoordinates(CompositeShape):
     

@@ -39,7 +39,7 @@ def regular_polygon(nsides: int=3, r: float=1.0, ellipse_radius: tuple=None):
     return builder.build()
 
 
-@ad.shape()
+@ad.shape
 @ad.datatree
 class RegularPrism(ad.CompositeShape):
     '''

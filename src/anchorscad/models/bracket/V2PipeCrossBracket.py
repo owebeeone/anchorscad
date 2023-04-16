@@ -34,7 +34,7 @@ def cone_cyl_plane_intersection_slope(
 
 ABS_SHRINK_FACTOR=1.0 / 1.015
 
-@core.shape('anchorscad/models/bracket/PipeCrossBracket')
+@core.shape
 @dataclass
 class V2PipeCrossBracket(core.CompositeShape):
     '''

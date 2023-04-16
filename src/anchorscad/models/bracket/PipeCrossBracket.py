@@ -13,7 +13,7 @@ from anchorscad.models.screws.CountersunkScrew import CountersunkScrew, FlatSunk
 import numpy as np
 
 
-@core.shape('anchorscad/models/bracket/PipeCrossBracket')
+@core.shape
 @dataclass
 class PipeCrossBracket(core.CompositeShape):
     '''

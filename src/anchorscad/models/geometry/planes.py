@@ -9,7 +9,7 @@ import anchorscad.core as core
 import anchorscad.linear as l
 
 
-@core.shape('anchorscad/models/geometry/planes')
+@core.shape
 @dataclass
 class Planes(core.CompositeShape):
     '''

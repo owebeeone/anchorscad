@@ -10,7 +10,7 @@ from anchorscad import linear as l
 from anchorscad.extrude import PathBuilder, LinearExtrude
 
 
-@core.shape('anchorscad.models.basic.TriangularPrism')
+@core.shape
 @dataclass
 class TriangularPrism(core.CompositeShape):
     '''

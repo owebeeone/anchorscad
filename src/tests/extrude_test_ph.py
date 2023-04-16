@@ -10,7 +10,7 @@ import anchorscad.extrude as e
 import anchorscad.linear as l
 import numpy as np
 
-@core.shape('anchorscad.extrude_test_ph.PolyhedraExtrusionTest')
+@core.shape
 @dataclass
 class PolyhedraExtrusionTest(core.CompositeShape):
     '''
@@ -48,7 +48,7 @@ class PolyhedraExtrusionTest(core.CompositeShape):
                      'face_corner', 0, 0)
         return maker
 
-@core.shape('anchorscad.extrude_test_ph.PolyhedraCircularTest')
+@core.shape
 @dataclass
 class PolyhedraCircularTest(core.CompositeShape):
     '''
@@ -87,8 +87,5 @@ class PolyhedraCircularTest(core.CompositeShape):
         return maker
 
 
-
-
-    
 if __name__ == "__main__":
     core.anchorscad_main(False)

@@ -11,7 +11,7 @@ from anchorscad.models.screws.holes import CountersinkSelfTapHole
 from anchorscad.models.basic.box_cylinder import BoxCylinder
 
 
-@ad.shape('anchorscad.models.screws.screw_tab')
+@ad.shape
 @ad.datatree
 class ScrewTab(ad.CompositeShape):
     '''

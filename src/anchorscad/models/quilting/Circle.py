@@ -13,7 +13,7 @@ import numpy as np
 INCH=25.4
 
 
-@core.shape('anchorscad.models.quilting.Circle')
+@core.shape
 @dataclass
 class Circle(core.CompositeShape):
     '''

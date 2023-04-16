@@ -14,7 +14,7 @@ from anchorscad.models.screws.dims import HoleDimensions, holeMetricDims
 import numpy as np
 
 
-@shape('anchorscad/models/screws/holes/self_tap_hole')
+@shape
 @dataclass
 class SelfTapHole(CompositeShape):
     thru_len: float
@@ -69,7 +69,7 @@ class SelfTapHole(CompositeShape):
     def bottom(self):
         return self.maker.at('base')
 
-@shape('anchorscad/models/screws/holes/countersink_access_hole')
+@shape
 @dataclass
 class CountersinkAccessHole(CompositeShape):
     access_len: float
@@ -108,7 +108,7 @@ class CountersinkAccessHole(CompositeShape):
         self.set_maker(maker)
 
 
-@shape('anchorscad/models/screws/holes/countersink_access_hole')
+@shape
 @dataclass
 class CountersinkSelfTapHole(CompositeShape):
     '''A self tapped screw hole (two internal diameters) with a extended access hole above

@@ -15,7 +15,7 @@ INCH=25.4
 def radians(degs):
     return degs * np.pi / 180
 
-@core.shape('anchorscad.models.quilting.Hexagons')
+@core.shape
 @dataclass
 class HalfHexagon(core.CompositeShape):
     '''

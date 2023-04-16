@@ -9,7 +9,7 @@ Created on 26 Jan 2021
 import anchorscad as ad
 
 
-@ad.shape('anchorscad/models/basic/pipe')
+@ad.shape
 @ad.datatree
 class Pipe(ad.CompositeShape):
     '''

@@ -12,7 +12,7 @@ import anchorscad.linear as l
 
 EPSILON=0.001
 
-@core.shape('anchorscad.models.components.terminal_blocks.TerminalKF301')
+@core.shape
 @datatree
 class TerminalKF301Terminal(core.CompositeShape):
     
@@ -92,7 +92,7 @@ class TerminalKF301Terminal(core.CompositeShape):
         
         self.set_maker(maker)
 
-@core.shape('anchorscad.models.components.terminal_blocks.TerminalKF301Body')
+@core.shape
 @datatree
 class TerminalKF301Body(core.CompositeShape):
     '''
@@ -144,7 +144,7 @@ class TerminalKF301Body(core.CompositeShape):
         return self.maker.at('face_edge', *args, **kwds)
     
 
-@core.shape('anchorscad.models.components.terminal_blocks.TerminalKF301')
+@core.shape
 @datatree
 class TerminalKF301(core.CompositeShape):
     '''

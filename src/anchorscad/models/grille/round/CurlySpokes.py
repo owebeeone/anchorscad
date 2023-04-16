@@ -14,7 +14,7 @@ import numpy as np
 def radians(degs):
     return degs * np.pi / 180 
 
-@core.shape('anchorscad.models.grille.round.CurlySpokes')
+@core.shape
 @dataclass
 class CurlySpokes(core.CompositeShape):
     '''

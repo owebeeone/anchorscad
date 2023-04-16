@@ -49,7 +49,7 @@ def determine_params(r, r_inner, t_default, t, name):
     return r, r_inner, t
             
 
-@ad.shape('anchorscad.models.tools.funneConePipe')
+@ad.shape
 @ad.datatree
 class ConePipe(ad.CompositeShape):
     '''
@@ -89,7 +89,7 @@ class ConePipe(ad.CompositeShape):
         self.set_maker(maker)
 
 
-@ad.shape('anchorscad.models.tools.funneResinFilterFunnel')
+@ad.shape
 @ad.datatree
 class ResinFilterFunnel(ad.CompositeShape):
     '''

@@ -22,7 +22,7 @@ def _normal_len(v):
     vlen = _vlen(v)
     return v / vlen, vlen
 
-@core.shape('anchorscad.models.components.switches.tactile_tl1105_leg')
+@core.shape
 @datatree
 class TactileSwitchTL1105Lead(core.CompositeShape):
     
@@ -118,7 +118,7 @@ class TactileSwitchTL1105Lead(core.CompositeShape):
                              ) * l.tranZ(tran) * l.ROTZ_90
     
 
-@core.shape('anchorscad.models.components.switches.tactile_switch_tl1105')
+@core.shape
 @datatree
 class TactileSwitchTL1105(core.CompositeShape):
     '''
@@ -191,7 +191,7 @@ class TactileSwitchTL1105(core.CompositeShape):
         return self.maker.at('face_centre', 1)
 
 
-@core.shape('anchorscad.models.components.switches.tactile_tl59_lead')
+@core.shape
 @datatree
 class TactileSwitchTL59Lead(core.CompositeShape):
     
@@ -217,7 +217,7 @@ class TactileSwitchTL59Lead(core.CompositeShape):
         return self.maker.at('face_centre', 5 if at_end else 2)    
 
 
-@core.shape('anchorscad.models.components.switches.tactile_switch_tl59')
+@core.shape
 @datatree(frozen=True)
 class TactileSwitchTL59(core.CompositeShape):
     '''
@@ -282,7 +282,7 @@ class TactileSwitchTL59(core.CompositeShape):
         return self.maker.at('face_centre', 1) * l.ROTZ_90
     
 
-@core.shape('anchorscad.models.components.switches.tactile_switch_outline')
+@core.shape
 @datatree(frozen=True)
 class TactileSwitchOutline(core.CompositeShape):
     '''

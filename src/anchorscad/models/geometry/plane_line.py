@@ -8,7 +8,7 @@ from dataclasses import dataclass
 import anchorscad.core as core
 import anchorscad.linear as l
 
-@core.shape('anchorscad.models.geometry.plane_line')
+@core.shape
 @dataclass
 class PlaneLine(core.CompositeShape):
     '''

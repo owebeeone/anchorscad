@@ -11,7 +11,7 @@ from anchorscad.extrude import PathBuilder, LinearExtrude
 import numpy as np
 
 
-@core.shape('anchorscad.models.grille.case_vent.basic.RectangularGrille')
+@core.shape
 @dataclass
 class RectangularGrille(core.CompositeShape):
     '''
@@ -107,7 +107,7 @@ class RectangularGrille(core.CompositeShape):
         return full_path, half_path
     
 
-@core.shape('anchorscad.models.grille.case_vent.basic.RectangularGrilleAsHoles')
+@core.shape
 @dataclass
 class RectangularGrilleAsHoles(RectangularGrille):
     
@@ -115,7 +115,7 @@ class RectangularGrilleAsHoles(RectangularGrille):
         return self.as_holes(maker).at('centre')
     
 
-@core.shape('anchorscad.models.grille.case_vent.basic.RectangularGrille')
+@core.shape
 @dataclass
 class RectangularGrilleHoles(core.CompositeShape):
     '''

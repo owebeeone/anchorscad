@@ -12,7 +12,7 @@ import anchorscad.models.basic.pipe as pipe
 import numpy as np
 
 
-@core.shape('anchorscad/models/screws/hole_tester')
+@core.shape
 @dataclass
 class HoleTester(core.CompositeShape):
     '''A test model for screws. This creates a model with multiple holes with

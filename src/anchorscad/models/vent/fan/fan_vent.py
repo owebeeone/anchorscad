@@ -47,7 +47,7 @@ FAN_30x7_TYPE3=FanVentScrewHoleParams(
     curl_inner_angle=-30)
 
 
-@shape('anchorscad.models.vent.fan.fan_vent')
+@shape
 @datatree
 class FanVent(CompositeShape):
     '''

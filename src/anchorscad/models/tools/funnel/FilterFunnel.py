@@ -13,7 +13,7 @@ from anchorscad.models.basic.cone_ended_prism import ConeEndedHull,\
     ConeEndedPrism
     
 
-@core.shape('anchorscad.models.tools.funnel.FilterFunnel.ElipticCone')
+@core.shape
 @dataclass
 class ElipticCone(core.CompositeShape):
     '''
@@ -65,7 +65,7 @@ class ElipticCone(core.CompositeShape):
         return l.tranZ(h + self.h * rh) * l.ROTX_180
         
 
-@core.shape('anchorscad.models.tools.funnel.FilterFunnel.ElipticConeHull')
+@core.shape
 @dataclass
 class ElipticConeHull(core.CompositeShape):
     '''
@@ -119,7 +119,7 @@ def radians(degs):
     '''Degrees to radians helper.'''
     return np.pi * degs / 180
 
-@core.shape('anchorscad.models.tools.funnel.FilterFunnel.FilterFunnel')
+@core.shape
 @dataclass
 class FilterFunnel(core.CompositeShape):
     '''Generates a paper filter (classic coffee paper filter) funnel with

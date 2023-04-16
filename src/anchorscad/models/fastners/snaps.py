@@ -11,7 +11,7 @@ from anchorscad.extrude import PathBuilder, LinearExtrude
 from anchorscad.models.basic.box_side_bevels import BoxSideBevels
 
 
-@core.shape('anchorscad.models.fastners.snaps')
+@core.shape
 @dataclass(frozen=True)
 class Snap(core.CompositeShape):
     '''

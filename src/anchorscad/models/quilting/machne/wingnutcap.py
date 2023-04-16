@@ -10,7 +10,7 @@ import anchorscad.extrude as e
 import anchorscad.linear as l
 
 
-@core.shape('anchorscad.models.quilting.machne.WingNutWings')
+@core.shape
 @datatree
 class WingNutWings(core.CompositeShape):
     '''
@@ -51,7 +51,7 @@ class WingNutWings(core.CompositeShape):
         return self.at('lhs', 'arc', 0)
 
 
-@core.shape('anchorscad.models.quilting.machne.WingNutCap')
+@core.shape
 @datatree
 class WingNutCap(core.CompositeShape):
     '''

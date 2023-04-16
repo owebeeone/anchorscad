@@ -14,7 +14,7 @@ from anchorscad.models.screws.dims import SHAFT_MAP, ShaftDimensions, \
 import numpy as np
 
 
-@core.shape('anchorscad/models/screws/CountersunkScrew')
+@core.shape
 @dataclass
 class CountersunkScrew(core.CompositeShape):
     '''
@@ -171,7 +171,7 @@ class CountersunkScrew(core.CompositeShape):
             head_countersink_depth=self.head_depth_factor * shaft_dims.tapping_d / 2)
 
 
-@core.shape('anchorscad/models/screws/CountersunkScrew')
+@core.shape
 @dataclass
 class FlatSunkScrew(CountersunkScrew):
 

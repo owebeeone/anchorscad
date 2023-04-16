@@ -11,7 +11,7 @@ import anchorscad as ad
 import numpy as np
 
 
-@ad.shape('anchorscad.models.basic.cone_ended_prism.ConeEndedPrism')
+@ad.shape
 @ad.datatree
 class ConeEndedPrism(ad.CompositeShape):
     '''
@@ -85,7 +85,7 @@ class ConeEndedPrism(ad.CompositeShape):
         return self.at('cage', 'face_centre', 1)
 
 
-@ad.shape('anchorscad.models.basic.cone_ended_prism.ConeEndedHull')
+@ad.shape
 @ad.datatree
 class ConeEndedHull(ad.CompositeShape):
     '''

@@ -8,7 +8,7 @@ from anchorscad import Box, Cone, Cylinder, Maker, core, cageof,\
                        datatree, Node, ShapeNode, l, dtfield
 
 
-@core.shape('anchorscad.models.quilting.machne.SpoolHolder')
+@core.shape
 @datatree
 class SpoolHolder(core.CompositeShape):
     '''
@@ -106,7 +106,7 @@ class SpoolHolder(core.CompositeShape):
         return maker
 
 
-@core.shape('anchorscad.models.quilting.machne.SpoolHolderCap')
+@core.shape
 @datatree
 class SpoolHolderCap(core.CompositeShape):
     '''

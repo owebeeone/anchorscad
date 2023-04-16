@@ -1634,7 +1634,7 @@ def test():
         print(f'r={r}, points={points}, paths={paths}')
     
 
-@core.shape('linear_extrude')
+@core.shape
 @dataclass
 class LinearExtrude(ExtrudedShape):
     '''Generates a linear extrusion of a given Path.'''
@@ -1850,7 +1850,7 @@ class LinearExtrude(ExtrudedShape):
         return result
 
 
-@core.shape('arc_extrude')
+@core.shape
 @dataclass
 class RotateExtrude(ExtrudedShape):
     '''Generates a circular/arc extrusion of a given Path.'''

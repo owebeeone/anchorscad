@@ -12,7 +12,7 @@ import numpy as np
 
 INCH=25.4
 
-@core.shape('anchorscad.models.quilting.dresden')
+@core.shape
 @dataclass
 class DresdenWedge(core.CompositeShape):
     '''
@@ -51,7 +51,7 @@ class DresdenWedge(core.CompositeShape):
         self.maker = shape.solid("dresden").at(
             'lower_left', 0, post=l.ROTX_90)
         
-@core.shape('anchorscad.models.quilting.dresden')
+@core.shape
 @dataclass
 class DresdenHalfWedge(core.CompositeShape):
     '''
@@ -85,7 +85,7 @@ class DresdenHalfWedge(core.CompositeShape):
 def radians(degs):
     return np.pi * (degs / 180.0)
 
-@core.shape('anchorscad.models.quilting.dresden')
+@core.shape
 @dataclass
 class DresdenKite(core.CompositeShape):
     '''
@@ -152,7 +152,7 @@ class DresdenKite(core.CompositeShape):
         
 SEAM_ALLOWANCE = 0.25 * INCH
 
-@core.shape('anchorscad.models.quilting.dresden')
+@core.shape
 @dataclass
 class DresdenBorder(core.CompositeShape):
     '''

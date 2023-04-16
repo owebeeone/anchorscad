@@ -7,7 +7,7 @@ Created on 25 Feb 2022
 import anchorscad as ad
 
 
-@ad.shape('anchorscad/src/anchorscad/models/toys/Dice')
+@ad.shape
 @ad.datatree
 class DiceWithDigits(ad.CompositeShape):
     '''

@@ -11,7 +11,7 @@ from anchorscad.extrude import PathBuilder, LinearExtrude
 
 
 
-@core.shape('anchorscad.models.basic.wedge.Wedge')
+@core.shape
 @dataclass
 class Wedge(core.CompositeShape):
     '''
