@@ -10,9 +10,11 @@ from anchorscad.models.screws.CountersunkScrew import CountersunkScrew
 
 @ad.shape
 @ad.datatree
-class Basic(ad.CompositeShape):
+class SealedGrommet(ad.CompositeShape):
     '''
-    <description>
+    A grommet with a no opening. The model is intended to be 3D printed in TPU
+    and a slit is cut in the top to allow for cables to be inserted creating a
+    partial seal.
     '''
     stock_hole_r: float=86 / 2
     stock_depth: float=3
@@ -85,7 +87,7 @@ class Basic(ad.CompositeShape):
         ad.ShapeNode(CountersunkScrew, prefix='screw_'))
     screw_count: int=6
     
-    EXAMPLE_SHAPE_ARGS=ad.args(fn=64)
+    EXAMPLE_SHAPE_ARGS=ad.args(fn=64, screw_count=6)
     EXAMPLE_ANCHORS=()
 
     def build(self) -> ad.Maker:

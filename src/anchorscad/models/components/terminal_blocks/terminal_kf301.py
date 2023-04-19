@@ -53,7 +53,7 @@ class TerminalKF301Terminal(ad.CompositeShape):
     EXAMPLE_ANCHORS=(ad.surface_args('face_edge', 1, 0, scale_anchor=0.3),
                      ad.surface_args('pin', 'top', scale_anchor=0.3),)
     
-    def __post_init__(self):
+    def build(self) -> ad.Maker:
         size = (self.w, self.pin_pitch, self.h)
         maker = self.cage_node(ad.Box(size)).at('face_edge', 1, 0, post=ad.ROTY_180)
         
@@ -87,7 +87,7 @@ class TerminalKF301Terminal(ad.CompositeShape):
                      .at('face_centre', 2),
                      'block', 'face_centre', 2, post=ad.ROTY_180)
         
-        self.set_maker(maker)
+        return maker
 
 @ad.shape
 @ad.datatree
@@ -109,7 +109,7 @@ class TerminalKF301Body(ad.CompositeShape):
     EXAMPLE_SHAPE_ARGS=ad.args(as_cage=True)
     EXAMPLE_ANCHORS=(ad.surface_args('face_edge', 1, 0),)
     
-    def __post_init__(self):
+    def build(self) -> ad.Maker:
         
         length = self.count * self.pin_pitch
         cage_shape = ad.Box((self.w, length, self.h))
@@ -132,9 +132,8 @@ class TerminalKF301Body(ad.CompositeShape):
         shape = ad.LinearExtrude(path, length)
         maker.add_at(shape.solid('terminal').at('base_lhs', rh=1),
                      'face_edge', 1, 0, post=ad.ROTY_180 * ad.ROTZ_180)
-        
 
-        self.set_maker(maker)
+        return maker
 
     @ad.anchor('An example anchor specifier.')
     def side(self, *args, **kwds):
@@ -168,5 +167,6 @@ class TerminalKF301(ad.CompositeShape):
                          'face_edge', 3, 0, post=ad.tranZ(-i * self.pin_pitch))
         return maker
         
+MAIN_DEFAULT=ad.ModuleDefault(True)
 if __name__ == '__main__':
     ad.anchorscad_main(False)
