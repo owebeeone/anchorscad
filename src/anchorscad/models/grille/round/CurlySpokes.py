@@ -4,21 +4,19 @@ Created on 27 Sep 2021
 @author: gianni
 '''
 
-from dataclasses import dataclass
-import anchorscad.core as core
+import anchorscad as ad
 import anchorscad.linear as l
-from anchorscad.extrude import PathBuilder, LinearExtrude
 import numpy as np
 
 
 def radians(degs):
     return degs * np.pi / 180 
 
-@core.shape
-@dataclass
-class CurlySpokes(core.CompositeShape):
+@ad.shape
+@ad.datatree
+class CurlySpokes(ad.CompositeShape):
     '''
-    <description>
+    Axial fan grille with bent spokes.
     '''
     h: float
     as_cutout: bool=True
@@ -30,18 +28,22 @@ class CurlySpokes(core.CompositeShape):
     min_solid_size: float=1.4
     min_hole_size: float=1.4
     epsilon: float=1.e-2
+    
+    cylinder_node: ad.Node=ad.ShapeNode(ad.Cylinder, {})
+    linear_extrude_node: ad.Node=ad.ShapeNode(ad.LinearExtrude, {})
+    
     fn: int=None
     
-    EXAMPLE_SHAPE_ARGS=core.args(h=2)
+    EXAMPLE_SHAPE_ARGS=ad.args(h=2)
     EXAMPLE_ANCHORS=()
     
     EXAMPLES_EXTENDED={
-        'as_cutout': core.ExampleParams(
-            shape_args=core.args(h=2, as_cutout=False),
-            anchors=(core.surface_args('centre'),)),
-        'as_solid': core.ExampleParams(
-            shape_args=core.args(h=2, as_cutout=False),
-            anchors=(core.surface_args('centre'),))}
+        'as_cutout': ad.ExampleParams(
+            shape_args=ad.args(h=2, as_cutout=False),
+            anchors=(ad.surface_args('centre'),)),
+        'as_solid': ad.ExampleParams(
+            shape_args=ad.args(h=2, as_cutout=False),
+            anchors=(ad.surface_args('centre'),))}
 
     
     def __post_init__(self):
@@ -67,14 +69,14 @@ class CurlySpokes(core.CompositeShape):
         else:
             fn = self.fn
         
-        maker = core.Cylinder(r=self.r_outer, h=self.h, fn=fn).cage(
+        maker = self.cylinder_node(r=self.r_outer, h=self.h).cage(
             'cage').transparent(1).colour([1, 1, 0, 0.5]).at('centre')
             
         if self.as_cutout:
-            maker.add_at(core.Cylinder(r=self.r_outer, h=self.h, fn=fn)
+            maker.add_at(self.cylinder_node(r=self.r_outer, h=self.h)
                          .solid('core').at('centre'))
         
-        path = (PathBuilder()
+        path = (ad.PathBuilder()
                        .move(inner_points[0])
                        .line(mid_points[0], ('inner', 'mid', 0))
                        .line(outer_points[0], ('mid', 'outer', 0))
@@ -87,11 +89,11 @@ class CurlySpokes(core.CompositeShape):
                        .line(inner_points[0], ('inner', 'inner', 0))
                        .build())
         
-        shape = LinearExtrude(path, h=self.h + self.epsilon)
+        shape = self.linear_extrude_node(path, h=self.h + self.epsilon)
         
-        spokes_mode = (core.ModeShapeFrame.HOLE 
+        spokes_mode = (ad.ModeShapeFrame.HOLE 
                 if self.as_cutout 
-                else core.ModeShapeFrame.SOLID)
+                else ad.ModeShapeFrame.SOLID)
         for i in range(count):
             maker.add_at(shape
                          .named_shape(('spoke', i), spokes_mode)
@@ -100,7 +102,7 @@ class CurlySpokes(core.CompositeShape):
                          )
             
         
-        maker.add_at(core.Cylinder(r=self.r_inner, h=self.h + self.epsilon, fn=fn)
+        maker.add_at(ad.Cylinder(r=self.r_inner, h=self.h + self.epsilon, fn=fn)
                      .named_shape('inner_core', spokes_mode).at('centre'))
         
         self.set_maker(maker)
@@ -121,9 +123,11 @@ class CurlySpokes(core.CompositeShape):
         count = count_inner if count_inner > count_outer else count_outer
         return count
 
-    @core.anchor('An example anchor specifier.')
+    @ad.anchor('An example anchor specifier.')
     def side(self, *args, **kwds):
         return self.maker.at('face_edge', *args, **kwds)
 
+
+MAIN_DEFAULT=ad.ModuleDefault(True, write_path_files=True)
 if __name__ == '__main__':
-    core.anchorscad_main(False)
+    ad.anchorscad_main(False)
