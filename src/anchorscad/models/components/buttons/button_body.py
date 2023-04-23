@@ -65,10 +65,9 @@ class ButtonBody(CompositeShape):
     cap_shape: Shape=dtfield(
         self_default=lambda s: s.cap_node(), init=False)
         
-    body_wing_node: Node=dtfield(ShapeNode(button_cap.ButtonWings, 
+    body_wing_node: Node=ShapeNode(button_cap.ButtonWings, 
             preserve=WINGS_PRESERVE_SET,
-            prefix='cap_'),
-            init=False)
+            prefix='cap_')
     fn: int=64
     
     EXAMPLE_SHAPE_ARGS=args(as_cage=True,
@@ -135,7 +134,6 @@ class ButtonBody(CompositeShape):
         shape = self.extrude_node(path)
         maker.add_at(shape.solid('body').at('plate_centre'),
                      'base', post=ROTY_180 * ROTX_90)
-        
         
         wings_mode = (ModeShapeFrame.SOLID
                       if self.with_wings else
@@ -239,13 +237,6 @@ class ButtonAssemblyTest(CompositeShape):
     EXAMPLE_ANCHORS=tuple()
     
     def build(self) -> Maker:
-        
-        # inner_size = self.button_r - self.body_inner_rim_r
-        # self.wing_r_inner_size = inner_size + self.gap_size
-        # self.cap_wing_r_inner_size = inner_size
-        # self.cap_wing_h = self.wing_h - self.gap_size
-        # self.cap_wing_angle = self.wing_angle - to_degrees(2 * self.gap_size / self.button_r)
-        #
 
         shape = self.base_node()
         
