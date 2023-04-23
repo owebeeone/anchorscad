@@ -41,7 +41,8 @@ class HingeHolePath:
 @ad.datatree
 class HingeHole(ad.CompositeShape):
     '''
-    <description>
+    The shape of the hole separating the two sides of a hinge.
+    This provides a lateral interference but rotates freely.
     '''
     path_node: ad.Node=ad.Node(HingeHolePath)
     rx_path: ad.Path=ad.dtfield(self_default=lambda s:s.path_node().build())
@@ -73,7 +74,7 @@ class HingeHole(ad.CompositeShape):
 @ad.datatree
 class HingeBar3X(ad.CompositeShape):
     '''
-    <description>
+    A 3x hinge bar with holes for the hinge.
     '''
     epsilon: float=ad.dtfield(0.001, doc='Fudge factor')
     hole_node: ad.Node=ad.ShapeNode(HingeHole)
@@ -116,7 +117,7 @@ class HingeBar3X(ad.CompositeShape):
 @ad.datatree
 class HingeBar3XEndHoles(ad.CompositeShape):
     '''
-    <description>
+    End holes for a 3x hinge bar.
     '''
     hinge_bar_shape: HingeBar3X
     cage_of_node: ad.Node=ad.CageOfNode()
@@ -158,7 +159,7 @@ class HingeBar3XEndHoles(ad.CompositeShape):
 @ad.datatree
 class HingeBar3XMiddleHole(ad.CompositeShape):
     '''
-    <description>
+    Middle hole for a 3x hinge bar.
     '''
     hinge_bar_shape: HingeBar3X
     cage_of_node: ad.Node=ad.CageOfNode()
@@ -184,7 +185,7 @@ class HingeBar3XMiddleHole(ad.CompositeShape):
 @ad.datatree
 class Hinge3XTestPrint(ad.CompositeShape):
     '''
-    <description>
+    Test shape for 3x hinge.
     '''
     bar_node: ad.Node=ad.ShapeNode(HingeBar3X,  
                                            {'as_cage': 'bar_cage_as_cage'},
@@ -255,7 +256,7 @@ class Hinge3XTestPrint(ad.CompositeShape):
 @ad.datatree
 class HingeBar(ad.CompositeShape):
     '''
-    <description>
+    A hinge bar with N segments.
     '''
     epsilon: float=ad.dtfield(0.001, doc='Fudge factor')
     hole_node: ad.Node=ad.ShapeNode(HingeHole)
@@ -325,7 +326,11 @@ class HingeBar(ad.CompositeShape):
 @ad.datatree
 class HingeBarSleeveHoles(ad.CompositeShape):
     '''
-    <description>
+    Holes for hinge bar sleeves. The side=0 sleeve holes are for the
+    stationary side of the hinge bar, and the side=1 holes are for the
+    inner side of the hinge bar where hinge segment requies a small 
+    linear section of the hole to avoid printing artifacs interfereing
+    with the hinge rotation.
     '''
     hinge_bar_shape: HingeBar
     cage_of_node: ad.Node=ad.CageOfNode()
@@ -411,7 +416,7 @@ class HingeBarSleeveHoles(ad.CompositeShape):
 @ad.datatree
 class Hinge(ad.CompositeShape):
     '''
-    <description>
+    A completed hinge 
     '''
     bar_node: ad.Node=ad.ShapeNode(HingeBar,  
                                            {'as_cage': 'bar_cage_as_cage'},
@@ -482,7 +487,7 @@ class HingeTestPrint(ad.CompositeShape):
     EXAMPLE_SHAPE_ARGS=ad.args(as_cage=True,
                                sep=0.5,
                                seg_count=7,
-                               fn=8)
+                               fn=12)
     EXAMPLE_ANCHORS=()
     
     def build(self) -> ad.Maker:
@@ -518,7 +523,7 @@ class HingeTestPrint(ad.CompositeShape):
     
 # Uncomment the line below to default to writing OpenSCAD files
 # when anchorscad_main is run with no --write or --no-write options.
-MAIN_DEFAULT=ad.ModuleDefault(True)
+MAIN_DEFAULT=ad.ModuleDefault(True, write_path_files=True)
 
 if __name__ == "__main__":
     ad.anchorscad_main()
