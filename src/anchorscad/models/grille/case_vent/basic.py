@@ -4,30 +4,26 @@ Created on 12 Sep 2021
 @author: gianni
 '''
 
-from dataclasses import dataclass
-import anchorscad.core as core
-import anchorscad.linear as l
-from anchorscad.extrude import PathBuilder, LinearExtrude
-import numpy as np
+import anchorscad as ad
 
 
-@core.shape
-@dataclass
-class RectangularGrille(core.CompositeShape):
+@ad.shape
+@ad.datatree
+class RectangularGrille(ad.CompositeShape):
     '''
     A grille of vent holes.
     '''
-    size: l.GVector=(50, 2, 10)
+    size: ad.GVector=(50, 2, 10)
     h: float=10
     w: float=3
     chamfer_size_ratio = 0.25
     sep: float=3
     
-    EXAMPLE_SHAPE_ARGS=core.args()
+    EXAMPLE_SHAPE_ARGS=ad.args()
     EXAMPLE_ANCHORS=()
     
-    def __post_init__(self):
-        maker = core.Box(self.size).cage(
+    def build(self) -> ad.Maker:
+        maker = ad.Box(self.size).cage(
             'cage').at('centre')
         
         requested_size = self.w + self.sep
@@ -40,10 +36,10 @@ class RectangularGrille(core.CompositeShape):
         
         full_path, half_path = self._paths(self.size[1], actual_sep) 
         
-        full_shape = LinearExtrude(full_path, h=self.size[2])
-        half_shape = LinearExtrude(half_path, h=self.size[2])
+        full_shape = ad.LinearExtrude(full_path, h=self.size[2])
+        half_shape = ad.LinearExtrude(half_path, h=self.size[2])
         
-        post_transform = l.ROTY_90 * l.translate([self.size[1] / 2, 0, 0])
+        post_transform = ad.ROTY_90 * ad.translate([self.size[1] / 2, 0, 0])
         
         maker.add_at(half_shape.solid(('vane', 'left'))
                      .at('inner', 0),
@@ -56,9 +52,9 @@ class RectangularGrille(core.CompositeShape):
         
         
         maker.add_at(half_shape.solid(('vane', 'right')).at('inner', 0),
-                     'face_edge', 0, 0, 1, post=post_transform * l.ROTY_180)
+                     'face_edge', 0, 0, 1, post=post_transform * ad.ROTY_180)
         
-        self.maker = self.complete(maker)
+        return maker
         
     def complete(self, maker):
         return maker
@@ -66,7 +62,7 @@ class RectangularGrille(core.CompositeShape):
     def as_holes(self, maker):
         
         maker1 = maker.hole('grille').at('centre')
-        maker1.add_at(core.Box(self.size).solid('etch').at('centre'))
+        maker1.add_at(ad.Box(self.size).solid('etch').at('centre'))
     
         return maker1.solid('holes')
         
@@ -83,7 +79,7 @@ class RectangularGrille(core.CompositeShape):
         right = vane_w / 2
         left = -right
         
-        path_builder = (PathBuilder()
+        path_builder = (ad.PathBuilder()
             .move([0, 0])
             .line([left, 0], 'inner')
             .line([left, ch_top], ('left', 'upper'))
@@ -107,30 +103,30 @@ class RectangularGrille(core.CompositeShape):
         return full_path, half_path
     
 
-@core.shape
-@dataclass
+@ad.shape
+@ad.datatree(chain_post_init=True)
 class RectangularGrilleAsHoles(RectangularGrille):
     
     def complete(self, maker):
         return self.as_holes(maker).at('centre')
     
 
-@core.shape
-@dataclass
-class RectangularGrilleHoles(core.CompositeShape):
+@ad.shape
+@ad.datatree
+class RectangularGrilleHoles(ad.CompositeShape):
     '''
     A grille of as holes.
     '''
-    size: l.GVector=(50, 2, 10)
+    size: ad.GVector=(50, 2, 10)
     w: float=3
     sep: float=0.01
     chamfer_size_ratio = 0.25
     
-    EXAMPLE_SHAPE_ARGS=core.args()
+    EXAMPLE_SHAPE_ARGS=ad.args()
     EXAMPLE_ANCHORS=()
     
-    def __post_init__(self):
-        maker = core.Box(self.size).cage(
+    def build(self) -> ad.Maker:
+        maker = ad.Box(self.size).cage(
             'cage').transparent(True).colour([0.3, 1, 0.3, 0.3]).at('centre')
         
         k = self.sep / self.w
@@ -142,16 +138,16 @@ class RectangularGrilleHoles(core.CompositeShape):
         
         full_path = self._paths(self.size[1], actual_w, actual_sep) 
         
-        full_shape = LinearExtrude(full_path, h=self.size[2])
+        full_shape = ad.LinearExtrude(full_path, h=self.size[2])
         
-        post_transform = l.translate([actual_w, 0, -self.size[1]])
+        post_transform = ad.translate([actual_w, 0, -self.size[1]])
         
         for i in range(count):
             maker.add_at(full_shape.solid(('vane', i)).at(('left', 'upper'), 0),
                          'face_edge', 0, 0, i / count, 
                          post=post_transform)
         
-        self.maker = self.complete(maker)
+        return maker
         
     def complete(self, maker):
         return maker
@@ -159,7 +155,7 @@ class RectangularGrilleHoles(core.CompositeShape):
     def as_holes(self, maker):
         
         maker1 = maker.hole('grille').at('centre')
-        maker1.add_at(core.Box(self.size).solid('etch').at('centre'))
+        maker1.add_at(ad.Box(self.size).solid('etch').at('centre'))
     
         return maker1.solid('holes')
         
@@ -176,7 +172,7 @@ class RectangularGrilleHoles(core.CompositeShape):
         right = vane_w / 2
         left = -right
         
-        path_builder = (PathBuilder()
+        path_builder = (ad.PathBuilder()
             .move([0, 0])
             .line([left, 0], 'inner')
             .line([left, ch_top], ('left', 'upper'))
@@ -198,5 +194,6 @@ class RectangularGrilleHoles(core.CompositeShape):
         return full_path
     
 
+MAIN_DEFAULT=ad.ModuleDefault(True, write_path_files=True)
 if __name__ == '__main__':
-    core.anchorscad_main(False)
+    ad.anchorscad_main(False)
