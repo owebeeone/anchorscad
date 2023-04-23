@@ -6,15 +6,14 @@ Created on 6 Jan 2022
 
 import numpy as np
 import anchorscad as ad
-from anchorscad import datatree, Node
 
 EPSILON=1.0e-3
 
 @ad.shape
-@datatree
+@ad.datatree
 class ButtonWings(ad.CompositeShape):
     '''
-    <description>
+    Guides (holes or solids) for keeping the button from rotating.
     '''
     button_r: float=17.4 / 2
     button_h: float=5.7
@@ -24,10 +23,11 @@ class ButtonWings(ad.CompositeShape):
     wing_count: int=5
     wing_angle: float=20
     
-    extruder: Node=ad.ShapeNode(ad.RotateExtrude, {})
+    extruder: ad.Node=ad.ShapeNode(ad.RotateExtrude, {})
     
-    wings_cage_shape: Node=ad.ShapeNode(ad.Cylinder, {'r': 'button_r', 'h': 'button_h'})
-    winge_cageof_node: Node=Node(ad.cageof, prefix='wings_cage_')
+    wings_cage_shape: ad.Node=ad.ShapeNode(
+        ad.Cylinder, {'r': 'button_r', 'h': 'button_h'})
+    winge_cageof_node: ad.Node=ad.Node(ad.cageof, prefix='wings_cage_')
     fn=128
     
     EXAMPLE_SHAPE_ARGS=ad.args(wings_cage_as_cage=False,
@@ -67,10 +67,10 @@ class ButtonWings(ad.CompositeShape):
 
 
 @ad.shape
-@datatree
+@ad.datatree
 class ButtonCap(ad.CompositeShape):
     '''
-    <description>
+    A button cap with a shaft hole and optional engraving.
     '''
     button_r: float=17.4 / 2
     button_h: float=5.7
@@ -80,13 +80,13 @@ class ButtonCap(ad.CompositeShape):
     edge_height: float=4.5
     rim_radius: float=0.75
     bottom_flange: tuple=(0.3, 0.4)
-    bc_cage_shape: Node=ad.ShapeNode(ad.Cylinder, {'r': 'button_r', 'h': 'button_h'})
-    cageof_node: Node=Node(ad.cageof, prefix='bc_cage_')
+    bc_cage_shape: ad.Node=ad.ShapeNode(ad.Cylinder, {'r': 'button_r', 'h': 'button_h'})
+    cageof_node: ad.Node=ad.Node(ad.cageof, prefix='bc_cage_')
     spline1_meta_data: object=ad.ModelAttributes().with_fn(15)
     spline2_meta_data: object=ad.ModelAttributes().with_fn(5)
-    extruder: Node=ad.ShapeNode(ad.RotateExtrude, {'degrees': 'ex_degrees'})
+    extruder: ad.Node=ad.ShapeNode(ad.RotateExtrude, {'degrees': 'ex_degrees'})
     with_wings: bool=True
-    wings_node: Node=ad.ShapeNode(ButtonWings)
+    wings_node: ad.Node=ad.ShapeNode(ButtonWings)
     engrave_shape: ad.Shape=None
     
     EXAMPLE_SHAPE_ARGS=ad.args(fn=128, bc_cage_as_cage=False)
@@ -153,12 +153,12 @@ class ButtonCap(ad.CompositeShape):
         return maker
 
 @ad.shape
-@datatree
+@ad.datatree
 class EngravedButtonCap(ad.CompositeShape):
     '''
-    <description>
+    An example button cap with an engraving.
     '''
-    button_node: Node=ad.ShapeNode(ButtonCap)
+    button_node: ad.Node=ad.ShapeNode(ButtonCap)
     engrave_h: float=0.4
     engrave_shape: ad.shape=None
     engrave_shape_anchor: ad.AnchorArgs=ad.surface_args()
@@ -199,5 +199,6 @@ class EngravedButtonCap(ad.CompositeShape):
         return maker
 
 
+MAIN_DEFAULT=ad.ModuleDefault(True, write_path_files=True)
 if __name__ == '__main__':
     ad.anchorscad_main(False)
