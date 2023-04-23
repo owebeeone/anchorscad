@@ -4,16 +4,14 @@ Created on 20 Sep 2021
 @author: gianni
 '''
 
-from dataclasses import dataclass
-import anchorscad.core as core
+import anchorscad as ad
 import anchorscad.linear as l
-from anchorscad.extrude import PathBuilder, LinearExtrude
 from anchorscad.models.basic.box_side_bevels import BoxSideBevels
 
 
-@core.shape
-@dataclass(frozen=True)
-class Snap(core.CompositeShape):
+@ad.shape
+@ad.datatree(frozen=True)
+class Snap(ad.CompositeShape):
     '''
     <description>
     '''
@@ -27,12 +25,12 @@ class Snap(core.CompositeShape):
     snap_offs_factor: float=0.17
     fn:int = 16
     
-    EXAMPLE_SHAPE_ARGS=core.args()
+    EXAMPLE_SHAPE_ARGS=ad.args()
     EXAMPLE_ANCHORS=(
-                core.surface_args('snap', 0.5),)
+                ad.surface_args('snap', 0.5),)
     
     def __post_init__(self):
-        box = core.Box(self.size)
+        box = ad.Box(self.size)
         maker = box.cage(
             'cage').transparent(1).colour([1, 1, 0, 0.5]).at('centre')
             
@@ -44,7 +42,7 @@ class Snap(core.CompositeShape):
         
         start=[1, 0]
         
-        path = (PathBuilder()
+        path = (ad.PathBuilder()
             .move(start)
             .line([-max_x, t_size], 'edge1')
             .line([-max_x, 1.2 * t_size], 'edge3')
@@ -55,15 +53,15 @@ class Snap(core.CompositeShape):
             .line(start, name='bottom')
             .build())
 
-        shape = LinearExtrude(path, h=self.size[0])
+        shape = ad.LinearExtrude(path, h=self.size[0])
         
         maker.add_at(shape.solid('tooth').at('top', 0),
-                     'face_edge', 0, 3, post=l.ROTY_180)
+                     'face_edge', 0, 3, post=ad.ROTY_180)
         
         # Round the clip.
         clip_size = box.size.A[0:3] + 2 * self.epsilon
         clip_size[2] = clip_size[2] + self.tab_protrusion
-        clip_cage = (core.Box(clip_size).cage('clip_cage')
+        clip_cage = (ad.Box(clip_size).cage('clip_cage')
                 .transparent(1).colour([0, 1, 0, 0.5])
                 .at('centre'))
         
@@ -71,7 +69,7 @@ class Snap(core.CompositeShape):
         th = self.tab_height
         cutter_size = clip_size + self.epsilon / 2
         cutter_size[1] = th
-        clip = core.Box(cutter_size)
+        clip = ad.Box(cutter_size)
         clip_cage.add_at(clip.solid('clip').at(
             'face_corner', 1, 1), 'face_corner', 1, 1)
            
@@ -85,19 +83,20 @@ class Snap(core.CompositeShape):
         maker.add_at(
             clip_cage.hole('clip').at('face_centre', 1), 
             'face_centre', 1, 
-            post=l.translate([-self.epsilon / 2, -self.epsilon, 0]))
+            post=ad.translate([-self.epsilon / 2, -self.epsilon, 0]))
         
         self.set_maker(maker)
         
-    @core.anchor('Snap seam edge.')
+    @ad.anchor('Snap seam edge.')
     def snap(self, rpos=0.5):
         '''Anchors to the seam line..
         Args:
             rpos: 0.0-1.0, 0.5 is centre.
         '''
-        return (self.at('centre') * l.ROTZ_180 * l.tranY(
+        return (self.at('centre') * ad.ROTZ_180 * ad.tranY(
             -self.snap_offs_factor * self.size[1]))
 
 
+MAIN_DEFAULT=ad.ModuleDefault(True, write_path_files=True)
 if __name__ == '__main__':
-    core.anchorscad_main(False)
+    ad.anchorscad_main(False)

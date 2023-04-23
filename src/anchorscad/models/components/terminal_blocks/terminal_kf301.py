@@ -12,7 +12,9 @@ EPSILON=0.001
 @ad.shape
 @ad.datatree
 class TerminalKF301Terminal(ad.CompositeShape):
-    
+    '''Access hole cutout for a KF301 terminal block.
+    This includes holes for the pin, terminal wire and screwdriver access.
+    '''
     h: float=10
     w: float=7.6
     pin_pitch: float=5.08
@@ -144,7 +146,7 @@ class TerminalKF301Body(ad.CompositeShape):
 @ad.datatree
 class TerminalKF301(ad.CompositeShape):
     '''
-    Based on the specs for Handson Technologu KF301.
+    Based on the specs for Handson Technology KF301.
     '''
     count: int=2
     
@@ -166,7 +168,8 @@ class TerminalKF301(ad.CompositeShape):
                          .at('face_edge', 3, 0), 
                          'face_edge', 3, 0, post=ad.tranZ(-i * self.pin_pitch))
         return maker
-        
-MAIN_DEFAULT=ad.ModuleDefault(True)
+
+
+MAIN_DEFAULT=ad.ModuleDefault(True, write_path_files=True)
 if __name__ == '__main__':
     ad.anchorscad_main(False)
