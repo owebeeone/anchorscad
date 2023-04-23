@@ -81,7 +81,7 @@ DRAWER_CUTOUT_PATH=(ad.PathBuilder().move([0, BRACKET_YS[0]])
 
 
 @ad.shape
-@ad.dataclass(frozen=True)
+@ad.datatree(frozen=True)
 class KitchenDrawerMountHole(ad.CompositeShape):
     '''
     Elongated screw hole.
@@ -104,6 +104,9 @@ class KitchenDrawerMountHole(ad.CompositeShape):
     t_base_cs: float= SCREW_HOLE_DIA / 2
     h_access: float=15
     
+    # Injects just the ShapeNode fields.
+    cone_node: ad.Node=ad.ShapeNode(ConeEndedPrism, {})
+    
     epsilon: float=epsilon
     fn: int=64
     
@@ -115,21 +118,21 @@ class KitchenDrawerMountHole(ad.CompositeShape):
         
         w = self.rw - 2 * self.r
         sr = self.shell_w + self.r
-        shell = ConeEndedPrism(h=self.h, w=w, r_base=sr, r_top=sr)
+        shell = self.cone_node(h=self.h, w=w, r_base=sr, r_top=sr)
         
         maker = shell.solid('shell').at('base')
         
-        hole = ConeEndedPrism(h=self.h + 2 * self.epsilon, 
+        hole = self.cone_node(h=self.h + 2 * self.epsilon, 
                               w=w, 
                               r_base=self.r, 
                               r_top=self.r)
         
-        cs_hole = ConeEndedPrism(h=self.h_cs + 2 * self.epsilon, 
+        cs_hole = self.cone_node(h=self.h_cs + 2 * self.epsilon, 
                               w=w, 
                               r_base=self.t_base_cs, 
                               r_top=self.r_top_cs)
     
-        access_hole = ConeEndedPrism(h=self.h_access + 2 * self.epsilon, 
+        access_hole = self.cone_node(h=self.h_access + 2 * self.epsilon, 
                               w=w, 
                               r_base=self.r_top_cs, 
                               r_top=self.r_top_cs)
@@ -401,8 +404,19 @@ class KitchenDrawerBracket(ad.CompositeShape):
     '''
     outline: ad.Shape=KitchenDrawerOutline()
     front_bevel_radius: float=RADIUS_TOP
-    mount_hole_lower: ad.Shape=KitchenDrawerMountHole(h=17)
-    mount_hole_upper: ad.Shape=KitchenDrawerMountHole(h=5)
+
+    mount_hole_lower_h=17
+    mount_hole_lower_node: ad.Node=ad.ShapeNode(
+        KitchenDrawerMountHole, 
+        {'h': 'mount_hole_lower_h'}, 
+        prefix='mount_hole_')
+    
+    mount_hole_upper_h=5
+    mount_hole_upper_node: ad.Node=ad.ShapeNode(
+        KitchenDrawerMountHole, 
+        {'h': 'mount_hole_upper_h'}, 
+        prefix='mount_hole_')
+    
     expand_base_lower: float=30
     expand_base_upper: float=20
     expand_x_top: float=2
@@ -429,7 +443,16 @@ class KitchenDrawerBracket(ad.CompositeShape):
     countersunk_scew_hole_type : ad.Shape=CountersunkScrew
     flatsunk_scew_hole_type : ad.Shape=FlatSunkScrew
     
-    fn: int=128
+    front_size: tuple=ad.dtfield(
+        self_default=lambda s: s.outline.front_size, init=False)
+    
+    box_side_bevels_node: ad.Node=ad.ShapeNode(BoxSideBevels, prefix='front_')
+    
+    linear_extrude_node: ad.Node=ad.ShapeNode(ad.LinearExtrude, {})
+    
+    tnut_node: ad.Node=ad.ShapeNode(Tnut, {})
+    
+    fn: int=64
     fa: float=None
     fs: float=None
     
@@ -476,10 +499,7 @@ class KitchenDrawerBracket(ad.CompositeShape):
         
         maker = self.outline.named_shape('outline', render_mode).at()
         
-        front_shape = BoxSideBevels(
-            size=self.outline.front_size,
-            bevel_radius=self.front_bevel_radius
-            )
+        front_shape = self.box_side_bevels_node()
         
         maker.add_at(front_shape.solid('front')
                      .at('centre'),
@@ -509,7 +529,7 @@ class KitchenDrawerBracket(ad.CompositeShape):
                   .line([0, 0], 'base_r')
                   .build())
 
-        holder_shape = ad.LinearExtrude(
+        holder_shape = self.linear_extrude_node(
             path=holder_path, 
             h=self.outline.front_size[0] - self.outline.drawer_cut_depth)
 
@@ -522,15 +542,17 @@ class KitchenDrawerBracket(ad.CompositeShape):
                           0, 
                           -self.expand_y_top]))
         
+        mount_hole_upper = self.mount_hole_upper_node()
+        
         screw_post = ad.ROTZ_90 * ad.translate(
                          [self.screw_top_offs, 
-                          self.mount_hole_upper.centre_offs(),
+                          mount_hole_upper.centre_offs(),
                           0])
-        maker.add_at(self.mount_hole_upper.composite('upper_hole').at('base'),
+        maker.add_at(mount_hole_upper.composite('upper_hole').at('base'),
                      'front', 'face_edge', 1, 2, 1,
                      post=screw_post)
         
-        maker.add_at(self.mount_hole_lower.composite('lower_hole').at('base'),
+        maker.add_at(self.mount_hole_lower_node().composite('lower_hole').at('base'),
                      'front', 'face_edge', 1, 2, 1,
                      post=screw_post * ad.tranX(self.screw_hole_seps))
         
@@ -565,7 +587,7 @@ class KitchenDrawerBracket(ad.CompositeShape):
         outer_plane = ad.surface_args(
             'outline', 'drawer_side_cage', 'face_centre', 2)
 
-        maker.add_at(Tnut(left_handed=not self.make_mirror)
+        maker.add_at(self.tnut_node(left_handed=not self.make_mirror)
                      .hole('tnut1').at('base'),
                      post=ad.find_intersection(
                                 maker, outer_plane, screw1_axis) 
@@ -664,7 +686,8 @@ class KitchenDrawerBracket(ad.CompositeShape):
     @ad.anchor('An example anchor specifier.')
     def side(self, *args, **kwds):
         return self.maker.at('face_edge', *args, **kwds)
-    
 
+
+MAIN_DEFAULT=ad.ModuleDefault(True, write_path_files=True)
 if __name__ == '__main__':
     ad.anchorscad_main(False)
