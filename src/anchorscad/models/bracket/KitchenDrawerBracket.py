@@ -13,7 +13,7 @@ from anchorscad.models.screws.CountersunkScrew import CountersunkScrew, \
     FlatSunkScrew
 from anchorscad.models.screws.tnut import Tnut
 
-
+# Various dimensions in mm.
 UPPER_LEAF_H=28.9
 UPPER_CLAMP_NOTCH_H=13.5 + UPPER_LEAF_H
 LIP_LEAF_H=50.7
@@ -183,6 +183,8 @@ class KitchenDrawerOutline(ad.CompositeShape):
             s.front_cut_depth),
         init=False)
     
+    linear_extrude_node: ad.Node=ad.ShapeNode(ad.LinearExtrude, {})
+    
     fn: int=16
     
 
@@ -195,7 +197,7 @@ class KitchenDrawerOutline(ad.CompositeShape):
         render_mode = (ad.ModeShapeFrame.SOLID 
                        if self.show_outline else 
                        ad.ModeShapeFrame.HOLE)
-        drawer_shape = ad.LinearExtrude(
+        drawer_shape = self.linear_extrude_node(
             path=self.drawer_path, h=self.drawer_depth, fn=self.fn)
         maker = drawer_shape.solid('drawer_side').at('base', 0)
         
@@ -223,7 +225,7 @@ class KitchenDrawerOutline(ad.CompositeShape):
                      'drawer_side_cage', 'face_edge', 0, 0,
                      post=ad.translate([epsilon / 2, -epsilon, epsilon]))
                      
-        cut_shape = ad.LinearExtrude(
+        cut_shape = self.linear_extrude_node(
             path=self.drawer_cut_path,
             h=self.drawer_cut_depth + 2 * epsilon, 
             fn=self.fn)
@@ -402,7 +404,9 @@ class KitchenDrawerBracket(ad.CompositeShape):
       show_outline: Debugging setting for showing the drawer outline.
       adjuster: The shape type for theadjuster knob.
     '''
-    outline: ad.Shape=KitchenDrawerOutline()
+    outline_node: ad.Node=ad.ShapeNode(KitchenDrawerOutline, prefix='outline_')
+    outline: ad.Shape=ad.dtfield(self_default=lambda s: s.outline_node())
+    
     front_bevel_radius: float=RADIUS_TOP
 
     mount_hole_lower_h=17
@@ -497,7 +501,7 @@ class KitchenDrawerBracket(ad.CompositeShape):
                        if self.show_outline else 
                        ad.ModeShapeFrame.HOLE)
         
-        maker = self.outline.named_shape('outline', render_mode).at()
+        maker = self.outline.named_shape('outline', render_mode).at('base', rh=1)
         
         front_shape = self.box_side_bevels_node()
         
