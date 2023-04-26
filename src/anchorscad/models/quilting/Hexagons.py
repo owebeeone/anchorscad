@@ -4,10 +4,7 @@ Created on 4 Oct 2021
 @author: gianni
 '''
 
-from dataclasses import dataclass
-import anchorscad.core as core
-from anchorscad.extrude import PathBuilder, LinearExtrude
-import anchorscad.linear as l
+import anchorscad as ad
 import numpy as np
 
 INCH=25.4
@@ -15,9 +12,9 @@ INCH=25.4
 def radians(degs):
     return degs * np.pi / 180
 
-@core.shape
-@dataclass
-class HalfHexagon(core.CompositeShape):
+@ad.shape
+@ad.dataclass
+class HalfHexagon(ad.CompositeShape):
     '''
     <description>
     '''
@@ -27,10 +24,10 @@ class HalfHexagon(core.CompositeShape):
     
     DEFAULT_SMALL_R = 3 * INCH
     
-    EXAMPLE_SHAPE_ARGS=core.args()
+    EXAMPLE_SHAPE_ARGS=ad.args()
     EXAMPLE_ANCHORS=()
     
-    def __post_init__(self):
+    def build(self) -> ad.Maker:
         
         if self.large_r is None and self.small_r is None:
             self.small_r = self.DEFAULT_SMALL_R
@@ -42,7 +39,7 @@ class HalfHexagon(core.CompositeShape):
             
         ypos2 = self.large_r * np.sin(radians(30))
         
-        path = (PathBuilder()
+        path = (ad.PathBuilder()
             .move([0, 0])
             .line([0, self.large_r], 'upper_side')
             .line([self.small_r, ypos2], 'edge1')
@@ -51,11 +48,11 @@ class HalfHexagon(core.CompositeShape):
             .line([0, 0], 'lower_side')
             .build())
         
-        shape = LinearExtrude(path, h=self.t)
+        shape = ad.LinearExtrude(path, h=self.t)
         
-        self.maker = shape.solid('half_hexagon').at(
-            'upper_side', 0, post=l.ROTX_270)
+        return shape.solid('half_hexagon').at(
+            'upper_side', 0, post=ad.ROTX_270)
         
 
 if __name__ == '__main__':
-    core.anchorscad_main(False)
+    ad.anchorscad_main(False)
