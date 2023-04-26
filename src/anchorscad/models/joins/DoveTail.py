@@ -4,14 +4,11 @@ Created on 21 Sep 2021
 @author: gianni
 '''
 
-from dataclasses import dataclass
-import anchorscad.core as core
-import anchorscad.linear as l
-from anchorscad.extrude import PathBuilder, LinearExtrude
+import anchorscad as ad
 
-@core.shape
-@dataclass
-class DoveTail(core.CompositeShape):
+@ad.shape
+@ad.datatree
+class DoveTail(ad.CompositeShape):
     '''Creates a dovetail join.
     Args:
      overall_width: Width of the enclosing volume.
@@ -33,21 +30,21 @@ class DoveTail(core.CompositeShape):
     dt_widthb: float=8 # Approximate
     edge_shrink: float=0.01 
     
-    EXAMPLE_SHAPE_ARGS=core.args()
+    EXAMPLE_SHAPE_ARGS=ad.args()
     EXAMPLE_ANCHORS=()
     EXAMPLES_EXTENDED={
-        'upper': core.ExampleParams(
-            shape_args=core.args(side=False),
+        'upper': ad.ExampleParams(
+            shape_args=ad.args(side=False),
             anchors=()),
-        'lower': core.ExampleParams(
-            shape_args=core.args(side=True),
+        'lower': ad.ExampleParams(
+            shape_args=ad.args(side=True),
             anchors=())
         }
     
     def __post_init__(self):
         
         box_size = [self.overall_width, self.overall_height, self.t]
-        maker = core.Box(box_size).cage(
+        maker = ad.Box(box_size).cage(
             'dovetail_cage').colour([1, 1, 0, 0.5]).at('centre')
             
         dt_width = (self.dt_widtha + self.dt_widthb) / 2
@@ -67,7 +64,7 @@ class DoveTail(core.CompositeShape):
         mid_offset = 0.5 * actual_dt_width
         
         # Makes a single tail path and reuse.
-        dt_path = (PathBuilder().move([0, 0])
+        dt_path = (ad.PathBuilder().move([0, 0])
                    .line((-offseta, 0), ('front', 'right'))
                    .line((offseta - mid_offset, depth), ('side', 'right'))
                    .line((-mid_offset, depth), ('back', 'right'))
@@ -77,9 +74,9 @@ class DoveTail(core.CompositeShape):
                    .build()
                    )
                     
-        pathbuilder = PathBuilder().move([0, 0])
-        dw_trans = l.translate([-actual_dt_width, 0, 0])
-        dw_current_trans = l.IDENTITY
+        pathbuilder = ad.PathBuilder().move([0, 0])
+        dw_trans = ad.translate([-actual_dt_width, 0, 0])
+        dw_current_trans = ad.IDENTITY
         
         half_count = count // 2
         
@@ -115,13 +112,15 @@ class DoveTail(core.CompositeShape):
 
         path = pathbuilder.build()
         
-        shape = LinearExtrude(path, h=self.t)
+        shape = ad.LinearExtrude(path, h=self.t)
         
         maker.add_at(shape.solid('front').at(
-            ('front', 'right', half_count - 1), post=l.ROTX_90),
+            ('front', 'right', half_count - 1), post=ad.ROTX_90),
                      'face_centre', 1)
         
         self.set_maker(maker)
         
+
+MAIN_DEFAULT=ad.ModuleDefault(True, write_path_files=True)
 if __name__ == '__main__':
-    core.anchorscad_main(False)
+    ad.anchorscad_main(False)
