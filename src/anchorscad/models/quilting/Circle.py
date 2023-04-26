@@ -4,18 +4,14 @@ Created on 18 Sep 2021
 @author: gianni
 '''
 
-from dataclasses import dataclass
-import anchorscad.core as core
-import anchorscad.linear as l
-from anchorscad.extrude import PathBuilder, LinearExtrude
-import numpy as np
+import anchorscad as ad
 
 INCH=25.4
 
 
-@core.shape
-@dataclass
-class Circle(core.CompositeShape):
+@ad.shape
+@ad.dataclass
+class Circle(ad.CompositeShape):
     '''
     A Circle
     '''
@@ -23,13 +19,13 @@ class Circle(core.CompositeShape):
     t: float=1.5
     fn: int=60
     
-    EXAMPLE_SHAPE_ARGS=core.args()
+    EXAMPLE_SHAPE_ARGS=ad.args()
     EXAMPLE_ANCHORS=()
     
     def __post_init__(self):
-        shape = core.Cylinder(r=self.radius, h=self.t, fn=self.fn)
+        shape = ad.Cylinder(r=self.radius, h=self.t, fn=self.fn)
         
         self.maker = shape.solid("circle").at('base')
 
 if __name__ == '__main__':
-    core.anchorscad_main(False)
+    ad.anchorscad_main(False)
