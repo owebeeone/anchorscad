@@ -5,7 +5,7 @@ Created on 23 Feb 2022
 
 @author: gianni
 '''
-from dataclasses import field
+
 import anchorscad as ad
 
 
@@ -18,7 +18,7 @@ class Torus(ad.CompositeShape):
 
     r_hole: float=30
     r_section: float=10
-    path: ad.Path=field(init=False)
+    path: ad.Path=ad.dtfield(init=False)
     section_start_angle_degrees: float=0
     section_sweep_angle_degrees: float=360
     rotate_extrude_node: ad.Node=ad.ShapeNode(
