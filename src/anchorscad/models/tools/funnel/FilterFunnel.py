@@ -32,7 +32,7 @@ class ElipticCone(ad.CompositeShape):
         ad.surface_args('surface', 0.3, rh=0),
         )
     
-    def __post_init__(self):
+    def build(self) -> ad.Maker:
         builder = ad.PathBuilder()
         builder.move((0., self.r_base))
         
@@ -51,7 +51,7 @@ class ElipticCone(ad.CompositeShape):
             scale=scale,
             fn=self.fn)
         
-        self.maker = shape.solid('eliptic_cone').at()
+        return shape.solid('eliptic_cone').at()
         
     @ad.anchor('top of the shape')
     def top(self):
@@ -86,7 +86,7 @@ class ElipticConeHull(ad.CompositeShape):
         ad.surface_args('surface', 0.3, rh=0),
         )
     
-    def __post_init__(self):
+    def build(self) -> ad.Maker:
         outer = ElipticCone(
             h=self.h,
             r_base=self.r_base,
@@ -95,7 +95,6 @@ class ElipticConeHull(ad.CompositeShape):
             fn=self.fn)
         
         maker = outer.solid('outer').at('top')
-        self.set_maker(maker)
         
         inner = ElipticCone(
             h=self.h + 2 * self.epsilon,
@@ -106,6 +105,8 @@ class ElipticConeHull(ad.CompositeShape):
         
         maker.add_at(inner.hole('inner').at('top'),
                      'top', post=ad.tranZ(self.epsilon))
+        
+        return maker
 
 
 def ffs(n):
@@ -195,7 +196,7 @@ class FilterFunnel(ad.CompositeShape):
 #         ad.surface_args('inner', 'cone2', 'surface', 0, 225, rh=0),
         )
     
-    def __post_init__(self):
+    def build(self) -> ad.Maker:
         
         hull_shape = ConeEndedHull(
             h=self.h, w=self.w, r_base=self.r_base, r_top=self.r_top, 
@@ -222,7 +223,6 @@ class FilterFunnel(ad.CompositeShape):
                     'inner', 'top', post=ad.tranZ(-self.offs_adapter))
 
         maker = hull.solid('hull').at()
-        self.set_maker(maker)
         
         # Add ribs on the conic surfaces.
         count_conic_side = 2 ** self.conic_rib_level
@@ -339,6 +339,7 @@ class FilterFunnel(ad.CompositeShape):
                         post=ad.ROTX_180 * ad.tranZ(-self.epsilon))
    
 
+        return maker
 
 
 if __name__ == '__main__':
