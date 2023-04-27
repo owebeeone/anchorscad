@@ -4,18 +4,15 @@ Created on 4 Oct 2021
 @author: gianni
 '''
 
-from dataclasses import dataclass
-import anchorscad.core as core
-import anchorscad.linear as l
-from anchorscad.extrude import PathBuilder, LinearExtrude
+import anchorscad as ad
 import numpy as np
 from anchorscad.models.basic.cone_ended_prism import ConeEndedHull,\
     ConeEndedPrism
     
 
-@core.shape
-@dataclass
-class ElipticCone(core.CompositeShape):
+@ad.shape
+@ad.datatree
+class ElipticCone(ad.CompositeShape):
     '''
     Cone with an ellipltic cross section on the top side.
     '''
@@ -26,17 +23,17 @@ class ElipticCone(core.CompositeShape):
     fn: int=32
     
     
-    EXAMPLE_SHAPE_ARGS=core.args(10, 10, 50, 7)
+    EXAMPLE_SHAPE_ARGS=ad.args(10, 10, 50, 7)
     EXAMPLE_ANCHORS=(
-        core.surface_args('top'),
-        core.surface_args('base', rh=-1),
-        core.surface_args('surface', 0, rh=1, align_scale=True),
-        core.surface_args('surface', 0.3, rh=1, align_scale=True),
-        core.surface_args('surface', 0.3, rh=0),
+        ad.surface_args('top'),
+        ad.surface_args('base', rh=-1),
+        ad.surface_args('surface', 0, rh=1, align_scale=True),
+        ad.surface_args('surface', 0.3, rh=1, align_scale=True),
+        ad.surface_args('surface', 0.3, rh=0),
         )
     
     def __post_init__(self):
-        builder = PathBuilder()
+        builder = ad.PathBuilder()
         builder.move((0., self.r_base))
         
         builder.arc_centre_sweep(
@@ -48,7 +45,7 @@ class ElipticCone(core.CompositeShape):
         
         scale = (self.r_top_x / self.r_base, self.r_top_y / self.r_base)
        
-        shape = LinearExtrude(
+        shape = ad.LinearExtrude(
             path=path, 
             h=self.h, 
             scale=scale,
@@ -56,18 +53,18 @@ class ElipticCone(core.CompositeShape):
         
         self.maker = shape.solid('eliptic_cone').at()
         
-    @core.anchor('top of the shape')
+    @ad.anchor('top of the shape')
     def top(self):
-        return l.tranZ(self.h)
+        return ad.tranZ(self.h)
 
-    @core.anchor('base of the shape')
+    @ad.anchor('base of the shape')
     def base(self, h=0, rh=0):
-        return l.tranZ(h + self.h * rh) * l.ROTX_180
+        return ad.tranZ(h + self.h * rh) * ad.ROTX_180
         
 
-@core.shape
-@dataclass
-class ElipticConeHull(core.CompositeShape):
+@ad.shape
+@ad.datatree
+class ElipticConeHull(ad.CompositeShape):
     '''
     A "pipe" with an elliptic cross section on the top end.
     '''
@@ -80,13 +77,13 @@ class ElipticConeHull(core.CompositeShape):
     fn: int=32
     
     
-    EXAMPLE_SHAPE_ARGS=core.args(10, 10, 50, 7, 1.5)
+    EXAMPLE_SHAPE_ARGS=ad.args(10, 10, 50, 7, 1.5)
     EXAMPLE_ANCHORS=(
-        core.surface_args('top'),
-        core.surface_args('base', rh=-1),
-        core.surface_args('surface', 0, rh=1),
-        core.surface_args('surface', 0.1, rh=1),
-        core.surface_args('surface', 0.3, rh=0),
+        ad.surface_args('top'),
+        ad.surface_args('base', rh=-1),
+        ad.surface_args('surface', 0, rh=1),
+        ad.surface_args('surface', 0.1, rh=1),
+        ad.surface_args('surface', 0.3, rh=0),
         )
     
     def __post_init__(self):
@@ -108,7 +105,7 @@ class ElipticConeHull(core.CompositeShape):
             fn=self.fn)
         
         maker.add_at(inner.hole('inner').at('top'),
-                     'top', post=l.tranZ(self.epsilon))
+                     'top', post=ad.tranZ(self.epsilon))
 
 
 def ffs(n):
@@ -119,9 +116,9 @@ def radians(degs):
     '''Degrees to radians helper.'''
     return np.pi * degs / 180
 
-@core.shape
-@dataclass
-class FilterFunnel(core.CompositeShape):
+@ad.shape
+@ad.datatree
+class FilterFunnel(ad.CompositeShape):
     '''Generates a paper filter (classic coffee paper filter) funnel with
     ribs on the inner surface to allow for efficient use of paper filters.
     Args:
@@ -165,17 +162,17 @@ class FilterFunnel(core.CompositeShape):
     
     # Inner ribs.
     conic_rib_level: int=4  # n**2-1 == 15 ribs
-    rib_factory: object=core.lazy_shape(
-        core.Cone, 'h', 
-        other_args=core.args(r_base=1.5 * 1.3, r_top=1.5, fn=3))
+    rib_factory: object=ad.lazy_shape(
+        ad.Cone, 'h', 
+        other_args=ad.args(r_base=1.5 * 1.3, r_top=1.5, fn=3))
     rib_overlap_factor: float=0.016
     
     # Tail pipe
     r_tail: float=8.0
     l_tail: float=40 
-    tail_rib_factory: object=core.lazy_shape(
-        lambda x, y, z : core.Box((x, y, z)), 'y', 
-        other_args=core.args(x=1.5, z=1.5))
+    tail_rib_factory: object=ad.lazy_shape(
+        lambda x, y, z : ad.Box((x, y, z)), 'y', 
+        other_args=ad.args(x=1.5, z=1.5))
     tail_rib_h: float=0.75
     
     n_tail_ribs: int= 6
@@ -184,18 +181,18 @@ class FilterFunnel(core.CompositeShape):
     epsilon: float=0.001
     fn: int=128
     
-    EXAMPLE_SHAPE_ARGS=core.args()
+    EXAMPLE_SHAPE_ARGS=ad.args()
     NOEXAMPLE_ANCHORS=(
         
-        core.surface_args('tail', 'tail_outer', 'surface', rh=0, degrees=60),
-        core.surface_args('tail', 'tail_outer', 'surface', rh=1, degrees=60),
-        core.surface_args('tail', ('tail_rib', 1), 'face_edge', 1, 2),
-        core.surface_args('tail', ('tail_rib', 1), 'face_edge', 1, 0),
-#         core.surface_args('base'),
-#         core.surface_args('inner', 'prism', 'lside', 0.1, rh=0.6),
-#         core.surface_args('inner', 'cone1', 'surface', 0, 180, rh=0.6),
-#         core.surface_args('inner', 'cone2', 'surface', 0, 225, rh=0.6),
-#         core.surface_args('inner', 'cone2', 'surface', 0, 225, rh=0),
+        ad.surface_args('tail', 'tail_outer', 'surface', rh=0, degrees=60),
+        ad.surface_args('tail', 'tail_outer', 'surface', rh=1, degrees=60),
+        ad.surface_args('tail', ('tail_rib', 1), 'face_edge', 1, 2),
+        ad.surface_args('tail', ('tail_rib', 1), 'face_edge', 1, 0),
+#         ad.surface_args('base'),
+#         ad.surface_args('inner', 'prism', 'lside', 0.1, rh=0.6),
+#         ad.surface_args('inner', 'cone1', 'surface', 0, 180, rh=0.6),
+#         ad.surface_args('inner', 'cone2', 'surface', 0, 225, rh=0.6),
+#         ad.surface_args('inner', 'cone2', 'surface', 0, 225, rh=0),
         )
     
     def __post_init__(self):
@@ -222,7 +219,7 @@ class FilterFunnel(core.CompositeShape):
             fn=self.fn
             )
         hull.add_at(adapter.composite('adapter').at('base', rh=1),
-                    'inner', 'top', post=l.tranZ(-self.offs_adapter))
+                    'inner', 'top', post=ad.tranZ(-self.offs_adapter))
 
         maker = hull.solid('hull').at()
         self.set_maker(maker)
@@ -244,26 +241,26 @@ class FilterFunnel(core.CompositeShape):
                 rh = max_rh
             adj = 0
             for a, rot, pop_size in (
-                            ('cone1', l.ROTZ_270, -rib_pop),
-                            ('cone2', l.ROTZ_90, rib_pop)):
+                            ('cone1', ad.ROTZ_270, -rib_pop),
+                            ('cone2', ad.ROTZ_90, rib_pop)):
         
-                tran = l.tranY(pop_size + self.epsilon)
+                tran = ad.tranY(pop_size + self.epsilon)
                 rib_shape = self.rib_factory.solid(('rib', a, i))
                 maker.add_between(
-                    core.at_spec('inner', a, 'surface', 0, angle, rh=0),
-                    core.at_spec('inner', a, 'surface', h, angle, rh=rh),
+                    ad.at_spec('inner', a, 'surface', 0, angle, rh=0),
+                    ad.at_spec('inner', a, 'surface', h, angle, rh=rh),
                     rib_shape,
-                    core.at_spec('top', post=rot * tran),
-                    core.at_spec('base', post=rot * tran),
-                    align_axis=l.X_AXIS,
-                    align_plane=l.Z_AXIS
+                    ad.at_spec('top', post=rot * tran),
+                    ad.at_spec('base', post=rot * tran),
+                    align_axis=ad.X_AXIS,
+                    align_plane=ad.Z_AXIS
                     )
         
         d = self.r_base * np.sin(radians(degs_per_rib))
         count_flat_side = int(round(0.5 + self.w / d))
         rs = 1 / (count_flat_side - 1)
         h = 0.000001
-        tran = l.tranY(rib_pop + self.epsilon)
+        tran = ad.tranY(rib_pop + self.epsilon)
         for i in range(0, count_flat_side):
             
             w = rs * i
@@ -277,28 +274,28 @@ class FilterFunnel(core.CompositeShape):
         
                 rib_shape = self.rib_factory.solid(('rib', a, i))
                 maker.add_between(
-                    core.at_spec('inner', 'prism', a, ts, h=h, rh=w),
-                    core.at_spec('inner', 'prism', a, te, rh=w),
+                    ad.at_spec('inner', 'prism', a, ts, h=h, rh=w),
+                    ad.at_spec('inner', 'prism', a, te, rh=w),
                     rib_shape,
-                    core.at_spec('base', post=l.ROTZ_90 * tran),
-                    core.at_spec('top', post=l.ROTZ_90 * tran),
-                    align_axis=l.Y_AXIS,
-                    align_plane=l.X_AXIS
+                    ad.at_spec('base', post=ad.ROTZ_90 * tran),
+                    ad.at_spec('top', post=ad.ROTZ_90 * tran),
+                    align_axis=ad.Y_AXIS,
+                    align_plane=ad.X_AXIS
                     )
                 
         # Rib cleaner (removes tips of ribs protruding from base).
         maker.add_at(rim.hole('rib_cleaner').at('top'),
                      'hull', 'rim', 'base', 
-                     post=l.ROTX_180 * l.tranZ(self.epsilon))
+                     post=ad.ROTX_180 * ad.tranZ(self.epsilon))
         
         # Tail pipe
-        tail_outer = core.Cone(
+        tail_outer = ad.Cone(
             h=self.l_tail,
             r_base=self.r_tail,
             r_top=self.r_adapter,
             fn=self.fn)
         
-        tail_inner = core.Cone(
+        tail_inner = ad.Cone(
             h=self.l_tail + self.epsilon,
             r_base=self.r_tail - self.t,
             r_top=self.r_adapter - self.t_adapter,
@@ -312,37 +309,37 @@ class FilterFunnel(core.CompositeShape):
         for i in range(self.n_tail_ribs):
             degs = tail_degs * i
             
-            rib_shape = core.Box((self.t, self.l_tail, self.tail_rib_h))
+            rib_shape = ad.Box((self.t, self.l_tail, self.tail_rib_h))
             tail_maker.add_at(
                 rib_shape.solid(('tail_rib', i)).at('face_edge', 1, 0),
                         'tail_outer', 'surface', rh=1, degrees=degs,
-                        post=l.ROTX_180)
+                        post=ad.ROTX_180)
 #             tail_rib_shape = self.tail_rib_factory.solid(('tail_rib', i))
 #             tail_maker.add_between(
-#                 core.at_spec('tail_outer', 'surface', rh=1, degrees=degs),
-#                 core.at_spec('tail_inner', 'surface', h=0, rh=0, degrees=degs),
+#                 ad.at_spec('tail_outer', 'surface', rh=1, degrees=degs),
+#                 ad.at_spec('tail_inner', 'surface', h=0, rh=0, degrees=degs),
 #                 tail_rib_shape,
-#                 core.at_spec('face_edge', 0, 0),
-#                 core.at_spec('face_edge', 0, 2),
+#                 ad.at_spec('face_edge', 0, 0),
+#                 ad.at_spec('face_edge', 0, 2),
 #                 align_axis=None,
 #                 align_plane=None
 #                 )
         
         maker.add_at(tail_maker.composite('tail').at('top'),
-                     'adapter', 'base', post=l.ROTX_180)
+                     'adapter', 'base', post=ad.ROTX_180)
         
         
         # Debug cut-away
         if self.show_cutaway:
-            cut = core.Box([self.r_base, 
+            cut = ad.Box([self.r_base, 
                             (self.r_base * 2 + self.w) / 2, 
                             self.h + 2 * self.epsilon])
             
             self.maker.add_at(cut.hole('cut').at(), 'top', 
-                        post=l.ROTX_180 * l.tranZ(-self.epsilon))
+                        post=ad.ROTX_180 * ad.tranZ(-self.epsilon))
    
 
 
 
 if __name__ == '__main__':
-    core.anchorscad_main(False)
+    ad.anchorscad_main(False)
