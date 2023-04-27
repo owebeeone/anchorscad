@@ -4,15 +4,12 @@ Created on 14 Feb 2022
 @author: gianni
 '''
 
-import anchorscad.core as core
-from anchorscad.datatrees import datatree, Node
-import anchorscad.extrude as e
-import anchorscad.linear as l
+import anchorscad as ad
 
 
-@core.shape
-@datatree
-class WingNutWings(core.CompositeShape):
+@ad.shape
+@ad.datatree
+class WingNutWings(ad.CompositeShape):
     '''
     Provides a single wing shape for a wing-nut assembly.
     '''
@@ -20,14 +17,14 @@ class WingNutWings(core.CompositeShape):
     
     outer_r: float=16 / 2
     sweep_angle_degrees: float=44
-    linex_node: Node=core.ShapeNode(e.LinearExtrude, 'h')
+    linex_node: ad.Node=ad.ShapeNode(ad.LinearExtrude, 'h')
     fn: int=64
     
-    EXAMPLE_SHAPE_ARGS=core.args()
-    NOEXAMPLE_ANCHORS=(core.surface_args('base'),)
+    EXAMPLE_SHAPE_ARGS=ad.args()
+    NOEXAMPLE_ANCHORS=(ad.surface_args('base'),)
     
-    def __post_init__(self):
-        path = (e.PathBuilder()
+    def build(self) -> ad.Maker:
+        path = (ad.PathBuilder()
                 .move([0, 0], direction=[-1, 0])
                 .arc_tangent_radius_sweep(
                     radius=self.outer_r,
@@ -42,18 +39,18 @@ class WingNutWings(core.CompositeShape):
         shape = self.linex_node(path=path)
         maker = shape.solid('lhs').at()
         
-        maker.add_at(shape.solid('rhs').at(post=l.scale([-1, 1, 1])))
+        maker.add_at(shape.solid('rhs').at(post=ad.scale([-1, 1, 1])))
                 
-        self.set_maker(maker)
+        return maker
         
-    @core.anchor('The centre of the arc for attaching to cylinder')
+    @ad.anchor('The centre of the arc for attaching to cylinder')
     def arc_centre(self):
         return self.at('lhs', 'arc', 0)
 
 
-@core.shape
-@datatree
-class WingNutCap(core.CompositeShape):
+@ad.shape
+@ad.datatree
+class WingNutCap(ad.CompositeShape):
     '''
     Provides a shape to be used to make a winged bolt.
     Defaults are for a 3inch x 1/4inch rounded head, square neck bolt.
@@ -62,19 +59,19 @@ class WingNutCap(core.CompositeShape):
     
     sq_size: tuple=(6.5, 6.5, 3.7)
     
-    wings_node: Node=core.ShapeNode(WingNutWings)
+    wings_node: ad.Node=ad.ShapeNode(WingNutWings)
     
-    outer_cyl_node: Node=core.ShapeNode(core.Cylinder, {'r': 'outer_r'}, 'h')
-    inner_cyl_node: Node=core.ShapeNode(core.Cylinder, 'r', 'h')
+    outer_cyl_node: ad.Node=ad.ShapeNode(ad.Cylinder, {'r': 'outer_r'}, 'h')
+    inner_cyl_node: ad.Node=ad.ShapeNode(ad.Cylinder, 'r', 'h')
     
-    sq_node: Node=core.ShapeNode(core.Box, prefix='sq_')
+    sq_node: ad.Node=ad.ShapeNode(ad.Box, prefix='sq_')
 
     fn: int=64
     
-    EXAMPLE_SHAPE_ARGS=core.args()
-    NOEXAMPLE_ANCHORS=(core.surface_args('base'),)
+    EXAMPLE_SHAPE_ARGS=ad.args()
+    NOEXAMPLE_ANCHORS=(ad.surface_args('base'),)
     
-    def __post_init__(self):
+    def build(self) -> ad.Maker:
         outer_cyl = self.outer_cyl_node()
         
         maker = outer_cyl.solid('outer').at('centre')
@@ -92,9 +89,8 @@ class WingNutCap(core.CompositeShape):
             maker.add_at(wing.solid(('wing', i))
                          .at('arc_centre'), 
                          'surface', 0, i * 180)
-        
-        self.set_maker(maker)
+        return maker
 
 
 if __name__ == '__main__':
-    core.anchorscad_main(False)
+    ad.anchorscad_main(False)
