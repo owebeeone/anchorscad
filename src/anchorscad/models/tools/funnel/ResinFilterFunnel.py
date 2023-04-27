@@ -6,7 +6,6 @@ Created on 10 Oct 2021
 @author: gianni
 '''
 
-from dataclasses import field
 import anchorscad as ad
 import numpy as np
 
@@ -58,7 +57,7 @@ class ConePipe(ad.CompositeShape):
     h: float
     r_base: float=None
     r_top: float=None
-    h_inner: float=field(init=False)
+    h_inner: float=ad.dtfield(init=False)
     r_base_inner: float=None
     r_top_inner: float=None
     t: float=None
@@ -72,7 +71,7 @@ class ConePipe(ad.CompositeShape):
     EXAMPLE_SHAPE_ARGS=ad.args(h=10, r_base=5, r_top=4, t=2, fn=128)
     EXAMPLE_ANCHORS=()
     
-    def __post_init__(self):
+    def build(self) -> ad.Maker:
         (self.r_base, self.r_base_inner, self.t_base) = determine_params(
              self.r_base, self.r_base_inner, self.t, self.t_base, 'base')
          
@@ -86,7 +85,7 @@ class ConePipe(ad.CompositeShape):
         maker.add_at(self.inner_cone_node().hole('inner').at('centre'),
                       'centre')
         
-        self.set_maker(maker)
+        return maker
 
 
 @ad.shape
@@ -147,7 +146,7 @@ class ResinFilterFunnel(ad.CompositeShape):
     EXAMPLE_SHAPE_ARGS=ad.args(show_cutaway=False, fn=64, fn_boss=16)
     EXAMPLE_ANCHORS=()
      
-    def __post_init__(self):
+    def build(self) -> ad.Maker:
         
         main_shape = self.cone_pipe_node(
             h=self.h,
@@ -255,7 +254,8 @@ class ResinFilterFunnel(ad.CompositeShape):
                               .at(), 'base', 
                         post=ad.ROTX_180 * ad.tranZ(-self.epsilon))
    
-        self.set_maker(maker)
+        return maker
+
  
 if __name__ == '__main__':
     ad.anchorscad_main(False)
