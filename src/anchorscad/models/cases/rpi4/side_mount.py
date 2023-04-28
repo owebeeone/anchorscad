@@ -5,23 +5,17 @@ Created on 10 Feb 2021
 '''
 
 
-from dataclasses import dataclass
 
 import anchorscad as ad
-from anchorscad.core import shape, CompositeShape, non_defaults_dict, Cylinder, args, \
-    surface_args, anchorscad_main, Cone, create_from, anchor, Box
-from anchorscad.extrude import PathBuilder 
-from anchorscad.linear import tranX, tranY, tranZ, ROTX_180
-from anchorscad.models.basic.pipe import Pipe
-from anchorscad.models.screws.dims import HoleDimensions, holeMetricDims
+from anchorscad.models.screws.dims import HoleDimensions
 from anchorscad.models.screws.holes import SelfTapHole
 import numpy as np
 
 RUNNER_EXCLUDE=True
 
-@shape
-@dataclass
-class SideMount(CompositeShape):
+@ad.shape
+@ad.dataclass
+class SideMount(ad.CompositeShape):
     h: float
     taper_h: float
     wall_sink_depth: float  # How much this is sunk into the wall it's attached to.
@@ -42,7 +36,7 @@ class SideMount(CompositeShape):
     fs: float=None
     
     
-    EXAMPLE_SHAPE_ARGS=args(
+    EXAMPLE_SHAPE_ARGS=ad.args(
         h=10,
         taper_h=3,
         wall_sink_depth=3,
@@ -54,8 +48,8 @@ class SideMount(CompositeShape):
         counter_sink_overlap=0.5, 
         fn=20)
     
-    def __post_init__(self):
-        self_tap_hole = create_from(SelfTapHole, self)
+    def build(self) -> ad.Maker:
+        self_tap_hole = ad.create_from(SelfTapHole, self)
         if not self.access_dia:
             self.access_dia = self_tap_hole.outer_dia + self.overlap_delta
         if not self.outer_dia:
@@ -65,7 +59,7 @@ class SideMount(CompositeShape):
         
         maker = ad.LinearExtrude(path, self.h).solid('profile').at()
         
-        self.set_maker(maker)
+        return maker
         
     def _make_sunk_profle(self): 
         bevel_r = self.bevel_r
@@ -77,7 +71,7 @@ class SideMount(CompositeShape):
         p1 = [cos_t * outer_r, sin_t * outer_r]
         p2 = [cos_t * (outer_r + bevel_r), 0]
         
-        return (PathBuilder()
+        return (ad.PathBuilder()
             .move([0, 0])
             .line([0, -self.r_sphere], 'edge1')
             .arc_tangent_point(p1, degrees=90, name='sphere')
@@ -91,7 +85,7 @@ class SideMount(CompositeShape):
         assert bevel_r < outer_r, \
             f'bevel radius {bevel_r} must be smaller than access radius {outer_r}.'
         base_width = 2 * bevel_r + outer_r * 2
-        pathBuilder = (PathBuilder()
+        pathBuilder = (ad.PathBuilder()
             .move([0, 0])
             .line([bevel_r + outer_r, 0], 'back1')
             .arc_tangent_point([base_width - bevel_r, bevel_r], -180, 'bevel1', self))
@@ -115,6 +109,6 @@ class SideMount(CompositeShape):
         
 
 if __name__ == "__main__":
-    anchorscad_main(False)
+    ad.anchorscad_main(False)
 
         

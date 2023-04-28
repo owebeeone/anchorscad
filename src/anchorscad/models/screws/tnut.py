@@ -4,18 +4,15 @@ Created on 27 Oct 2021
 @author: gianni
 '''
 
-from dataclasses import dataclass
-import anchorscad.core as core
-import anchorscad.linear as l
+import anchorscad as ad
 import anchorscad.models.basic.box_side_bevels as bsb
-import numpy as np
 
 epsilon=0.001
 epsilon2=2 * epsilon
 
-@core.shape
-@dataclass
-class Tnut(core.CompositeShape):
+@ad.shape
+@ad.datatree
+class Tnut(ad.CompositeShape):
     
     r_t: float=17.6 / 2
     h_t: float=1.2
@@ -30,21 +27,21 @@ class Tnut(core.CompositeShape):
     fa: float=None
     fs: float=None
     
-    EXAMPLE_SHAPE_ARGS=core.args()
+    EXAMPLE_SHAPE_ARGS=ad.args()
     
     
     def __post_init__(self):
         kwds = {'fn': self.fn, 'fs': self.fs, 'fa': self.fa}
-        shaft_cage_shape = core.Cylinder(
+        shaft_cage_shape = ad.Cylinder(
             h=self.h_shaft, r=self.r_shaft, **kwds)
         
         maker = shaft_cage_shape.cage('cage').at('base')
         
-        base_shape = core.Cylinder(h=self.h_t, r=self.r_t, **kwds)
+        base_shape = ad.Cylinder(h=self.h_t, r=self.r_t, **kwds)
         
         maker.add_at(base_shape.solid('flat').at('base'),
                      'base')
-        bevel_shape = core.Cone(h=self.bevel_shaft + epsilon2, 
+        bevel_shape = ad.Cone(h=self.bevel_shaft + epsilon2, 
                                 r_base=self.r_shaft + self.bevel_shaft, 
                                 r_top=self.r_shaft, 
                                 **kwds)
@@ -53,13 +50,13 @@ class Tnut(core.CompositeShape):
         
         h_shaft = self.h_shaft - self.bevel_shaft - self.h_t
         
-        shaft_cage_shape = core.Cylinder(
+        shaft_cage_shape = ad.Cylinder(
             h=h_shaft, r=self.r_shaft, **kwds)
         
         maker.add_at(shaft_cage_shape.solid('shaft').at('base'),
                      'bevel', 'base', rh=1, h=-epsilon)
         
-        shaft_extension = core.Cylinder(
+        shaft_extension = ad.Cylinder(
             h=h_shaft, r=self.r_shaft, **kwds)
         
         maker.add_at(shaft_extension.solid('shaft_extension')
@@ -67,7 +64,7 @@ class Tnut(core.CompositeShape):
                      .at('base'),
                      'shaft', 'base', rh=1, h=-epsilon)
         
-        wing_shape = core.Box(self.wing_size)
+        wing_shape = ad.Box(self.wing_size)
         angle_shift = (-self.wing_angle 
                        if self.left_handed
                        else self.wing_angle - 180)
@@ -76,22 +73,22 @@ class Tnut(core.CompositeShape):
             maker.add_at(wing_shape.solid(('wing', i))
                          .colour((1, 0, 1))
                          .at('face_corner', 0, 0, 
-                             pre=l.rotZ(angle_shift) * l.tranZ(-epsilon)),
+                             pre=ad.rotZ(angle_shift) * ad.tranZ(-epsilon)),
                          'flat', 'surface', degrees=i * 360 / 4
                          )
         
         self.set_maker(maker)
         
 
-    @core.anchor('An example anchor')
+    @ad.anchor('An example anchor')
     def origin(self):
         return self.maker.at('centre')
 
 
-@core.shape
-@dataclass
-class TnutExample(core.CompositeShape):
-    tnut_type: core.Shape=Tnut
+@ad.shape
+@ad.datatree
+class TnutExample(ad.CompositeShape):
+    tnut_type: ad.Shape=Tnut
     offs: float=4
     fn: int=128
     fa: float=None
@@ -109,11 +106,11 @@ class TnutExample(core.CompositeShape):
                 
         maker.add_at(tnut.hole('tnut').at('base'),
                      'face_centre', 4,
-                     post=l.tranZ(epsilon))
+                     post=ad.tranZ(epsilon))
 
         self.set_maker(maker)
 
 if __name__ == "__main__":
-    core.anchorscad_main(False)
+    ad.anchorscad_main(False)
     
     
