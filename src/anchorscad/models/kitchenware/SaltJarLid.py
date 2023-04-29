@@ -189,7 +189,7 @@ class HingedLid(ad.CompositeShape):
     
     Original lids were wooden and virtually all of them are degraded
     and unusable. This model is a one piece hinged lid. The washers
-    (wee the model below) are shaped to fit in the hole provided 
+    (see the model below) are shaped to fit in the hole provided 
     at the rear of the salt pig.
     
     See link below for a similar (if not identical salt pig) this was

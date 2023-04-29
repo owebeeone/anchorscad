@@ -5,7 +5,6 @@ Created on 20 Sep 2021
 '''
 
 import anchorscad as ad
-import anchorscad.linear as l
 from anchorscad.models.basic.box_side_bevels import BoxSideBevels
 
 
@@ -13,7 +12,9 @@ from anchorscad.models.basic.box_side_bevels import BoxSideBevels
 @ad.datatree(frozen=True)
 class Snap(ad.CompositeShape):
     '''
-    <description>
+    A snap-on tab for fastening two shapes together.
+    This is meant to be used as a hole on one side and a solid on the other.
+    The 'snap' anchor is intended to be shared on both sides.
     '''
     size: tuple=(15, 10, 3)
     depth_factor: float=0.5

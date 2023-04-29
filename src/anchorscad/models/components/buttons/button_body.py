@@ -152,7 +152,7 @@ class ButtonBody(CompositeShape):
 @datatree
 class ButtonForTactileSwitch(CompositeShape):
     '''
-    <description>
+    Button housing for tactile switches.
     '''
     
     leads_as_cages: bool=True
@@ -214,14 +214,13 @@ class ButtonForTactileSwitch(CompositeShape):
             return self.tl1105_node
         
         assert False, f'Failed to find switch_type {self.switch_type!r}.'
-        
 
 
 @shape
 @datatree
 class ButtonAssemblyTest(CompositeShape):
     '''
-    <description>
+    A test assembly of a button and a tactile switch.
     '''
     
     base_node: Node=ShapeNode(ButtonForTactileSwitch)

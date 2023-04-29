@@ -31,7 +31,7 @@ class ScrewTab(ad.CompositeShape):
         ad.surface_args('face_corner', 0, 0),
         ad.surface_args('round_top'),)
     
-    def __post_init__(self):
+    def build(self) -> ad.Maker:
         tab = self.box_cyl_node((self.width, self.depth, self.h))
         max_outer_dia = (
             self.width 
@@ -50,7 +50,7 @@ class ScrewTab(ad.CompositeShape):
         maker.add_at(screw.composite('screw').at('top'), 
                      'round_top')
         
-        self.set_maker(maker)
+        return maker
 
     @ad.anchor('Mounting point.')
     def side(self, face='back', edge=2):
