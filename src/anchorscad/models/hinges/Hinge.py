@@ -8,6 +8,7 @@ from anchorscad.models.basic.sleeve import Sleeve, SleeveAndKeyway
 
 @ad.datatree
 class HingeHolePath:
+    '''Builds an extrusion path for a hinge lateral separation hole.'''
     sep: float=ad.dtfield(0.4, 'Separation between hinge sides')
     nib_r: float=ad.dtfield(1.3, 'Radius of inner hinge nib')
     nib_ang_len: float=ad.dtfield(3, 'Angle length of inner hinge nib')
@@ -41,7 +42,7 @@ class HingeHolePath:
 @ad.datatree
 class HingeHole(ad.CompositeShape):
     '''
-    The shape of the hole separating the two sides of a hinge.
+    The shape of the hole separating the sides of a hinge.
     This provides a lateral interference but rotates freely.
     '''
     path_node: ad.Node=ad.Node(HingeHolePath)
@@ -456,7 +457,7 @@ class Hinge(ad.CompositeShape):
 @ad.datatree
 class HingeTestPrint(ad.CompositeShape):
     '''
-    <description>
+    A test print for an N hinge.
     '''
     bar_node: ad.Node=ad.ShapeNode(HingeBar,  
                                            {'as_cage': 'bar_cage_as_cage'},

@@ -37,8 +37,8 @@ class ScrewTab(ad.CompositeShape):
             self.width 
             if self.width < self.depth * 2 
             else self.depth * 2)
-        screw =self.screw(
-            dia = self.dia,
+        screw = self.screw(
+            dia=self.dia,
             thru_len=self.h, 
             tap_len=0, 
             outer_delta=None,
