@@ -447,6 +447,8 @@ def _apply_node_fields(clz):
             nodes[name] = anno_default
             rev_map = anno_default.get_rev_map()
             for rev_map_name, anno_detail_tuple in rev_map.items():
+                if rev_map_name is None:
+                    continue  # Skip fields mapped to None
                 anno_detail = anno_detail_tuple[0]
                 if not rev_map_name in new_annos:
                     new_annos[rev_map_name] = anno_detail.anno_type

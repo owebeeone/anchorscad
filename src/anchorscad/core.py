@@ -1693,17 +1693,19 @@ class Sphere(Shape):
         renderer.add(renderer.model.Sphere(**params))
         return renderer
     
-    @anchor('The base of the cylinder')
+    @anchor('The base of the shpere')
     def base(self):
-        return l.rotX(180) * l.translate([0, 0, self.r])
+        return l.ROTX_180 * l.translate([0, 0, self.r])
     
-    @anchor('The top of the cylinder')
+    @anchor('The top of the shpere')
     def top(self):
         return l.translate([0, 0, self.r])
     
-    @anchor('The centre of the cylinder')
-    def centre(self):
-        return l.rotX(180)
+    @anchor('The centre of the shpere')
+    def centre(self, h=0, rh=None):
+        if rh:
+           h = h + rh * self.r
+        return l.ROTX_180 * l.translate([0, 0, h])
     
     @anchor('A location on the sphere.')
     def surface(self, degrees: ANGLES_TYPE=ANGLES_TYPE([0, 0, 0]), radians: ANGLES_TYPE=None):
@@ -2179,11 +2181,16 @@ class ModuleDefault():
     Similarly, write_graph_files and write_graph_svg_files apply
     as well.
     '''
-    write_files: bool=False
-    write_graph_files: bool=False
-    write_graph_svg_files: bool=False
-    write_path_files: bool=False
-    all: bool=False
+    write_files: bool=dtfield(
+        False, 'Writes OpendSCAD models to files.')
+    write_graph_files: bool=dtfield(
+        False, 'Produces a graph of shape_names in .dot GraphViz format.')
+    write_graph_svg_files: bool=dtfield(
+        False, 'Produces a graph of shape_names in .dot and .svg formats.')
+    write_path_files: bool=dtfield(
+        False, 'Produces an html file containg 2D paths if any are used.')
+    all: bool=dtfield(
+        False, 'Produce all output files.')
     
     def __post_init__(self):
         if self.all:
