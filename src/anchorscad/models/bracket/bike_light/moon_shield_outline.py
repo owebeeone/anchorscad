@@ -1,6 +1,6 @@
 '''
 The brackets on the Moon Shield bike light often fail. These are held
-on by a 2.2M screw. This is a replacement bracket for mounting on the
+on by a 2.6M screw. This is a replacement bracket for mounting on the
 back of a bike bag.
     
 Created on 30-Apr-2023
@@ -125,6 +125,9 @@ class MoonShieldOutline(ad.CompositeShape):
 
 @ad.datatree
 class BasicClipPath:
+    '''The 2D path for the main clip shape.
+    '''
+    
     h: float=ad.dtfield(40, doc='The height of the path.')
     d: float=ad.dtfield(15, doc='The depth of the clip.')
     base_w: float=ad.dtfield(4, doc='The width of the clip at the base.')
@@ -213,7 +216,7 @@ class BasicClipPath:
 @ad.datatree
 class BasicClipShape(ad.CompositeShape):
     '''
-    This is the bracket for the bike bag.
+    A basic clip shape .
     '''
     h: float=ad.dtfield(17, doc='The depth of the clip.')
     n: int=ad.dtfield(3, doc='The number of caps.')
