@@ -51,7 +51,7 @@ class MoonShieldOutline(ad.CompositeShape):
         default=ad.ShapeNode(ad.Box, prefix='mount_boss_chamfer_'))
     
     rib_size: tuple=ad.dtfield(
-        default=(5.1, 1.1, 1.5),
+        default=(5.1, 1.1, 1.6),
         doc='The size of the rib.')
     
     rib_node: ad.Node=ad.dtfield(ad.ShapeNode(ad.Box, prefix='rib_'))
@@ -129,7 +129,7 @@ class BasicClipPath:
     '''
     
     h: float=ad.dtfield(40, doc='The height of the path.')
-    d: float=ad.dtfield(15, doc='The depth of the clip.')
+    d: float=ad.dtfield(11, doc='The depth of the clip.')
     base_w: float=ad.dtfield(4, doc='The width of the clip at the base.')
     outer_w: float=ad.dtfield(2.5, doc='The width at the outer part.')
     curvature: float=ad.dtfield(0.95, doc="Relative spline curvature.")
@@ -272,6 +272,7 @@ class MoonShieldClip(ad.CompositeShape):
     screw_access_hole_depth:float=ad.dtfield(
         self_default=lambda s: s.clip_path_d + 1)
     screw_as_solid: bool=False
+    screw_head_depth_factor: float=ad.dtfield(0.6)
     screw_node: ad.Node=ad.dtfield(ad.ShapeNode(CountersunkScrew, prefix='screw_'))
     
     
