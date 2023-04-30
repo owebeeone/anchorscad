@@ -272,7 +272,7 @@ class MoonShieldClip(ad.CompositeShape):
     screw_access_hole_depth:float=ad.dtfield(
         self_default=lambda s: s.clip_path_d + 1)
     screw_as_solid: bool=False
-    screw_head_depth_factor: float=ad.dtfield(0.6)
+    screw_head_depth_factor: float=ad.dtfield(0.7)
     screw_node: ad.Node=ad.dtfield(ad.ShapeNode(CountersunkScrew, prefix='screw_'))
     
     
