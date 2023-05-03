@@ -6,8 +6,6 @@ Created on 25 Jan 2021
 
 from dataclasses import dataclass
 
-from anchorscad.core import shape, CompositeShape
-from anchorscad.models.basic.pipe import Pipe
 
 @dataclass(frozen=True)
 class ShaftDimensions(object):

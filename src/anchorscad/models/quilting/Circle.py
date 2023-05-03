@@ -22,10 +22,12 @@ class Circle(ad.CompositeShape):
     EXAMPLE_SHAPE_ARGS=ad.args()
     EXAMPLE_ANCHORS=()
     
-    def __post_init__(self):
+    def build(self) -> ad.Maker:
         shape = ad.Cylinder(r=self.radius, h=self.t, fn=self.fn)
         
-        self.maker = shape.solid("circle").at('base')
+        maker = shape.solid("circle").at('base')
+        
+        return maker
 
 if __name__ == '__main__':
     ad.anchorscad_main(False)

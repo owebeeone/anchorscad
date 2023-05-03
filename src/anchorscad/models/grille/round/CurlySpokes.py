@@ -46,7 +46,7 @@ class CurlySpokes(ad.CompositeShape):
             anchors=(ad.surface_args('centre'),))}
 
     
-    def __post_init__(self):
+    def build(self) -> ad.Maker:
             
         count = self.min_count()
         r_diff = self.r_outer - self.r_inner
@@ -105,7 +105,7 @@ class CurlySpokes(ad.CompositeShape):
         maker.add_at(ad.Cylinder(r=self.r_inner, h=self.h + self.epsilon, fn=fn)
                      .named_shape('inner_core', spokes_mode).at('centre'))
         
-        self.set_maker(maker)
+        return maker
         
     def points(self, r, start_angle, *phis):
         sum_phis = start_angle

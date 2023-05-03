@@ -30,7 +30,7 @@ class Snap(ad.CompositeShape):
     EXAMPLE_ANCHORS=(
                 ad.surface_args('snap', 0.5),)
     
-    def __post_init__(self):
+    def build(self) -> ad.Maker:
         box = ad.Box(self.size)
         maker = box.cage(
             'cage').transparent(1).colour([1, 1, 0, 0.5]).at('centre')
@@ -86,7 +86,7 @@ class Snap(ad.CompositeShape):
             'face_centre', 1, 
             post=ad.translate([-self.epsilon / 2, -self.epsilon, 0]))
         
-        self.set_maker(maker)
+        return maker
         
     @ad.anchor('Snap seam edge.')
     def snap(self, rpos=0.5):

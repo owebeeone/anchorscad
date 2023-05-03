@@ -4,16 +4,13 @@ Created on 24 Sep 2021
 @author: gianni
 '''
 
-from dataclasses import dataclass
-import anchorscad.core as core
-import anchorscad.linear as l
+import anchorscad as ad
 from anchorscad.extrude import PathBuilder, LinearExtrude
 
 
-
-@core.shape
-@dataclass
-class Wedge(core.CompositeShape):
+@ad.shape
+@ad.datatree
+class Wedge(ad.CompositeShape):
     '''
     <description>
     '''
@@ -22,11 +19,11 @@ class Wedge(core.CompositeShape):
     size_door: tuple=(5,3, 10)
     chminey_size: tuple=(2, 10)
     
-    EXAMPLE_SHAPE_ARGS=core.args()
+    EXAMPLE_SHAPE_ARGS=ad.args()
     EXAMPLE_ANCHORS=()
     
-    def __post_init__(self):
-        maker = core.Box(self.size_base).solid(
+    def build(self) -> ad.Maker:
+        maker = ad.Box(self.size_base).solid(
             'base').colour([1, 1, 0, 0.5]).at('centre')
         
         # Roof
@@ -46,7 +43,7 @@ class Wedge(core.CompositeShape):
                      'face_centre', 4)
         # Door
         
-        door = core.Box(self.size_door).hole(
+        door = ad.Box(self.size_door).hole(
             'door').colour([1, 0, 0, 0.5]).at(
                 'face_edge', 0, 0)
             
@@ -55,7 +52,7 @@ class Wedge(core.CompositeShape):
         
         # Chimney
         
-        chimney = core.Cone(
+        chimney = ad.Cone(
             r_base=self.chminey_size[0],
             r_top=self.chminey_size[0],
             h=self.chminey_size[1],
@@ -65,10 +62,9 @@ class Wedge(core.CompositeShape):
             
         maker.add_at(chimney, 
                      'face_edge', 4, 1,
-                     post=l.ROTX_180 * l.translate([0, -5, 0]))
+                     post=ad.ROTX_180 * ad.translate([0, -5, 0]))
         
-                
-        self.set_maker(maker)
+        return maker
         
 if __name__ == '__main__':
-    core.anchorscad_main(False)
+    ad.anchorscad_main(False)

@@ -41,7 +41,7 @@ class DoveTail(ad.CompositeShape):
             anchors=())
         }
     
-    def __post_init__(self):
+    def build(self) -> ad.Maker:
         
         box_size = [self.overall_width, self.overall_height, self.t]
         maker = ad.Box(box_size).cage(
@@ -118,7 +118,7 @@ class DoveTail(ad.CompositeShape):
             ('front', 'right', half_count - 1), post=ad.ROTX_90),
                      'face_centre', 1)
         
-        self.set_maker(maker)
+        return maker
         
 
 MAIN_DEFAULT=ad.ModuleDefault(True, write_path_files=True)
