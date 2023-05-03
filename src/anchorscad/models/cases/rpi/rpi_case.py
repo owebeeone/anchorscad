@@ -84,7 +84,7 @@ class RaspberryPiCase(CompositeShape):
     split_box_size: tuple=dtfield(
         self_default=lambda s : s.outer_size + s.split_box_delta)
     split_box_node: Node=dtfield(ShapeNode(Box, prefix='split_box_'))
-    screw_tab_node: Node=ShapeNode(ScrewTab, prefix='screw_tab')
+    screw_tab_node: Node=ShapeNode(ScrewTab, prefix='screw_tab_')
     cageof_node: Node=Node(cageof, prefix='rpi_cage_')
     rpi_cage_properties: CageOfProperties=CageOfProperties(
         name='split_box_cage')

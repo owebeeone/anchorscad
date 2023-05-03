@@ -69,6 +69,7 @@ class CountersinkAccessHole(ad.CompositeShape):
     overlap_delta: float=0.01
 
     cylinder_node: ad.Node=ad.ShapeNode(ad.Cylinder, {})
+    code_node: ad.Node=ad.ShapeNode(ad.Cone, {})
     
     EXAMPLE_SHAPE_ARGS=ad.args(access_len=10, access_dia=4.5, counter_sink_overlap=0.5, fn=20)
     
@@ -86,7 +87,7 @@ class CountersinkAccessHole(ad.CompositeShape):
                      .at('surface', self.counter_sink_overlap, tangent=False),
                      'surface', 0, tangent=False)
         
-        couter_sink_hole = ad.Cone(h=access_r, r_base=0, r_top=access_r)
+        couter_sink_hole = self.code_node(h=access_r, r_base=0, r_top=access_r)
         
         maker.add_at(couter_sink_hole.hole('couter_sink_hole').colour([1,0,0]).at('surface', access_r, tangent=False),
                      'access_hole', 'surface', self.overlap_delta, tangent=False)
