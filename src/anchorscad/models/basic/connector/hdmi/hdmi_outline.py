@@ -6,6 +6,7 @@ Created on 2 Oct 2021
 @author: gianni
 '''
 
+import anchorscad as ad
 from anchorscad import args, datatree, dtfield, CompositeShape, \
     shape, surface_args, PathBuilder, LinearExtrude, Box, Shape, \
     anchorscad_main, ShapeNode, Maker, ROTX_270, Node, cageof
@@ -25,7 +26,7 @@ class HdmiOutline(CompositeShape):
     h3: float=4.3
     r: float=0.7
     plug_cutout: tuple=(18.2, 10, 8.2)
-    as_cage: bool=False
+    as_cage: bool=True
     
     cage_shape: Shape=dtfield(ShapeNode(Box), init=False)
 
@@ -85,5 +86,6 @@ class HdmiOutlineTest(CompositeShape):
         return maker
 
 
+MAIN_DEFAULT=ad.ModuleDefault(True)
 if __name__ == '__main__':
     anchorscad_main(False)
