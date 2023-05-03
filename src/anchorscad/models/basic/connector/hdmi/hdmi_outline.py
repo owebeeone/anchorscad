@@ -26,16 +26,16 @@ class HdmiOutline(CompositeShape):
     h3: float=4.3
     r: float=0.7
     plug_cutout: tuple=(18.2, 10, 8.2)
-    as_cage: bool=True
     
     cage_shape: Shape=dtfield(ShapeNode(Box), init=False)
+    cage_node: Node=ad.CageOfNode()
 
     EXAMPLE_SHAPE_ARGS=args(as_cage=False)
     NOEXAMPLE_ANCHORS=(
         surface_args('face_edge', 0, 0),)
     
     def build(self) -> Maker:
-        cage_shape = cageof(self.cage_shape(), self.as_cage, 'cage')
+        cage_shape = self.cage_node(self.cage_shape())
         maker = cage_shape.at('centre')
         y1 = self.size[2] - self.h3
         y2 = self.size[2] - self.h2
