@@ -19,6 +19,10 @@ set "{env}={ppath}"
 
 For powershell:
 $env:{env} = '{ppath}'
+
+For vscode .env
+WORKSPACE_FOLDER={workspace}
+PYTHONPATH=${{WORKSPACE_FOLDER}}/src;${{WORKSPACE_FOLDER}}/pythonopenscad/src;${{PYTHONPATH}}
 '''
 
 def main():
@@ -28,7 +32,8 @@ def main():
     print(f'\n{PYTHON_PATH} environment variable for AnchorSCAD is')
     
     fmtstr = WIN_FORMAT if platform.system() == 'Windows' else UNIX_FORMAT
-    print(fmtstr.format(env=PYTHON_PATH, ppath=rasm.env[PYTHON_PATH]))
+    print(fmtstr.format(
+        env=PYTHON_PATH, ppath=rasm.env[PYTHON_PATH], workspace=rasm.workspace))
     
     print('''\nYou may set these in your IDE to start your IDE with the
     your IDE with python3 src/anchorscad/run.py, e.g. You can start VS Code

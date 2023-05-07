@@ -83,10 +83,12 @@ class RunAnchorSCADModule:
     module: type=sys.modules[__name__]
     env: dict=field(default_factory=lambda : dict(os.environ))
     argv: list=field(default_factory=lambda : list(sys.argv))
+    workspace: Path=field(default=None, init=False)
     
     def __post_init__(self):
         # Fix PYTHONPATH to AnchorSCAD's root
         ad_path = self.get_anchorscad_path()
+        self.workspace = ad_path.parents[0]
         ppath = self.env.get(PYTHON_PATH, None)
         
         self.python_path_ok = False
