@@ -6,6 +6,7 @@ Created on 16 Nov 2021
 @author: gianni
 '''
 
+import anchorscad as ad
 from anchorscad import tranY, tranZ, ROTX_180, ROTX_270, \
     ROTX_90, ROTY_270, ROTY_180, translate, GVector, IDENTITY, \
     plane_line_intersect, dtfield, shape, Maker, datatree, Node, \
@@ -36,7 +37,8 @@ class RaspberryPiCase(CompositeShape):
     '''A Generic Raspberry Pi Case.'''
     outline_model: Shape=dtfield(
         self_default=lambda s: s.outline_model_node())
-    outline_model_node: Node=ShapeNode(RaspberryPi4Outline, prefix='outline_')
+    outline_model_node: Node=ad.dtfield(
+        ShapeNode(RaspberryPi4Outline, prefix='outline_'), init=True)
     inner_size_delta: tuple=(3, 2, 22)
     inner_offset: tuple=(-1.5, 1, 3)
     inner_size: GVector=dtfield(
