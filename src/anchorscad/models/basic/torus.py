@@ -175,10 +175,10 @@ class TorusChain(ad.CompositeShape):
     EXAMPLE_SHAPE_ARGS=ad.args(
         r_hole=10,
         r_section=4,
-        path_fn=128,
-        fn=128)
+        path_fn=32,
+        fn=32)
     
-    XEXAMPLE_ANCHORS=(ad.surface_args(
+    EXAMPLE_ANCHORS=(ad.surface_args(
             'surface', section_degrees=10, degrees=10),)
 
     def build(self) -> ad.Maker:
@@ -190,7 +190,7 @@ class TorusChain(ad.CompositeShape):
             maker.add_at(
                 shape.solid(('torus', i)).at('surface'),
                 ('torus', i-1), 'surface', degrees=180, 
-                post=ad.ROTX_180 * ad.rotZ(angle) * ad.tranZ(-self.r_section / 2))
+                post=ad.ROTX_180 * ad.rotZ(angle) * ad.tranZ(-self.r_section / 3))
         
         return maker
 
