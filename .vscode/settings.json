@@ -2,5 +2,11 @@
     "terminal.integrated.env.windows": {
         "PYTHONPATH": "${workspaceFolder}${pathSeparator}src;${workspaceFolder}${pathSeparator}pythonopenscad${pathSeparator}src;${env:PYTHONPATH}"
     },
+    "terminal.integrated.env.linux": {
+        "PYTHONPATH": "${workspaceFolder}${pathSeparator}src:${workspaceFolder}${pathSeparator}pythonopenscad${pathSeparator}src:${env:PYTHONPATH}"
+    },
+    "terminal.integrated.env.osx": {
+        "PYTHONPATH": "${workspaceFolder}${pathSeparator}src:${workspaceFolder}${pathSeparator}pythonopenscad${pathSeparator}src:${env:PYTHONPATH}"
+    },
     "python.envFile": "${workspaceFolder}/.env",
 }

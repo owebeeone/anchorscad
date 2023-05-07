@@ -14,6 +14,7 @@ class HingeHolePath:
     nib_ang_len: float=ad.dtfield(3, 'Angle length of inner hinge nib')
     nib_angle: float=ad.dtfield(45, 'Angle degrees of hinge nib')
     edge_len: float=ad.dtfield(1.3, 'Length between nib and edge og hinge')
+    nib_metadata: ad.ModelAttributes=ad.EMPTY_ATTRS.with_fn(2)
     
     def build(self):
         
@@ -25,14 +26,16 @@ class HingeHolePath:
         builder.stroke(self.nib_ang_len, degrees=self.nib_angle, name='i_nib_angle_surface')
         builder.arc_tangent_radius_sweep(radius=self.sep, 
                                          sweep_angle_degrees=-self.nib_angle, 
-                                         name='inner_nib_arc')
+                                         name='inner_nib_arc',
+                                         metadata=self.nib_metadata)
         builder.stroke(self.edge_len, name='inner_face')
         builder.stroke(self.sep, degrees=-90, name='gap')
         builder.stroke(self.edge_len, degrees=-90, name='outer_face')
         builder.stroke(self.nib_ang_len, degrees=self.nib_angle, name='o_nib_angle_surface')
         builder.arc_tangent_radius_sweep(radius=self.sep, 
                                          sweep_angle_degrees=-self.nib_angle, 
-                                         name='outer_nib_arc')
+                                         name='outer_nib_arc',
+                                         metadata=self.nib_metadata)
         
         return builder.build()
 
@@ -282,7 +285,7 @@ class HingeBar(ad.CompositeShape):
     cyl_sleeve_with_key_node: ad.Node=ad.dtfield(ad.ShapeNode(
             SleeveAndKeyway, prefix='sleeve_', exclude=('h',)), init=False)
     
-    EXAMPLE_SHAPE_ARGS=ad.args(fn=32)
+    EXAMPLE_SHAPE_ARGS=ad.args(fn=32, as_cage=False)
     EXAMPLE_ANCHORS=()
     
     def build(self) -> ad.Maker:
@@ -451,7 +454,7 @@ class Hinge(ad.CompositeShape):
             .at('centre', post=ad.ROTZ_180), 
             'centre')
         return maker
-    
+
 
 @ad.shape
 @ad.datatree
@@ -459,36 +462,36 @@ class HingeTestPrint(ad.CompositeShape):
     '''
     A test print for an N hinge.
     '''
-    bar_node: ad.Node=ad.ShapeNode(HingeBar,  
-                                           {'as_cage': 'bar_cage_as_cage'},
-                                           expose_all=True)
-    hinge_bar_shape: ad.Shape=ad.dtfield(
+    bar_node: ad.Node=ad.ShapeNode(Hinge)
+    hinge_shape: ad.Shape=ad.dtfield(
             self_default=lambda s: s.bar_node(), init=False)
-    sleeves_node: ad.Node=ad.ShapeNode(
-        HingeBarSleeveHoles, 
-        {'as_cage': 'bar_ends_as_cage'},
-        exclude=('side',),
-        expose_all=True)
     
     cage_size: tuple=ad.dtfield(
             self_default=lambda s: (s.bar_h,
-                       s.bar_h * 2,
-                       s.hinge_bar_shape.bar_r * 2,), 
+                       s.bar_h,
+                       s.hinge_shape.hinge_bar_shape.bar_r * 2,), 
             doc='Size of cage')
     cage_node: ad.Node=ad.ShapeNode(ad.Box, prefix='cage_')
     cage_of_node: ad.Node=ad.CageOfNode()
     
     plate_size: tuple=ad.dtfield(
-            self_default=lambda s: (s.bar_h + 3,
-                       s.cage_size[1] / 2,
-                       s.hinge_bar_shape.bar_r,), 
+            self_default=lambda s: (s.bar_h + 5,
+                       (s.cage_size[1] - s.sep) / 2,
+                       s.hinge_shape.hinge_bar_shape.bar_r,), 
             doc='Size of plate')
     plate_node: ad.Node=ad.ShapeNode(ad.Box, prefix='plate_')
+    
+    locator_size: tuple=ad.dtfield(
+            self_default=lambda s: (s.cage_size[0],
+                       s.sep,
+                       s.cage_size[2]),
+            init=False)
+    locator_node: ad.Node=ad.ShapeNode(ad.Box, prefix='locator_')
     
     EXAMPLE_SHAPE_ARGS=ad.args(as_cage=True,
                                sep=0.5,
                                seg_count=7,
-                               fn=12)
+                               fn=64)
     EXAMPLE_ANCHORS=()
     
     def build(self) -> ad.Maker:
@@ -497,18 +500,8 @@ class HingeTestPrint(ad.CompositeShape):
         maker = self.cage_of_node(cage_shape).at('face_centre', 'base')
 
         etched_plate_evens = plate_shape.solid('plate_evens').colour((1,0,0)).at()
-        sleeve_evens = self.sleeves_node(side=0)
-        etched_plate_evens.add_at(
-            sleeve_evens.hole('sleeve_evens')
-            .at('centre', post=ad.ROTY_90), 
-            'face_edge', 'top', 0)
 
         etched_plate_odds = plate_shape.solid('plate_odds').colour((0,0,1)).at()
-        sleeve_odds = self.sleeves_node(side=1)
-        etched_plate_odds.add_at(
-            sleeve_odds.hole('sleeve_odds')
-            .at('centre', post=ad.ROTY_270), 
-            'face_edge', 'top', 0)
         
         maker.add_at(etched_plate_evens.solid('plate_evens')
                      .at('face_edge', 'base', 0), 
@@ -517,8 +510,16 @@ class HingeTestPrint(ad.CompositeShape):
                      .at('face_edge', 'base', 0), 
                      'face_edge', 'base', 2)
         
-        maker.add_at(self.hinge_bar_shape.composite('bar').at('centre'), 
-                     'plate_evens', 'sleeve_evens', 'centre')
+        # Use a locator cage between the 2 plates.
+        locator_shape = self.locator_node()
+        maker.add_at(self.cage_of_node(locator_shape, cage_name='locator_cage')
+                     .at('face_edge', 'front', 0),
+                     'plate_evens', 'face_edge', 'front', 0, 
+                     post=ad.ROTX_180 * ad.ROTZ_180)
+        
+        # Align the centre of the locator_cage and the hinge.
+        maker.add_at(self.hinge_shape.composite('bar').at('centre'), 
+                     'locator_cage', 'centre', post=ad.ROTY_90)
         return maker
     
     
