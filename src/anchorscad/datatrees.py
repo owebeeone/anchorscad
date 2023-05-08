@@ -18,7 +18,7 @@ complex relationships that require a large number of parameters.
 '''
 
 from dataclasses import dataclass, field, Field, MISSING
-from typing import ForwardRef
+from typing import List, Dict
 from frozendict import frozendict
 from types import FunctionType
 import inspect
@@ -383,6 +383,9 @@ class Node:
 
     def get_rev_map(self):
         return self.expose_rev_map
+    
+    def get_map(self):
+        return self.expose_map
 
 
 def _make_dataclass_field(field_obj, use_default, node_doc):
@@ -418,6 +421,74 @@ def _make_dataclass_field(field_obj, use_default, node_doc):
     return field(**value_map), None
 
 
+@dataclass
+class InjectedFieldInfo:
+    '''The source of an injected field.'''
+    node_field_name: str
+    node_name: str
+    node: Node
+
+
+@dataclass
+class InjectedFieldDetails:
+    '''Details of an injected field and its bindings.'''
+    field_name: str
+    sources: List[InjectedFieldInfo]=field(default_factory=list, init=False)
+    
+
+@dataclass
+class InjectedFields:
+    '''Details of the injected fields and their bindings.'''
+    injections: Dict[str, InjectedFieldDetails]=\
+                field(default_factory=dict, init=False)
+    
+    def _add(self, field_name: str, details: InjectedFieldInfo):
+        '''Adds an instance of an injected field.'''
+        ifd = self.injections.get(field_name, None)
+        if not ifd:
+            ifd = InjectedFieldDetails(field_name)
+            self.injections[field_name] = ifd
+        else:
+            pass
+        ifd.sources.append(details)
+        
+    def __str__(self) -> str:
+        info = []
+        for field_name, details in self.injections.items():
+            info.append(f'{field_name}:')
+            for source in details.sources:
+                node = source.node
+                node_field_name = source.node_field_name
+                info.append(f'    {node_field_name}: {node.clz_or_func!r}')
+        return '\n'.join(info)
+
+
+def _get_injected_fields(clz) -> InjectedFields:
+    '''Returns information about the injected fields for the given class.'''
+    
+    nodes = getattr(clz, DATATREE_SENTIENEL_NAME, {})
+    injected_fields = InjectedFields()
+    
+    for node_name, node in nodes.items():
+        for field_name, injected_name in node.get_map().items():
+            injected_fields._add(
+                injected_name,
+                InjectedFieldInfo(field_name, node_name, node)
+            )
+    return injected_fields
+
+# Cache the injected fields for each class.
+_INJECTED_FIELDS_CACHE = {}
+
+def get_injected_fields(clz) -> InjectedFields:
+    '''Returns information about the injected fields for the given class.'''
+    
+    result = _INJECTED_FIELDS_CACHE.get(clz, None)
+    if result is None:
+        result = _get_injected_fields(clz)
+        _INJECTED_FIELDS_CACHE[clz] = result
+    return result
+
 def _apply_node_fields(clz):
     '''Adds new fields from Node annotations.'''
     annotations = clz.__annotations__
@@ -446,9 +517,10 @@ def _apply_node_fields(clz):
         if isinstance(anno_default, Node):
             nodes[name] = anno_default
             rev_map = anno_default.get_rev_map()
+            # Add the fields from the Node specification.
             for rev_map_name, anno_detail_tuple in rev_map.items():
                 if rev_map_name is None:
-                    continue  # Skip fields mapped to None
+                    continue  # Skip fields mapped to None, these are not injected.
                 anno_detail = anno_detail_tuple[0]
                 if not rev_map_name in new_annos:
                     new_annos[rev_map_name] = anno_detail.anno_type
@@ -480,11 +552,11 @@ _Node = Node
 class BoundNode:
     '''The result of binding a Node to a class instance. Once a datatree 
     object is created, all Node fields become BoundNode fields.'''
-    parent: object
+    parent: object = field(compare=False)
     name: str
     node: Node = field(compare=False)
     instance_node: object = field(repr=False)
-    chained_node: object = field(default=None, repr=False)
+    chained_node: object = field(default=None, repr=False, compare=False)
 
     def chain(self, new_parent, node):
         return BoundNode(new_parent, self.name, self.node, node, self)
@@ -673,7 +745,7 @@ def datatree(clz=None, /, *, init=True, repr=True, eq=True, order=False,
              unsafe_hash=False, frozen=False, match_args=True,
              kw_only=False, slots=False, chain_post_init=False):
     '''Python decorator similar to dataclasses.dataclass providing parameter injection,
-    binding and overrides for parameters deeper inside a tree of objects.
+    injection, binding and overrides for parameters deeper inside a tree of objects.
     '''
 
     def wrap(clz):

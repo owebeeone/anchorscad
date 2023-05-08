@@ -6,7 +6,7 @@ Created on 8 Dec 2021
 
 import unittest
 from anchorscad.datatrees import datatree, dtargs, override, Node, \
-    dtfield, field_docs, BindingDefault
+    dtfield, field_docs, BindingDefault, get_injected_fields
 from dataclasses import dataclass, field
 
 @datatree
@@ -114,7 +114,8 @@ class Test(unittest.TestCase):
         
         @datatree
         class A:
-            anode: Node=Node(LeafType1, {'leaf_a': 'aa'}, expose_all=True)
+            anode: Node=dtfield(
+                Node(LeafType1, {'leaf_a': 'aa'}, expose_all=True), init=True)
             
             def __post_init__(self):
                 self.lt1 = self.anode()
@@ -129,7 +130,7 @@ class Test(unittest.TestCase):
         try:
             @datatree
             class A:
-                anode: Node=Node(LeafType1, use_defaults=False)
+                anode: Node=dtfield(Node(LeafType1, use_defaults=False), init=True)
             self.fail("Expected field order issue.")
         except TypeError:
             pass
@@ -137,7 +138,7 @@ class Test(unittest.TestCase):
     def test_additive_default(self):
         @datatree
         class A:
-            anode: Node=Node(LeafType1)
+            anode: Node=dtfield(Node(LeafType1), init=True)
             leaf_a: float=51
             leaf_b: float
             
@@ -150,7 +151,7 @@ class Test(unittest.TestCase):
         @datatree
         class A():
             a: float=1
-            leaf: Node=Node(LeafType2)
+            leaf: Node=dtfield(Node(LeafType2), init=True)
             s: list=field(default_factory=lambda : list())
             
             def __post_init__(self):
@@ -160,7 +161,7 @@ class Test(unittest.TestCase):
         @datatree(chain_post_init=True)
         class B(A):
             b: float=1
-            leaf: Node=Node(LeafType2)
+            leaf: Node=dtfield(Node(LeafType2), init=True)
             s: list=field(default_factory=lambda : list())
             
             def __post_init__(self):
@@ -182,7 +183,7 @@ class Test(unittest.TestCase):
         @datatree(chain_post_init=True)
         class A2():
             a2: float=1
-            leaf: Node=Node(LeafType2)
+            leaf: Node=dtfield(Node(LeafType2), init=True)
             s: list=field(default_factory=lambda : list())
             
             def __post_init__(self):
@@ -204,7 +205,7 @@ class Test(unittest.TestCase):
         @datatree(chain_post_init=True)
         class A1():
             a1: float=1
-            leaf: Node=Node(LeafType2)
+            leaf: Node=dtfield(Node(LeafType2), init=True)
             s: list=field(default_factory=lambda : list())
             
             def __post_init__(self):
@@ -235,7 +236,7 @@ class Test(unittest.TestCase):
         @datatree(chain_post_init=True)
         class A1():
             a1: float=1
-            leaf: Node=Node(LeafType2)
+            leaf: Node=dtfield(Node(LeafType2), init=True)
             s: list=field(default_factory=lambda : list())
             
             def __post_init__(self):
@@ -295,7 +296,7 @@ class Test(unittest.TestCase):
         @datatree
         class A:
             b: str='clzA-b'
-            funcNode: Node=Node(func)
+            funcNode: Node=dtfield(Node(func), init=True)
             
         A().funcNode()
         self.assertEqual(al, ['a'])
@@ -311,7 +312,7 @@ class Test(unittest.TestCase):
         @datatree
         class A:
             fb: str='clzA-b'
-            funcNode: Node=Node(func, prefix='f')
+            funcNode: Node=dtfield(Node(func, prefix='f'), init=True)
             
         A().funcNode()
         self.assertEqual(al, ['a'])
@@ -323,7 +324,7 @@ class Test(unittest.TestCase):
         @datatree
         class A():
             a1: float=1
-            leaf: Node=Node(LeafType2)
+            leaf: Node=dtfield(Node(LeafType2), init=True)
             s: list=field(default_factory=lambda : list())
             
             def __post_init__(self):
@@ -331,7 +332,7 @@ class Test(unittest.TestCase):
 
         @datatree
         class B():
-            node_A: Node=Node(A)
+            node_A: Node=dtfield(Node(A), init=True)
             
             def __post_init__(self):
                 self.s.append('B')    
@@ -406,23 +407,23 @@ class Test(unittest.TestCase):
         @datatree
         class A:
             a: int=1
-            f_node: Node=Node(f)
+            f_node: Node=dtfield(Node(f), init=True)
             
             def thing(self):
                 self.f_node()
         
         @datatree
         class B:
-            nodeA: Node=Node(A, 'f_node')
+            nodeA: Node=dtfield(Node(A, 'f_node'), init=True)
             a_obj: A=None
             
             def __post_init__(self):
                 self.a_obj = self.nodeA()
-                
+
         b = B()
         b.a_obj.f_node()
         self.assertEqual(b.a_obj, A(a=1))
-        
+                        
         b.f_node(a=4)
         self.assertEqual(s, [1, 4])
         
@@ -435,14 +436,16 @@ class Test(unittest.TestCase):
         @datatree
         class A:
             a: int=1
-            f_node: Node=Node(f)
+            f_node: Node=dtfield(Node(f), init=True)
             
             def thing(self):
                 self.f_node()
         
         @datatree
         class B:
-            nodeA: Node=Node(A, 'f_node', {'a': 'a1'}, expose_all=True)
+            nodeA: Node=dtfield(
+                Node(A, 'f_node', {'a': 'a1'}, expose_all=True),
+                init=True)
             a_obj: A=None
             
             def __post_init__(self):
@@ -468,7 +471,7 @@ class Test(unittest.TestCase):
         @datatree
         class A:
             a: int=1
-            f1_node: Node=Node(f1)
+            f1_node: Node=dtfield(Node(f1), init=True)
             
             def thing(self):
                 self.f1_node()
@@ -477,7 +480,7 @@ class Test(unittest.TestCase):
         self.assertEqual(s1, [1])  
         self.assertEqual(s2, [])  
         
-        # If neither a Node or a BoundNode is passed a a node, it is just called.
+        # If neither a Node or a BoundNode is passed as a node, it is just called.
         A(f1_node=f2).thing()
         self.assertEqual(s1, [1])  
         self.assertEqual(s2, [3]) 
@@ -581,6 +584,39 @@ class Test(unittest.TestCase):
         self.assertEqual(A().c, 14)
         self.assertEqual(B().prefix_a, 7)
         self.assertEqual(B().prefix_c.self_default(B().a_node()), 14)
+        
+    def test_get_injected_fields(self):
+        
+        @datatree
+        class A:
+            a: int=7
+            c: int=5
+            
+        @datatree
+        class B:
+            a_node: Node=Node(A, prefix='prefix_')
+            
+        @datatree
+        class C:
+            a_node: Node=Node(A, {'a': 'a', 'c': 'a'})
+        
+        injected_b = get_injected_fields(B)
+        injected_c = get_injected_fields(C)
+        
+        self.assertEqual(len(injected_b.injections), 2)
+        
+        self.assertEqual(
+            injected_b.injections.keys(), 
+            {'prefix_a', 'prefix_c'})
+        
+        self.assertEqual(
+            injected_c.injections.keys(), {'a'})
+        
+        self.assertEqual(
+            len(injected_c.injections['a'].sources), 2)
+        
+        self.assertEqual(
+            str(injected_c), 'a:\n    a: A\n    c: A')
 
 
 
