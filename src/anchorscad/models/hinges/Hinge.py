@@ -489,7 +489,7 @@ class HingeTestPrint(ad.CompositeShape):
     locator_node: ad.Node=ad.ShapeNode(ad.Box, prefix='locator_')
     
     EXAMPLE_SHAPE_ARGS=ad.args(as_cage=True,
-                               sep=0.5,
+                               sep=0.25,
                                seg_count=7,
                                fn=64)
     EXAMPLE_ANCHORS=()
