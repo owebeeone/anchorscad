@@ -439,6 +439,7 @@ class InjectedFieldDetails:
 @dataclass
 class InjectedFields:
     '''Details of the injected fields and their bindings.'''
+    clz: type
     injections: Dict[str, InjectedFieldDetails]=\
                 field(default_factory=dict, init=False)
     
@@ -454,7 +455,9 @@ class InjectedFields:
         
     def __str__(self) -> str:
         info = []
-        for field_name, details in self.injections.items():
+        field_names = sorted(self.injections.keys())
+        for field_name in field_names:
+            details = self.injections[field_name]
             info.append(f'{field_name}:')
             for source in details.sources:
                 node = source.node
@@ -462,14 +465,41 @@ class InjectedFields:
                 info.append(f'    {node_field_name}: {node.clz_or_func!r}')
         return '\n'.join(info)
 
+    def _deep_info_helper(
+            self, node: Node, field_name: str, prefix: str, info: list):
+        prefix += '    '
+        level = get_injected_fields(node.clz_or_func.clz_or_func)
+        if field_name in level.injections:
+            for source in level.injections[field_name].sources:
+                info.append(f'{prefix}{source.node_field_name}: {source.node.clz_or_func!r}')
+                self._deep_info_helper(source.node, source.node_field_name, prefix, info)
+
+
+    def deep_str(self) -> str:
+        '''Returns a string representation of the injected fields and their
+        bindings including the deeper levels of the injected fields.'''
+        info = []
+        field_names = sorted(self.injections.keys())
+        for field_name in field_names:
+            details = self.injections[field_name]
+            info.append(f'{field_name}: {self.clz.__name__}')
+            prefix = '    '
+            for source in details.sources:
+                node = source.node
+                node_field_name = source.node_field_name
+                info.append(f'{prefix}{node_field_name}: {node.clz_or_func!r}')
+                self._deep_info_helper(
+                    source.node, source.node_field_name, prefix, info)
+                
+        return '\n'.join(info)
 
 def _get_injected_fields(clz) -> InjectedFields:
-    '''Returns information about the injected fields for the given class.'''
-    
     nodes = getattr(clz, DATATREE_SENTIENEL_NAME, {})
-    injected_fields = InjectedFields()
+    injected_fields = InjectedFields(clz)
     
     for node_name, node in nodes.items():
+        if not isinstance(node, Node):
+            continue
         for field_name, injected_name in node.get_map().items():
             injected_fields._add(
                 injected_name,
@@ -481,8 +511,13 @@ def _get_injected_fields(clz) -> InjectedFields:
 _INJECTED_FIELDS_CACHE = {}
 
 def get_injected_fields(clz) -> InjectedFields:
-    '''Returns information about the injected fields for the given class.'''
-    
+    '''Returns information about the injected fields for the given class.
+    This can be used to find how fields are injected and bound. In particular,
+    a number of Node fields can inject the same field name. This will also 
+    provide all the Node fields will bind to a field.
+    Args:
+      clz: The class to inspect.
+    '''
     result = _INJECTED_FIELDS_CACHE.get(clz, None)
     if result is None:
         result = _get_injected_fields(clz)

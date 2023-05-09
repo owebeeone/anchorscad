@@ -599,10 +599,24 @@ class Test(unittest.TestCase):
         @datatree
         class C:
             a_node: Node=Node(A, {'a': 'a', 'c': 'a'})
+            
+        def f(x: int=0, y: int=1):
+            return x + y
+            
+        @datatree
+        class D:
+            a_node: Node=Node(A)
+            b_node: Node=Node(B)
+            c_node: Node=Node(C)
+            f_node: Node=Node(f)
+            
         
+        injected_a = get_injected_fields(A)
         injected_b = get_injected_fields(B)
         injected_c = get_injected_fields(C)
+        injected_d = get_injected_fields(D)
         
+        self.assertEqual(len(injected_a.injections), 0)
         self.assertEqual(len(injected_b.injections), 2)
         
         self.assertEqual(
@@ -616,10 +630,24 @@ class Test(unittest.TestCase):
             len(injected_c.injections['a'].sources), 2)
         
         self.assertEqual(
-            str(injected_b), 'prefix_c:\n    c: A\nprefix_a:\n    a: A')
+            str(injected_b), 'prefix_a:\n    a: A\nprefix_c:\n    c: A')
         
         self.assertEqual(
             str(injected_c), 'a:\n    a: A\n    c: A')
+        
+        self.assertEqual(
+            str(injected_d), 
+            'a:\n    a: A\n    a: C\nc:\n    c: A\n'
+            'prefix_a:\n    prefix_a: B\nprefix_c:\n    prefix_c: B\n'
+            'x:\n    x: f\ny:\n    y: f')
+
+        self.assertEqual(
+            injected_d.deep_str(), 
+            'a: D\n    a: A\n    a: C\n        a: A\n        c: A\n'
+            'c: D\n    c: A\nprefix_a: D\n    prefix_a: B\n        a: A\n'
+            'prefix_c: D\n    prefix_c: B\n        c: A\n'
+            'x: D\n    x: f\ny: D\n    y: f')
+        
 
 
 
