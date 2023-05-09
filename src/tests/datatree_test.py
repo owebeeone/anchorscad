@@ -624,5 +624,5 @@ class Test(unittest.TestCase):
 
 
 if __name__ == "__main__":
-    #import sys;sys.argv = ['', 'Test.test_exposed_node_different_names']
+    #import sys;sys.argv = [sys.argv[0], 'Test.test_exposed_node_different_names']
     unittest.main()
