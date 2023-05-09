@@ -616,6 +616,9 @@ class Test(unittest.TestCase):
             len(injected_c.injections['a'].sources), 2)
         
         self.assertEqual(
+            str(injected_b), 'prefix_c:\n    c: A\nprefix_a:\n    a: A')
+        
+        self.assertEqual(
             str(injected_c), 'a:\n    a: A\n    c: A')
 
 
