@@ -3,13 +3,56 @@ Created on 8 Dec 2021
 
 @author: gianni
 
-Wrapper over Python's dataclass adding support for a docstring for each 
-field and 'Node' fields where fields can be injected into a class 
-definition from constructor parameters and bound when nodes are invoked. 
+Wrapper over Python's dataclass that allows for the composition of classes
+by injecting constructor parameters or function parameters into a datatree
+annotated class with a Node type hint. The Node fields transform into factories
+that use the injected fields as defaults to construct the class (or call the 
+function). Field names can be mapped to different names, prefixed or suffixed 
+or excluded. 
 
-This is particularly useful when composing a class from other classes or 
+Example:
+
+@datatree
+class A:
+    a: int=1
+    b: int=2
+    x: int=0
+
+@datatree
+class B:
+    x: int=3
+    a_node: Node=Node(A, 'a', {'b': 'c'}, 'x')
+    
+b = B(c=5)
+a = b.a_node()
+
+# The following are true
+
+# The a field in B is mapped to the a field in A.
+b.a == 1
+a.a == 1
+
+# The c field in B is mapped to the b field in A.
+b.c == 5
+a.b == 5
+
+# The x field in B is mapped to the x field in A
+# but the default value is now the value of the x 
+# field in B.
+a.x == 3
+
+In the above example, the Node field a_node causes the fields of A to be
+injected into B. The field 'a' is mapped to 'a' and the field 'b' is mapped
+to 'c'. Hence B contains 4 fields (but only 3 parameters to the constructor
+because by default Node fields are not included in the constructor parameters),
+a_node, a, c and x. The a_node field is a factory that creates an instance of A
+that has the 'a' init parameter default set to the value of the field 
+'a' in B and the default value of the init parameter 'b' is set to the value 
+of the field 'c' in B etc.
+
+Datatree is particularly useful when composing a class from other classes or 
 functions where the fields or constructor or function parameters 
-become member fields of the composing class. datatree will automate the
+become member fields of the composing class. Datatree will automate the
 generation of these fields to become dataclass members. datatree will pull 
 constructor field definitions of Node declarations and add annotations to 
 the enclosed datatree class including any default values or other 
