@@ -5,7 +5,6 @@ Created on 5 Jan 2021
 '''
 
 import argparse
-import builtins
 import copy
 from dataclasses import dataclass, field
 import fnmatch
@@ -1500,7 +1499,7 @@ class Box(Shape):
         'right': 5})
     
     def __init__(self, size=[1, 1, 1]):
-        builtins.object.__setattr__(
+        _field_assign(
             self, 
             'size',
             l.GVector(VECTOR3_FLOAT_DEFAULT_1(size)))
@@ -1858,7 +1857,7 @@ class CompositeShape(Shape):
                 f'Available names are {self.anchor_names()!r}')
     
     def _set_maker(self, maker):
-        builtins.object.__setattr__(self, 'maker', maker)
+        _field_assign(self, 'maker', maker)
         
     def set_maker(self, maker):
         if hasattr(self, 'maker'):
@@ -1968,7 +1967,7 @@ class Coordinates(CompositeShape):
     
     def build(self) -> Maker:
         if self.r_stem_base is None:
-            builtins.object.__setattr__(self, 'r_stem_base', self.r_stem_top)
+            _field_assign(self, 'r_stem_base', self.r_stem_top)
         arrow = self.arrow_node()
         maker = CoordinatesCage().cage('origin').at('origin')
             
