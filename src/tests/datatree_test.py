@@ -644,11 +644,11 @@ class Test(unittest.TestCase):
         self.assertEqual(
             injected_d.deep_str(), 
             'a: D\n    a: A\n    a: C\n        a: A\n        c: A\n'
-            'c: D\n    c: A\nprefix_a: D\n    prefix_a: B\n        a: A\n'
+            'c: D\n    c: A\n'
+            'prefix_a: D\n    prefix_a: B\n        a: A\n'
             'prefix_c: D\n    prefix_c: B\n        c: A\n'
-            'x: D\n    x: f\ny: D\n    y: f')
-        
-
+            'x: D\n    x: f\n'
+            'y: D\n    y: f')
 
 
 if __name__ == "__main__":

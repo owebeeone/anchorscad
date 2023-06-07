@@ -108,6 +108,7 @@ class TnutExample(ad.CompositeShape):
                      post=ad.tranZ(epsilon))
         return maker
 
+MAIN_DEFAULT=ad.ModuleDefault(write_files=True, write_path_files=True)
 
 if __name__ == "__main__":
     ad.anchorscad_main(False)
