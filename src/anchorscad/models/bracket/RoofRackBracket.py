@@ -147,7 +147,7 @@ class RoofRackBracketUBoltCutout(ad.CompositeShape):
     
     ubolt_r: float=ad.dtfield(self_default=lambda s: s.d / 2)
     ubolt_inner_r: float=15
-    ubolt_w: float=15
+    ubolt_w: float=9
     ubolt_sequence: tuple=ad.dtfield(self_default=lambda s:
         (('P', ad.args(h=s.depth)),
          ('R', ad.args(sweep_degrees=90)),
@@ -169,7 +169,8 @@ class RoofRackBracketUBoltCutout(ad.CompositeShape):
         
         maker = ubolt_shape.solid('ubolt').at('base')
         
-        extension = ubolt_shape.prism_node(h=50)
+        extension_len = self.ubolt_inner_r * 2 + self.ubolt_w
+        extension = ubolt_shape.prism_node(h=extension_len)
         
         maker.add_at(extension.solid('extension1').at('top'), 
                      'element-0', 'top', post=ad.ROTX_180)
@@ -177,7 +178,8 @@ class RoofRackBracketUBoltCutout(ad.CompositeShape):
         maker.add_at(extension.solid('extension2').at('top'), 
                      'ubolt', 'element-4', 'base', post=ad.ROTX_180)
         
-        flat_extension = ubolt_shape.prism_node(h=130, square_right=True)
+        flat_extension_len = self.base_w + self.ubolt_inner_r
+        flat_extension = ubolt_shape.prism_node(h=flat_extension_len, square_right=True)
         
         maker.add_at(flat_extension.solid('flat_base').at('stadium', 'top', 0, rh=0.5), 
                      'ubolt', 'element-2', 'stadium', 'top', 0, rh=0.5)
@@ -205,7 +207,7 @@ class RoofRackBracketAssembly(ad.CompositeShape):
     
     rack_hole_shape: ad.Shape=ad.dtfield(self_default=lambda s: s.rack_hole())
     
-    margin=5
+    margin=4
     vmargin=10
     vbase_size=5
     rack_hole_width: float=50
@@ -233,11 +235,12 @@ class RoofRackBracketAssembly(ad.CompositeShape):
     
     
     slit_size=2.5
-    slit_margin=3
+    slit_margin=0.5
+    slit_open: bool=True
     
     slit_hole_size: tuple=ad.dtfield(
         self_default=lambda s: (
-            s.block_size[0] - s.slit_margin * 2,
+            s.block_size[0] - s.slit_margin * (1 if s.slit_open else 2),
             s.slit_size ,
             s.block_size[2] + 2 * s.epsilon))
     
@@ -261,7 +264,9 @@ class RoofRackBracketAssembly(ad.CompositeShape):
         
         slit_cutout = self.slit_hole_node()
         
-        maker.add_at(slit_cutout.hole('slit_cutout').at('centre'), 'centre')
+        offset = self.slit_margin if self.slit_open else 0
+        maker.add_at(slit_cutout.hole('slit_cutout').at('centre'), 
+                     'centre', post=ad.tranX(offset))
         
         maker.add_at(
             self.bolt_cutout_shape.hole('bolt_cutout')
