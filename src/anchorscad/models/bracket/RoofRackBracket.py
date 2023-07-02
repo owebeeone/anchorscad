@@ -44,22 +44,18 @@ class RoofRackBarOutline:
 @ad.shape
 @ad.datatree
 class RoofRackBracketHole(ad.CompositeShape):
-    '''
-    Padding for a roof rack bracket. The bracket consists of a
-    U bolt and a flat plate and this is the padding for the 
-    flat plate and U bolt to snugly fit around the roof rack
-    bar.
+    '''The hole for the roof rack bar. This uses the RoofRackBarOutline and
+    adds the notch for the rib on the roof rack bar.
     '''
     
     width: float=3
-    
     outline: ad.Node=ad.Node(RoofRackBarOutline, prefix='outline_')
     
     path: ad.Path=ad.dtfield(
         self_default=lambda s: s.outline().build())
     
     extrude_node : ad.Node=ad.ShapeNode(
-        ad.LinearExtrude, {})
+        ad.LinearExtrude, 'path', {'h': 'width'})
     
     notch_node : ad.Node=ad.ShapeNode(ad.Cylinder, 
             {'h': 'width'}, prefix='notch_', expose_all=True)
@@ -67,7 +63,8 @@ class RoofRackBracketHole(ad.CompositeShape):
     
     fn: int=64
 
-    NOTCH_ANCHOR=ad.surface_args('outline', 'front_top', 0.27, rh=1)
+    # The notch is placed at the front top of the outline.
+    NOTCH_ANCHOR=ad.surface_args('outline', 'front_top', 0.28, rh=1)
     
     EXAMPLE_SHAPE_ARGS=ad.args()
     EXAMPLE_ANCHORS=(
@@ -75,7 +72,7 @@ class RoofRackBracketHole(ad.CompositeShape):
     )
 
     def build(self) -> ad.Maker:
-        shape = self.extrude_node(path=self.path, h=self.width)
+        shape = self.extrude_node()
         
         maker = shape.solid('outline').at()
 
@@ -91,12 +88,9 @@ class RoofRackBracketHole(ad.CompositeShape):
 
 @ad.shape
 @ad.datatree
-class RoofRackBracket(ad.CompositeShape):
+class RoofRackBracketTestPlate(ad.CompositeShape):
     '''
-    Padding for a roof rack bracket. The bracket consists of a
-    U bolt and a flat plate and this is the padding for the 
-    flat plate and U bolt to snugly fit around the roof rack
-    bar.
+    A test plate for the roof rack bracket outline.
     '''
     
     width: float=4
@@ -118,8 +112,7 @@ class RoofRackBracket(ad.CompositeShape):
     epsilon: float=0.01
     
     upper_half: bool=True
-    
-        
+
     EXAMPLE_SHAPE_ARGS=ad.args()
     EXAMPLE_ANCHORS=(
         ad.surface_args('face_centre', 'front'),
@@ -129,7 +122,6 @@ class RoofRackBracket(ad.CompositeShape):
                        'lower': ad.ExampleParams(
                             ad.args(upper_half=False)),
                        }
-        
 
     def build(self) -> ad.Maker:
         
@@ -148,10 +140,12 @@ class RoofRackBracket(ad.CompositeShape):
         maker.add_at(shape.hole('rack_outline').at('centre'), 'centre')
         return maker
 
+
 @ad.shape
 @ad.datatree
 class RoofRackBracketUBoltCutout(ad.CompositeShape):
-    ''''''
+    '''The elongated cutout for the U bolt. This is a stadium shape sequence
+    with a flat base.'''
     d: float=11
     base_w: float=83
     depth: float=150
@@ -175,7 +169,7 @@ class RoofRackBracketUBoltCutout(ad.CompositeShape):
     )
     
     def build(self) -> ad.Maker:
-        
+        # Creates a stadium shape sequence of 5 elements.
         ubolt_shape = self.ubolt_node()
         
         maker = ubolt_shape.solid('ubolt').at('base')
@@ -202,12 +196,13 @@ class RoofRackBracketUBoltCutout(ad.CompositeShape):
         p2 = self.maker.at('ubolt', 'element-4', 'stadium', 'right', 0.5, rh=1)
         return ad.distance_between(p1, p2)
 
+
 @ad.shape
 @ad.datatree
 class RoofRackBracketAssembly(ad.CompositeShape):
     '''Full assembly of the roof rack bracket. This is a block with a hole 
-    for the roof rack bar and a U bolt. It can be slanted for pitch and yaw
-    to accommodate the curve of the car's turret.'''
+    for the roof rack bar and a U bolt. The roof rack hole can be slanted for 
+    pitch and yaw to accommodate the curve of the car's turret.'''
 
     label: str=ad.dtfield(
         default='Default', 
