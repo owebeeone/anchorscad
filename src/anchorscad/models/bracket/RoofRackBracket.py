@@ -10,7 +10,7 @@ import numpy as np
 
 @ad.datatree
 class RoofRackBarOutline:
-    '''Provides the outline for the roof rack bar.
+    '''Provides the outline for the Prorack brand roof rack bar.
     This one is specific to bars shaped like and areofoil.
     '''
     
@@ -61,16 +61,27 @@ class RoofRackBracketHole(ad.CompositeShape):
     extrude_node : ad.Node=ad.ShapeNode(
         ad.LinearExtrude, {})
     
-    fn: int=64
+    notch_node : ad.Node=ad.ShapeNode(ad.Cylinder, 
+            {'h': 'width'}, prefix='notch_', expose_all=True)
+    notch_r: float=1.8
     
-        
+    fn: int=64
+
+    NOTCH_ANCHOR=ad.surface_args('outline', 'front_top', 0.27, rh=1)
+    
     EXAMPLE_SHAPE_ARGS=ad.args()
-    EXAMPLE_ANCHORS=()
+    EXAMPLE_ANCHORS=(
+        NOTCH_ANCHOR,
+    )
 
     def build(self) -> ad.Maker:
         shape = self.extrude_node(path=self.path, h=self.width)
         
         maker = shape.solid('outline').at()
+
+        notch_shape = self.notch_node(fn=4)
+        maker.add_at(notch_shape.solid('notch').at('top'),
+                     anchor=self.NOTCH_ANCHOR, post=ad.ROTX_270 * ad.tranY(-self.notch_r * 0.2))
         return maker
     
     @ad.anchor('The centre of the outline')
@@ -194,7 +205,13 @@ class RoofRackBracketUBoltCutout(ad.CompositeShape):
 @ad.shape
 @ad.datatree
 class RoofRackBracketAssembly(ad.CompositeShape):
-    ''''''
+    '''Full assembly of the roof rack bracket. This is a block with a hole 
+    for the roof rack bar and a U bolt. It can be slanted for pitch and yaw
+    to accommodate the curve of the car's turret.'''
+
+    label: str=ad.dtfield(
+        default='Default', 
+        doc='Embossed label to distinguish the different variations.')
     
     bolt_cutout_node: ad.Node=ad.ShapeNode(
         RoofRackBracketUBoltCutout, prefix='bolt_cutout_')
@@ -207,10 +224,13 @@ class RoofRackBracketAssembly(ad.CompositeShape):
     
     rack_hole_shape: ad.Shape=ad.dtfield(self_default=lambda s: s.rack_hole())
     
-    margin=4
-    vmargin=10
-    vbase_size=5
-    rack_hole_width: float=50
+    margin: float=4
+    vmargin: float=10
+    vbase_size: float=5
+    block_width: float=50
+    rack_hole_width: float=70
+    rack_hole_pitch: float=5
+    rack_hole_yaw: float=5
     
     block_node: ad.Node=ad.ShapeNode(ad.Box, prefix='block_')
     
@@ -220,7 +240,7 @@ class RoofRackBracketAssembly(ad.CompositeShape):
         self_default=lambda s: (
             s.bolt_cutout_shape.overall_width() + s.margin * 2,
             s.rack_hole_shape.outline_thickness + s.vmargin * 2,
-            s.rack_hole_width - s.epsilon))
+            s.block_width - s.epsilon))
     
     base_block_node: ad.Node=ad.ShapeNode(ad.Box, prefix='base_block_')
     
@@ -234,18 +254,56 @@ class RoofRackBracketAssembly(ad.CompositeShape):
     slit_hole_node: ad.Node=ad.ShapeNode(ad.Box, prefix='slit_hole_')
     
     
-    slit_size=2.5
-    slit_margin=0.5
-    slit_open: bool=True
+    slit_size: float=2.5
+    slit_margin: float=0.5
+    slit_open: bool=False
     
     slit_hole_size: tuple=ad.dtfield(
         self_default=lambda s: (
-            s.block_size[0] - s.slit_margin * (1 if s.slit_open else 2),
+            1 + s.block_size[0] / np.cos(ad.to_radians(s.rack_hole_pitch)),
             s.slit_size ,
-            s.block_size[2] + 2 * s.epsilon))
+            s.rack_hole_width + 2 * s.epsilon))
     
+    # Label to distinguish the different variations.
+    label_halign: str='centre'
+    label_valign: str='centre'
+    label_depth: float=2
+    label_size: float=20
+    label_node: ad.Node=ad.ShapeNode(
+        ad.Text, {'text': 'label'}, prefix='label_', expose_all=True)
     
     fn: int=64    
+        
+    EXAMPLE_ANCHORS=(
+        ad.surface_args('face_centre', 'back'),
+    )
+
+    EXAMPLES_EXTENDED={
+        'right_front': ad.ExampleParams(
+                    shape_args=ad.args(
+                        rack_hole_pitch=1, 
+                        rack_hole_yaw=-2,
+                        label='R F'),
+                    anchors=()),
+        'left_front': ad.ExampleParams(
+                    shape_args=ad.args(
+                        rack_hole_pitch=0,
+                        rack_hole_yaw=2,
+                        label='L F'),
+                    anchors=()),
+        'right_back': ad.ExampleParams(
+                    shape_args=ad.args(
+                        rack_hole_pitch=1, 
+                        rack_hole_yaw=-2,
+                        label='R B'),
+                    anchors=()),
+        'left_back': ad.ExampleParams(
+                    shape_args=ad.args(
+                        rack_hole_pitch=0, 
+                        rack_hole_yaw=2,
+                        label='L B'),
+                    anchors=())
+    }
     
     def build(self) -> ad.Maker:
         
@@ -260,13 +318,14 @@ class RoofRackBracketAssembly(ad.CompositeShape):
         
         rack_cutout = self.rack_hole()
         
-        maker.add_at(rack_cutout.hole('rack_cutout').at('centre'), 'centre')
+        maker.add_at(rack_cutout.hole('rack_cutout').at('centre'), 
+            'centre', 
+            post=ad.rotZ(self.rack_hole_pitch) * ad.rotX(self.rack_hole_yaw))
         
         slit_cutout = self.slit_hole_node()
         
-        offset = self.slit_margin if self.slit_open else 0
         maker.add_at(slit_cutout.hole('slit_cutout').at('centre'), 
-                     'centre', post=ad.tranX(offset))
+                     'rack_cutout', 'centre')
         
         maker.add_at(
             self.bolt_cutout_shape.hole('bolt_cutout')
@@ -274,11 +333,32 @@ class RoofRackBracketAssembly(ad.CompositeShape):
             'base_block', 'face_centre', 'front',
             post=ad.ROTX_180 * ad.ROTZ_90)
         
-        return maker
-    
-    
-    
+        label_shape = self.label_node()
 
+        maker.add_at(label_shape.hole('label').colour((1, 0, 0)).at(),
+                     'face_centre', 'back')
+        
+
+        # Making a "solid" of the maker isolates all the holes to this layer of
+        # the assembly.
+        maker_final = maker.solid('assembly').at()
+
+        # Add a cap. This is small and flexible and ties the edges of the sliced
+        # bracket. This is added after all the holes have been applied so the
+        # exact position of the slit is inconsequential.
+        cap_size = list(self.block_size)
+        cap_size[0] = self.slit_margin
+        cap_shape = self.block_node(size=cap_size)
+        cap_mode = ad.ModeShapeFrame.CAGE if self.slit_open else ad.ModeShapeFrame.SOLID
+
+        # The base "block" shape has the cap attached.
+        maker_final.add_at(
+            cap_shape.named_shape('cap', cap_mode).colour((0, 1, 0)).at('face_centre', 'left'),
+            'block', 'face_centre', 'left'
+        )
+
+        return maker_final
+    
 
 # Uncomment the line below to default to writing OpenSCAD files
 # when anchorscad_main is run with no --write or --no-write options.
