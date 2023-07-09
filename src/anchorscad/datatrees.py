@@ -536,6 +536,94 @@ class InjectedFields:
                 
         return '\n'.join(info)
 
+    def generate_html_page(self, url_generator) -> str:
+        import html
+        def _html_row(field_name, details, is_nested):
+            rows = ''
+            for source in details.sources:
+                link = url_generator(source.node.clz_or_func)
+                nested_table_content = ''
+                if hasattr(source.node.clz_or_func, 'clz_or_func'):
+                    next_level = get_injected_fields(source.node.clz_or_func.clz_or_func)
+                    if source.node_field_name in next_level.injections:
+                        nested_table_content = _html_row(source.node_field_name, next_level.injections[source.node_field_name], True)
+                rows += (f"""
+                <tr>
+                """
+                +
+                ('<td>&nbsp;</td>' if is_nested else f"""    <td>{field_name}</td>
+                """)
+                +
+                f"""    <td>{source.node_field_name}</td>
+                    <td><a href='{link}'>{source.node.clz_or_func!r}</a></td>
+                </tr>
+                """)
+                if nested_table_content:
+                    rows += f"""
+                    <tr>
+                        <td colspan='3'>
+                            <table>{nested_table_content}</table>
+                        </td>
+                    </tr>
+                    """
+            return rows
+
+        docstring = inspect.getdoc(self.clz)
+        if docstring:
+            class_docstring = '<p>' + html.escape(docstring).replace('\n', '<br/>') + '</p>'
+        else:
+            class_docstring = ''
+
+        html_content = f"""
+        <!DOCTYPE html>
+        <html>
+        <head>
+            <title>Datatree Injected Fields for {self.clz.__name__}</title>
+            <style>
+                table {{
+                    width: 100%;
+                    border-collapse: collapse;
+                }}
+                th, td {{
+                    border: 1px solid #ddd;
+                    padding: 8px;
+                    text-align: left;
+                }}
+                th {{
+                    background-color: #4CAF50;
+                    color: white;
+                }}
+            </style>
+        </head>
+        <body>
+            <h1>Datatree Injected Fields for {self.clz.__name__}</h1>
+            {class_docstring}
+            <table>
+                <thead>
+                    <tr>
+                        <th>Field Name</th>
+                        <th>Node Field Name</th>
+                        <th>Node Class/Func</th>
+                    </tr>
+                </thead>
+                <tbody>
+        """
+        for field_name in sorted(self.injections.keys()):
+            details = self.injections[field_name]
+            html_content += _html_row(field_name, details, False)
+
+        html_content += """
+                </tbody>
+            </table>
+        </body>
+        </html>
+        """
+        return html_content
+    
+    def __bool__(self) -> bool:
+        return bool(self.injections)
+
+
 def _get_injected_fields(clz) -> InjectedFields:
     nodes = getattr(clz, DATATREE_SENTIENEL_NAME, {})
     injected_fields = InjectedFields(clz)

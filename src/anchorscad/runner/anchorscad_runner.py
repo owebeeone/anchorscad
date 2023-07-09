@@ -9,6 +9,7 @@ from dataclasses import dataclass, field
 from anchorscad.svg_renderer import HtmlRenderer
 import anchorscad.core as core
 from subprocess import Popen
+import anchorscad.datatrees as datatrees
 
 import sys
 import os
@@ -215,6 +216,23 @@ class ExampleRunner:
         runner_example.path_html_file = rel_pathhtml_filename
         html_renderer = HtmlRenderer(paths_dict.paths)
         html_renderer.write(full_pathhtml_path)
+
+    def injected_fields_writer(self, clz, example_name, base_example_name):
+        '''Describe the mapping of injected fields to the source class or functions.'''
+
+        injected_fields = datatrees.get_injected_fields(clz)
+
+        if not injected_fields:
+            return
+
+        rel_html_filename, runner_example, full_html_path = self.gen_filenames_and_runner(
+            clz, example_name, base_example_name, 'injected_fields.html')
+        
+        with open(full_html_path, 'w') as f:
+            f.write(injected_fields.generate_html_page(lambda x: str(x)))
+        
+        runner_example.injected_fields_html_file = rel_html_filename
+
         
     def shape_writer(self, maker, shape, clz, example_name, base_example_name):
         rel_filename, runner_example, full_path = self.gen_filenames_and_runner(
@@ -419,6 +437,7 @@ class AnchorScadRunner(core.ExampleCommandLineRenderer):
             ex_runner.file_writer,
             ex_runner.graph_file_writer,
             ex_runner.paths_file_writer,
+            ex_runner.injected_fields_writer,
             ex_runner.shape_writer,
             ex_runner.start_example,
             ex_runner.end_example)

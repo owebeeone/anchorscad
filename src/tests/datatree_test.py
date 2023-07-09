@@ -649,6 +649,16 @@ class Test(unittest.TestCase):
             'prefix_c: D\n    prefix_c: B\n        c: A\n'
             'x: D\n    x: f\n'
             'y: D\n    y: f')
+    
+    def test_injected_fields_with_models(self):
+        import anchorscad.models.cases.rpi.rpi4 as rpi4
+
+        injected = get_injected_fields(rpi4.RaspberryPi4Case)
+
+        with open('test_rpi4_injected_fields.html', 'w') as f:
+            f.write(injected.generate_html_page(lambda x: str(x)))
+
+
 
 
 if __name__ == "__main__":

@@ -28,7 +28,7 @@ class RaspberryPi4CaseFanType3(RaspberryPiCase):
     fan_vent_screw_params: FanVentScrewHoleParams=FAN_30x7_TYPE3
     outline_model_node: Node=Node(RaspberryPi4Outline)
     
-MAIN_DEFAULT=core.ModuleDefault(True)
+MAIN_DEFAULT=core.ModuleDefault(all=True)
 
 if __name__ == "__main__":
     core.anchorscad_main(False)

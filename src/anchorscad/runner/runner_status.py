@@ -30,6 +30,7 @@ class RunnerExampleResults(object):
     path_html_file: Optional[str]=None
     shape_pickle_file: Optional[str]=None
     stl_file: Optional[str]=None
+    injected_fields_html_file: Optional[str]=None
 
 
 @dataclass_json

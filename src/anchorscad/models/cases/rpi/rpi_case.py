@@ -36,7 +36,7 @@ DELTA=ot.DELTA
 class RaspberryPiCase(CompositeShape):
     '''A Generic Raspberry Pi Case.'''
     outline_model: Shape=dtfield(
-        self_default=lambda s: s.outline_model_node())
+        self_default=lambda s: s.outline_model_node(), doc='The outline of the Raspberry Pi.')
     outline_model_node: Node=ad.dtfield(
         ShapeNode(RaspberryPi4Outline, prefix='outline_'), init=True)
     inner_size_delta: tuple=(3, 2, 22)

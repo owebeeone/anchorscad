@@ -21,7 +21,7 @@ from abc import abstractmethod
 
 from anchorscad import linear as l
 from anchorscad.datatrees import Node, BoundNode, datatree, dtfield,\
-                                 METADATA_DOCS_NAME, _field_assign
+                                 METADATA_DOCS_NAME, _field_assign, get_injected_fields
 from anchorscad.svg_renderer import HtmlRenderer
 import numpy as np
 import pythonopenscad as posc
@@ -2121,6 +2121,7 @@ def render_examples(module,
                     consumer, 
                     graph_consumer,
                     paths_consumer,
+                    injected_field_consumer,
                     shape_consumer=None,
                     start_example=None,
                     end_example=None):
@@ -2150,6 +2151,7 @@ def render_examples(module,
                     consumer(result.rendered_shape, clz, name, e)
                     graph_consumer(result.graph, clz, name, e)
                     paths_consumer(result.paths, clz, name, e)
+                    injected_field_consumer(clz, name, e)
                     if shape_consumer:
                         shape_consumer(maker, shape, clz, name, e)
                 except BaseException as ex:
@@ -2188,6 +2190,8 @@ class ModuleDefault():
         False, 'Produces a graph of shape_names in .dot and .svg formats.')
     write_path_files: bool=dtfield(
         False, 'Produces an html file containg 2D paths if any are used.')
+    write_injection_files: bool=dtfield(
+        False, 'Produces an html file containg datatree injected field mappings.')
     all: bool=dtfield(
         False, 'Produce all output files.')
     
@@ -2406,11 +2410,31 @@ class ExampleCommandLineRenderer():
         self.argq.set_defaults(write_path_files=None)
         
         self.argq.add_argument(
+            '--no_write_injection_files', 
+            dest='write_injection_files',
+            action='store_false',
+            help='Produces an html file containg datatree injection mapping.')
+        
+        self.argq.add_argument(
+            '--write_injection_files', 
+            dest='write_injection_files',
+            action='store_true',
+            help='Produces an html file containg datatree injection mapping.')
+        self.argq.set_defaults(write_injection_files=None)
+        
+        self.argq.add_argument(
             '--paths_file_name', 
             type=str,
             default=os.path.join(
                 'examples_out', 'anchorcad_{class_name}_{example}_example.paths.html'),
             help='File name for the 2D paths rendered in html.')
+        
+        self.argq.add_argument(
+            '--injected_fields_file_name', 
+            type=str,
+            default=os.path.join(
+                'examples_out', 'anchorcad_{class_name}_{example}_example.injected_fields.html'),
+            help='File name for the mapping of datatree injected fields.')
         
         self.argq.add_argument(
             '--level', 
@@ -2526,6 +2550,31 @@ class ExampleCommandLineRenderer():
             strv = html_renderer.create_html(example_name)
             sys.stdout.write(
                 f'Paths html render: {clz.__name__} {example_name} {len(strv)}\n')
+            
+    def injected_file_writer(self, clz, example_name, base_example_name):
+        '''Create an html file containing the injected field mappings.'''
+        fname = self.argp.injected_fields_file_name.format(
+            class_name=clz.__name__, example=example_name)
+        
+        injectedFields = get_injected_fields(clz)
+        if not injectedFields:
+            return
+        
+        html_str = injectedFields.generate_html_page(lambda x : str(x))
+
+        path = pathlib.Path(fname)
+        if self.argp.write_path_files:
+            path.parent.mkdir(parents=True, exist_ok=True)
+            with open(path, 'w') as f:
+                f.write(html_str)
+        else:
+            if not path.parent in self.set_mkdir and not path.parent.exists():
+                self.set_mkdir.add(path.parent)
+                sys.stderr.write(f'directory "{path.parent}" does not exist. Will be created.\n')
+            sys.stdout.write(
+                f'Injected fields render: {clz.__name__} {example_name} {len(html_str)}\n')
+
+
         
     def invoke_render_examples(self):
         self.counts = render_examples(
@@ -2533,7 +2582,8 @@ class ExampleCommandLineRenderer():
             self.options, 
             self.file_writer,
             self.graph_file_writer,
-            self.path_file_writer)
+            self.path_file_writer,
+            self.injected_file_writer)
     
     def list_shapes(self):
         classes = find_all_shape_classes(self.module)
