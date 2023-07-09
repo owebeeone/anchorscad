@@ -298,7 +298,7 @@ class RaspberryPiCase(CompositeShape):
                             self.TAB_LHS, 
                             self.TAB_REAR_RHS, 
                             self.TAB_REAR_LHS)
-            tab_trans = ROTY_180
+            tab_trans = ROTY_180 * ad.tranZ(self.epsilon)
             tab_shape = self.screw_tab_node()
             for i, a in enumerate(tab_anchors):
                 maker.add_at(tab_shape
@@ -371,7 +371,7 @@ class RaspberryPiCase(CompositeShape):
     def get_example_version(self):
         return self.version.text if self.do_versioned_example else None
 
-#MAIN_DEFAULT=ModuleDefault(True)
+MAIN_DEFAULT=ModuleDefault(True)
 
 if __name__ == "__main__":
     anchorscad_main(False)
