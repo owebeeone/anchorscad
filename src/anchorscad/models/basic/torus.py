@@ -12,7 +12,8 @@ def torus_path(
     r_hole: float, 
     r_section: float, 
     section_start_angle_degrees: float,
-    section_sweep_angle_degrees: float) -> ad.Path:
+    section_sweep_angle_degrees: float,
+    metadata: ad.ModelAttributes) -> ad.Path:
     '''Provides a semi-circle path for for circular extrusion into a torus.
     Args:
       r_hole: Inner radius of torus hole.
@@ -34,7 +35,8 @@ def torus_path(
                     sweep_angle_degrees=-section_sweep_angle_degrees,
                     degrees=90,
                     side=True,
-                    name='surface'
+                    name='surface',
+                    metadata=metadata
                     )
                 .line(centre, 'surface_to_section_centre')
                 .build())
@@ -56,6 +58,10 @@ class Torus(ad.CompositeShape):
     r_section: float=10
     section_start_angle_degrees: float=0
     section_sweep_angle_degrees: float=360
+    metadata_fn: int=64
+    metadata_node: ad.Node=ad.Node(
+        ad.ModelAttributes, prefix='metadata_', expose_all=True)
+    metadata: ad.ModelAttributes=ad.dtfield(self_default=lambda s: s.metadata_node())
     path_node: ad.Node=ad.dtfield(ad.Node(torus_path))
     path: ad.Path=ad.dtfield(self_default=lambda s: s.path_node(), init=False)
     
