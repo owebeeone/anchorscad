@@ -466,7 +466,7 @@ class SvgRenderer(object):
             segments.append(
                 f'<path d="{seg[1].path}" id="{seg[1].id}" class="segment"/>')
 
-        return paths + segments
+        return (paths, segments)
 
     def get_svg_styles(self):
         shape_style = f'''{self.style_prefix}.shape {{
@@ -493,11 +493,11 @@ class SvgRenderer(object):
         hdr = self.get_svg_header()
         styles = self.get_svg_styles()
         g = self.get_svg_transform()
-        p = self.get_svg_path()
+        p, segs = self.get_svg_path()
         gstyles, rgs, gs = self.get_grads()
         fstyles, frame = self.get_frame()
         seq = (hdr[0], *styles[:-1], *gstyles, *fstyles, styles[-1], g[0], *frame,
-               *rgs, *p, *gs, g[1], hdr[1], '')
+               *rgs, *p, *gs, *segs, g[1], hdr[1], '')
         return '\n'.join(seq)
 
     def write(self, filename, encoding="utf-8"):
