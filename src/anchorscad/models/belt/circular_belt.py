@@ -29,7 +29,7 @@ class CircularBelt(ad.CompositeShape):
     EXAMPLE_SHAPE_ARGS=ad.args(d=3, l=225)
     EXAMPLE_ANCHORS=()
     EXAMPLES_EXTENDED={
-        'example2': ad.ExampleParams(shape_args=ad.args(d=4.7, l=225))
+        'example2': ad.ExampleParams(shape_args=ad.args(d=4.7, l=295))
     }
 
     def build(self) -> ad.Maker:
