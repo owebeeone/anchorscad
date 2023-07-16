@@ -24,14 +24,15 @@ class PawnPath:
     h_collar_centre: float = ad.dtfield(29.3, doc='Height of collar centre')
     h_collar_base: float = ad.dtfield(27.75, doc='Height of collar base')
     h_adjust_collar_for_printability: float = ad.dtfield(
-        2, doc='Adjust collar base for printability. Nakes the collar base angled')
+        2, doc='Adjust collar base for printability.'
+               ' Makes the collar base sloped up as horizontal edges can\'t be printed.')
 
     h_stem_bottom: float = ad.dtfield(15.9, doc='Height of stem bottom')
     h_pedestal_rim: float = ad.dtfield(14.4, doc='Height of pedestal rim')
     h_pedestal_base: float = ad.dtfield(11.5, doc='Height of pedestal base')
 
-    h_base_edge1: float = ad.dtfield(4.66, doc='Height of base edge 1 (upper base)')
-    h_base_ridge: float = ad.dtfield(3.2, doc='Height of base ridge (lower base)')
+    h_base_upper_edge: float = ad.dtfield(4.66, doc='Height of base edge upper edge')
+    h_base_ridge: float = ad.dtfield(3.2, doc='Height of base ridge')
     
     def build(self) -> ad.Path:
         collar_base_h = self.h_collar_base - self.h_adjust_collar_for_printability
@@ -57,17 +58,17 @@ class PawnPath:
                          (self.r_top_stem, collar_base_h)),
                          cv_len=(1.5, 1.5),
                         name='collar_bottom')
-                    .line((self.r_base_stem, self.h_stem_bottom), 'stem')
+                    .line((self.r_base_stem, self.h_stem_bottom), 'stem_edge')
                     .spline(
                         ((self.r_base_stem + 1, self.h_stem_bottom - 0.5),
                          (self.r_pedestal, self.h_pedestal_rim + 1),
                          (self.r_pedestal, self.h_pedestal_rim)),
                          cv_len=(0.5, 0.8),
                         name='pedestal_top')
-                    .line((self.r_pedestal, self.h_pedestal_base), 'pedestal')
+                    .line((self.r_pedestal, self.h_pedestal_base), 'pedestal_edge')
                     .spline(
-                        ((self.r_base, self.h_base_edge1 + 1),
-                         (self.r_base, self.h_base_edge1)),
+                        ((self.r_base, self.h_base_upper_edge + 1),
+                         (self.r_base, self.h_base_upper_edge)),
                          cv_len=(2.5, 1.8),
                         name='base_top')
                     .spline(
@@ -107,7 +108,7 @@ class Pawn(ad.CompositeShape):
         return maker
 
 
-# Uncomment the line below to default to writing OpenSCAD files
+# Uncomment the line below to default to writing all example output files
 # when anchorscad_main is run with no --write or --no-write options.
 MAIN_DEFAULT=ad.ModuleDefault(all=True)
 
