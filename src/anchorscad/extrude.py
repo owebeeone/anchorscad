@@ -1854,15 +1854,17 @@ class LinearExtrude(ExtrudedShape):
 @dataclass
 class RotateExtrude(ExtrudedShape):
     '''Generates a circular/arc extrusion of a given Path.'''
-    path: Path
-    degrees: float=360
-    radians: float=None
-    convexity: int=10
+    path: Path=core.dtfield(doc='The path to extrude.')
+    degrees: float=core.dtfield(360, doc='The number of degrees to extrude.')
+    radians: float=core.dtfield(
+        None, doc='The number of radians to extrude. (overrides degrees if not None)')
+    convexity: int=core.dtfield(10, doc='Openscad convexity parameter.')
     path_fn: int=None
     fn: int=None
     fa: float=None
     fs: float=None
-    use_polyhedrons: bool=None
+    use_polyhedrons: bool=core.dtfield(
+        None, doc='Use polyhedrons instead of rotate_extrude.')
 
     SCALE=1.0
     
