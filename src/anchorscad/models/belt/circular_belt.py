@@ -15,8 +15,8 @@ class CircularBelt(ad.CompositeShape):
     '''A basic torus, however paramerters are circumference diameter of the
     section. This is useful for making a belt with a specific length and diameter.
     '''
-    l: float
-    d: float
+    l: float=ad.dtfield(doc='The length of the belt')
+    d: float=ad.dtfield(doc='The diameter of the belt')
 
     torus_r_hole: float=ad.dtfield(self_default=lambda s: s.l / (2 * np.pi))
     torus_r_section: float=ad.dtfield(self_default=lambda s: s.d / 2)
@@ -24,7 +24,7 @@ class CircularBelt(ad.CompositeShape):
     torus_node: ad.Node=ad.ShapeNode(
         torus.Torus, prefix='torus_', expose_all=True)
     fn: int=512
-    torus_metadata_fn: int=32
+    torus_metadata_fn: int=ad.dtfield(32, doc='fn parameter for torus section')
     
     EXAMPLE_SHAPE_ARGS=ad.args(d=3, l=225)
     EXAMPLE_ANCHORS=()
