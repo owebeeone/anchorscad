@@ -26,10 +26,10 @@ class CircularBelt(ad.CompositeShape):
     fn: int=512
     torus_metadata_fn: int=ad.dtfield(32, doc='fn parameter for torus section')
     
-    EXAMPLE_SHAPE_ARGS=ad.args(d=3, l=225)
+    EXAMPLE_SHAPE_ARGS=ad.args(d=3, l=220)
     EXAMPLE_ANCHORS=()
     EXAMPLES_EXTENDED={
-        'example2': ad.ExampleParams(shape_args=ad.args(d=4.7, l=295))
+        'example2': ad.ExampleParams(shape_args=ad.args(d=4.7, l=290))
     }
 
     def build(self) -> ad.Maker:
