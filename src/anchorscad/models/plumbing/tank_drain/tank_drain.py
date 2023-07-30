@@ -15,7 +15,7 @@ class DrainProfile:
     r_flange_inner_flat: float=ad.dtfield(8, doc='Flat component of inner flange')
     r_flange_inner: float=ad.dtfield(165 / 2, doc='Inner radius of drain')
     h_flange_inner: float=ad.dtfield(20.87 - 3.57, doc='Height of flange')
-    r_drain_inner: float=ad.dtfield(113.5 / 2, doc='Inner radius of drain')
+    r_drain_inner: float=ad.dtfield(114.5 / 2, doc='Inner radius of drain')
     h_drain_inner: float=ad.dtfield(63.5, doc='Height of drain')
     r_drain_lip: float=ad.dtfield(5.04, doc='Radius of drain lip')
     h_small_drain: float=ad.dtfield(20.2, doc='Height of small drain')
@@ -141,11 +141,11 @@ class DrainHolderProfile(DrainProfile):
 
     r_holder_thickness: float=ad.dtfield(8, doc='Thickness of holder')
     pipe_side_upper_interference: float=ad.dtfield(0.3, doc='Interference of upper pipe side')
-    pipe_side_lower_interference: float=ad.dtfield(0.1, doc='Interference of lower pipe side')
+    pipe_side_lower_interference: float=ad.dtfield(0.0, doc='Interference of lower pipe side')
     pipe_side_h: float=ad.dtfield(80, doc='Height of pipe side')
     
     drain_side_upper_interference: float=ad.dtfield(0.1, doc='Interference of upper pipe side')
-    drain_side_lower_interference: float=ad.dtfield(0.5, doc='Interference of lower pipe side')
+    drain_side_lower_interference: float=ad.dtfield(1.1, doc='Interference of lower pipe side')
     
     inside_r: float=ad.dtfield(110 / 2 - 3.4, doc='Inside radius of pipe')
     pipe_offset: float=ad.dtfield(10, doc='Offset of pipe from base of flange')
@@ -340,16 +340,16 @@ class DrainGuage(ad.CompositeShape):
 
     
     EXAMPLES_EXTENDED={
-        's07' : ad.ExampleParams(
-            shape_args=ad.args(r_drain_inner=113.5 / 2, 
+        's11' : ad.ExampleParams(
+            shape_args=ad.args(r_drain_inner=114.5 / 2, 
                 drain_side_upper_interference=0.1,
-                drain_side_lower_interference=0.5),
+                drain_side_lower_interference=1.1),
             anchors=()
             ),
     }
 
     def build(self) -> ad.Maker:
-        maker = self.rotate_extrude_node().solid('guage').at()
+        maker = self.rotate_extrude_node().solid('guage').at(post=ad.rotZ(45))
 
         text_shape = self.text_shape_node()
         maker.add_at(
