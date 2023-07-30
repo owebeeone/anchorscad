@@ -6,6 +6,7 @@ Created on 29-Jul-2023
 
 import anchorscad as ad
 from anchorscad.models.basic.pipe import Pipe
+from anchorscad.models.basic.stadium import StadiumPrism
 import numpy as np
 
 @ad.datatree
@@ -14,7 +15,7 @@ class DrainProfile:
     r_flange_inner_flat: float=ad.dtfield(8, doc='Flat component of inner flange')
     r_flange_inner: float=ad.dtfield(165 / 2, doc='Inner radius of drain')
     h_flange_inner: float=ad.dtfield(20.87 - 3.57, doc='Height of flange')
-    r_drain_inner: float=ad.dtfield(114.5 / 2, doc='Inner radius of drain')
+    r_drain_inner: float=ad.dtfield(113.5 / 2, doc='Inner radius of drain')
     h_drain_inner: float=ad.dtfield(63.5, doc='Height of drain')
     r_drain_lip: float=ad.dtfield(5.04, doc='Radius of drain lip')
     h_small_drain: float=ad.dtfield(20.2, doc='Height of small drain')
@@ -139,28 +140,34 @@ class DrainHolderProfile(DrainProfile):
     '''Provides a Path for the drain holder for linear extrusion.'''
 
     r_holder_thickness: float=ad.dtfield(8, doc='Thickness of holder')
-    pipe_side_upper_interference: float=ad.dtfield(-0.3, doc='Interference of upper pipe side')
-    pipe_side_lower_interference: float=ad.dtfield(-0.1, doc='Interference of lower pipe side')
+    pipe_side_upper_interference: float=ad.dtfield(0.3, doc='Interference of upper pipe side')
+    pipe_side_lower_interference: float=ad.dtfield(0.1, doc='Interference of lower pipe side')
     pipe_side_h: float=ad.dtfield(80, doc='Height of pipe side')
     
-    drain_side_upper_interference: float=ad.dtfield(-0.1, doc='Interference of upper pipe side')
-    drain_side_lower_interference: float=ad.dtfield(-0.3, doc='Interference of lower pipe side')
+    drain_side_upper_interference: float=ad.dtfield(0.1, doc='Interference of upper pipe side')
+    drain_side_lower_interference: float=ad.dtfield(0.5, doc='Interference of lower pipe side')
     
     inside_r: float=ad.dtfield(110 / 2 - 3.4, doc='Inside radius of pipe')
     pipe_offset: float=ad.dtfield(10, doc='Offset of pipe from base of flange')
 
     def build(self) -> ad.Path:
 
-        drain_y_start = - self.pipe_side_h - self.pipe_offset;
+        drain_y_start = - self.pipe_side_h - self.pipe_offset
         r_diff = self.r_drain_inner - self.inside_r
+
+        angle_radians = ad.to_degrees(np.arctan(
+            (self.drain_side_upper_interference - self.drain_side_lower_interference) 
+            / self.h_drain_inner))
+        
+
 
         path = (ad.PathBuilder()
                 .move((self.inside_r - self.r_holder_thickness, 0))
-                .line((self.inside_r + self.pipe_side_upper_interference, 0), 'top_edge')
-                .line((self.inside_r + self.pipe_side_lower_interference, -self.pipe_side_h), 'pipe_side')
+                .line((self.inside_r - self.pipe_side_upper_interference, 0), 'top_edge')
+                .line((self.inside_r - self.pipe_side_lower_interference, -self.pipe_side_h), 'pipe_side')
                 .line((self.r_drain_inner - self.drain_side_upper_interference, drain_y_start), 'wedge')
                 .line((self.r_drain_inner - self.drain_side_lower_interference, drain_y_start - self.h_drain_inner), 'drain_side')
-                .stroke(self.r_holder_thickness + r_diff, degrees=-90, name='drain_lip')
+                .stroke(self.r_holder_thickness + r_diff, degrees=-90 - angle_radians, name='drain_lip')
                 .build())
 
         return path
@@ -195,7 +202,7 @@ class DrainHolder(ad.CompositeShape):
 
     
     profile_node: ad.Node=ad.Node(DrainHolderProfile)
-    holder_path: ad.Path=ad.dtfield(self_default=lambda s: s.profile_node().build())   
+    holder_path: ad.Path=ad.dtfield(self_default=lambda s: s.profile_node().build())
     rotate_extrude_node: ad.Node=ad.ShapeNode(ad.RotateExtrude, prefix='holder_')
 
     reinforcer_hole_inside_r: float=ad.dtfield(3.2, doc='Inner radius of hole for reinforcer rod')
@@ -212,12 +219,25 @@ class DrainHolder(ad.CompositeShape):
     snap_hole_angle_offset: float=ad.dtfield(20, doc='Angle offset of snap holes')
     snap_hole_z_pos: float=ad.dtfield(15, doc='Z position of snap holes')
 
+    bottom_hole_r: float=ad.dtfield(5.3, doc='Radius of bottom hole')
+    bottom_hole_w: float=ad.dtfield(5.3, doc='Stadium width of bottom hole')
+    bottom_hole_h: float=ad.dtfield(25, doc='Height of bottom hole')
+    bottom_hole_node: ad.Node=ad.ShapeNode(StadiumPrism, prefix='bottom_hole_')
+    bottom_hole_count: int=ad.dtfield(15, doc='Number of bottom holes')
+    bottom_hole_angle_offset: float=ad.dtfield(12, doc='Angle offset of bottom holes')
+    bottom_hole_z_pos: float=ad.dtfield(22, doc='Z position of bottom holes')
+    bottom_hole_offset: float=ad.dtfield(5, doc='lateral offset of bottom holes')
+    bottom_hole_as_cage: bool=ad.dtfield(True, doc='Bottom hole as cage')
+    bottom_hole_square_left: bool=ad.dtfield(True, doc='Bottom hole flattened on one end')
+
     grate_thickness: float=ad.dtfield(2, doc='Thickness of grate')
     grate_size: tuple=ad.dtfield(
         self_default=lambda s: 
             (s.grate_thickness, 2 * s.inside_r - 1, path_height(s.holder_path)))
 
     grate_node: ad.Node=ad.ShapeNode(ad.Box, prefix='grate_')
+
+    grate_enable: bool=ad.dtfield(False, doc='Enable grate')
 
     cage_node: ad.Node=ad.CageOfNode()
 
@@ -233,11 +253,12 @@ class DrainHolder(ad.CompositeShape):
 
         holder_maker = holder_shape.solid('holder').at()
         
-        grate_shape = self.grate_node()
-        holder_maker.add_at(
-            grate_shape.solid('grate1').at('face_centre', 'top'))
-        holder_maker.add_at(
-            grate_shape.solid('grate2').at('face_centre', 'top'), post=ad.rotZ(90))
+        if self.grate_enable:
+            grate_shape = self.grate_node()
+            holder_maker.add_at(
+                grate_shape.solid('grate1').at('face_centre', 'top'))
+            holder_maker.add_at(
+                grate_shape.solid('grate2').at('face_centre', 'top'), post=ad.rotZ(90))
 
         maker.add_at(holder_maker.solid('holder').at(post=ad.tranZ(-self.pipe_offset - self.pipe_side_h)),
                      'flange_base')
@@ -261,8 +282,82 @@ class DrainHolder(ad.CompositeShape):
                 degrees=i * 360 / self.snap_hole_count + self.snap_hole_angle_offset,
                 post=ad.tranZ(self.pipe_side_h - self.snap_hole_z_pos))
             
+        bottom_hole_shape = self.bottom_hole_node()
+        for i in range(self.bottom_hole_count):
+            maker.add_at(
+                bottom_hole_shape
+                    .hole(('bottom_hole', i))
+                    .at('base'),
+                'holder', 'wedge', 0.5,
+                degrees=i * 360 / self.bottom_hole_count + self.bottom_hole_angle_offset,
+                post=ad.tranZ(self.bottom_hole_z_pos) * ad.tranY(self.bottom_hole_offset) * ad.ROTZ_90)
 
         return maker
+
+@ad.datatree
+class DrainGuageProfile(DrainHolderProfile):
+    '''A profile of just the lower part of the holder.'''
+
+    h_base_plate: float=ad.dtfield(2, doc='Height of base plate')
+
+    def build(self) -> ad.Path:
+        
+        drain_y_start = - self.pipe_side_h - self.pipe_offset
+
+        path = (ad.PathBuilder()
+            .move((self.r_drain_inner - self.r_holder_thickness, drain_y_start))
+            .line((self.r_drain_inner - self.drain_side_upper_interference, drain_y_start), 'top')
+            .line((self.r_drain_inner - self.drain_side_lower_interference, drain_y_start - self.h_drain_inner), 'drain_side')
+            #.stroke(self.r_holder_thickness, degrees=-90, name='drain_lip')
+            .line((0, drain_y_start - self.h_drain_inner), 'base_plate_bottom')
+            .stroke(self.h_base_plate, degrees=-90, name='base_plate_centre')
+            .stroke(self.r_drain_inner - self.r_holder_thickness, degrees=-90, name='base_plate_top')
+            .build())
+
+        return path
+    
+@ad.shape
+@ad.datatree
+class DrainGuage(ad.CompositeShape):
+    '''A guage for the drain lower part.
+    '''
+    r_holder_thickness: float=ad.dtfield(4, doc='Thickness of holder')
+    profile_node: ad.Node=ad.Node(DrainGuageProfile)
+    profile: ad.Shape=ad.dtfield(self_default=lambda s: s.profile_node())
+
+    guage_path: ad.Path=ad.dtfield(self_default=lambda s: s.profile.build())
+
+    rotate_extrude_node: ad.Node=ad.ShapeNode(ad.RotateExtrude, prefix='guage_')
+
+    text_depth: float=ad.dtfield(4, doc='Depth of text')
+    text_halign: str='centre'
+    text_text: str=ad.dtfield(self_default=lambda s: 
+        f'{s.r_drain_inner:.1f} {s.drain_side_upper_interference:.1f} {s.drain_side_lower_interference:.1f}')
+    
+    text_shape_node: ad.Node=ad.ShapeNode(ad.Text, prefix='text_')
+
+    fn: int=ad.dtfield(128, doc='Number of facets')
+
+    
+    EXAMPLES_EXTENDED={
+        's07' : ad.ExampleParams(
+            shape_args=ad.args(r_drain_inner=113.5 / 2, 
+                drain_side_upper_interference=0.1,
+                drain_side_lower_interference=0.5),
+            anchors=()
+            ),
+    }
+
+    def build(self) -> ad.Maker:
+        maker = self.rotate_extrude_node().solid('guage').at()
+
+        text_shape = self.text_shape_node()
+        maker.add_at(
+            text_shape.solid('text').at('default'),
+            'base_plate_centre', 1, post=ad.ROTX_270)
+
+        return maker
+
 
 # Uncomment the line below to default to writing OpenSCAD files
 # when anchorscad_main is run with no --write or --no-write options.
