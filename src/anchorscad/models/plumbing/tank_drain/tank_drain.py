@@ -15,7 +15,7 @@ class DrainProfile:
     r_flange_inner_flat: float=ad.dtfield(8, doc='Flat component of inner flange')
     r_flange_inner: float=ad.dtfield(165 / 2, doc='Inner radius of drain')
     h_flange_inner: float=ad.dtfield(20.87 - 3.57, doc='Height of flange')
-    r_drain_inner: float=ad.dtfield(114.5 / 2, doc='Inner radius of drain')
+    r_drain_inner: float=ad.dtfield(115.4 / 2, doc='Inner radius of drain')
     h_drain_inner: float=ad.dtfield(63.5, doc='Height of drain')
     r_drain_lip: float=ad.dtfield(5.04, doc='Radius of drain lip')
     h_small_drain: float=ad.dtfield(20.2, doc='Height of small drain')
@@ -144,7 +144,7 @@ class DrainHolderProfile(DrainProfile):
     pipe_side_lower_interference: float=ad.dtfield(0.0, doc='Interference of lower pipe side')
     pipe_side_h: float=ad.dtfield(80, doc='Height of pipe side')
     
-    drain_side_upper_interference: float=ad.dtfield(0.1, doc='Interference of upper pipe side')
+    drain_side_upper_interference: float=ad.dtfield(0.0, doc='Interference of upper pipe side')
     drain_side_lower_interference: float=ad.dtfield(1.1, doc='Interference of lower pipe side')
     
     inside_r: float=ad.dtfield(110 / 2 - 3.4, doc='Inside radius of pipe')
