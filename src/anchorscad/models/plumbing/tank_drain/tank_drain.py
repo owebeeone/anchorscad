@@ -84,7 +84,7 @@ class DrainOutline(ad.CompositeShape):
 @ad.datatree
 class DrainPipe(ad.CompositeShape):
     inside_r: float=ad.dtfield(110 / 2 - 3.4, doc='Radius of pipe')
-    outside_r: float=ad.dtfield(110 / 2, doc='Radius of pipe')
+    outside_r: float=ad.dtfield(110.8 / 2, doc='Radius of pipe')
     h: float=ad.dtfield(100, doc='Length of pipe')
     hole_h_delta: float=ad.dtfield(0.1, doc='Delta height of hole')
 
@@ -355,6 +355,92 @@ class DrainGuage(ad.CompositeShape):
         maker.add_at(
             text_shape.solid('text').at('default'),
             'base_plate_centre', 1, post=ad.ROTX_270)
+
+        return maker
+
+
+@ad.datatree
+class DrainWedgeOutline(DrainHolderProfile):
+    '''Outline for a wedge to fit pvc pipe into to wedge into drain.'''
+
+    h_base_plate: float=ad.dtfield(2, doc='Height of base plate')
+    drain_outline_inner_r: float=ad.dtfield(105 / 2, doc='Inner radius of drain')
+    base_bevel_r: float=ad.dtfield(1.65, doc='Radius of base bevel')
+
+    def build(self) -> ad.Path:
+        
+        drain_y_start = -1.1
+
+        path = (ad.PathBuilder()
+            .move((self.drain_outline_inner_r, drain_y_start))
+            .line((self.r_drain_inner - self.drain_side_upper_interference, drain_y_start), 'top')
+            .line(
+                (self.r_drain_inner - self.drain_side_lower_interference, 
+                 drain_y_start - self.h_drain_inner + self.base_bevel_r),
+                'drain_side')
+            .arc_tangent_radius_sweep(
+                radius=self.base_bevel_r,
+                sweep_angle_degrees=-90,
+                name='base_bevel')
+            .stroke(self.r_holder_thickness - self.base_bevel_r, degrees=0, name='drain_lip')
+            .line((self.drain_outline_inner_r, drain_y_start - self.h_drain_inner), 'base_plate_bottom')
+            .build())
+
+        return path
+    
+@ad.shape
+@ad.datatree
+class DrainPipeShell(ad.CompositeShape):
+    drainpipe_node: ad.Node=ad.Node(DrainPipe)
+
+    base_outside_r: float=ad.dtfield(
+        self_default=lambda s: s.outside_r - s.hole_h_delta, 
+        doc='Radius of top of pipe shell')
+
+    pipe_shell_node: ad.Node=ad.ShapeNode(
+        ad.Cone, 
+        'h',
+        {'r_top': 'outside_r', 'r_base': 'base_outside_r'})
+    
+    def build(self) -> ad.Maker:
+        # Add your shape building code here...
+        shape = self.pipe_shell_node()
+        maker = shape.composite('pipe_shell').at()
+        return maker
+
+
+@ad.shape
+@ad.datatree
+class DrainWedge(ad.CompositeShape):
+    '''Alernative to the DrainHolder, this allows the 100mm PVC pipe to 
+    fit and wedge into the drain hole. It has a lip at the base to prevent
+    the pipe from falling through. This should take far less time and material
+    to print.
+    '''
+    h: float=ad.dtfield(63, doc='Height of wedge')
+    r_holder_thickness: float=ad.dtfield(4, doc='Thickness of holder')
+    
+    profile_node: ad.Node=ad.Node(DrainWedgeOutline)
+    profile: ad.Shape=ad.dtfield(self_default=lambda s: s.profile_node())
+
+    wedge_path: ad.Path=ad.dtfield(self_default=lambda s: s.profile.build())
+
+    rotate_extrude_node: ad.Node=ad.ShapeNode(ad.RotateExtrude, prefix='wedge_')
+
+    drain_pipe_shell_node: ad.Node=ad.ShapeNode(DrainPipeShell)
+
+    fn: int=ad.dtfield(256, doc='Number of facets')
+
+    EXAMPLE_SHAPE_ARGS=ad.args(hole_h_delta=0.2)
+
+    def build(self) -> ad.Maker:
+        maker = self.rotate_extrude_node().solid('wedge').at(post=ad.rotZ(45))
+
+        drain_pipe_shell_shape = self.drain_pipe_shell_node()
+
+        maker.add_at(
+            drain_pipe_shell_shape.hole('drain_pipe_shell').at('top')
+            )
 
         return maker
 
