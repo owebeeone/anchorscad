@@ -227,7 +227,7 @@ class DrainHolder(ad.CompositeShape):
     bottom_hole_angle_offset: float=ad.dtfield(12, doc='Angle offset of bottom holes')
     bottom_hole_z_pos: float=ad.dtfield(22, doc='Z position of bottom holes')
     bottom_hole_offset: float=ad.dtfield(5, doc='lateral offset of bottom holes')
-    bottom_hole_as_cage: bool=ad.dtfield(True, doc='Bottom hole as cage')
+    bottom_hole_hide_cage: bool=ad.dtfield(True, doc='Bottom hole as cage')
     bottom_hole_square_left: bool=ad.dtfield(True, doc='Bottom hole flattened on one end')
 
     grate_thickness: float=ad.dtfield(2, doc='Thickness of grate')
@@ -243,7 +243,7 @@ class DrainHolder(ad.CompositeShape):
 
     fn: int=ad.dtfield(128, doc='Number of facets for the linear extrusion')
 
-    EXAMPLE_SHAPE_ARGS=ad.args(as_cage=False, drain_outline_degrees=90)
+    EXAMPLE_SHAPE_ARGS=ad.args(hide_cage=False, drain_outline_degrees=90)
 
     def build(self) -> ad.Maker:
 
@@ -363,17 +363,20 @@ class DrainGuage(ad.CompositeShape):
 class DrainWedgeOutline(DrainHolderProfile):
     '''Outline for a wedge to fit pvc pipe into to wedge into drain.'''
 
-    h_base_plate: float=ad.dtfield(2, doc='Height of base plate')
+    h_base_plate: float=ad.dtfield(1.1, doc='Height of base plate')
     drain_outline_inner_r: float=ad.dtfield(105 / 2, doc='Inner radius of drain')
     base_bevel_r: float=ad.dtfield(1.65, doc='Radius of base bevel')
+    h_trim: float=ad.dtfield(3, doc='Height to trim')
 
     def build(self) -> ad.Path:
         
-        drain_y_start = -1.1
+        drain_y_start = -self.h_base_plate
+        top_y = drain_y_start - self.h_trim
+        
 
         path = (ad.PathBuilder()
-            .move((self.drain_outline_inner_r, drain_y_start))
-            .line((self.r_drain_inner - self.drain_side_upper_interference, drain_y_start), 'top')
+            .move((self.drain_outline_inner_r, top_y))
+            .line((self.r_drain_inner - self.drain_side_upper_interference, top_y), 'top')
             .line(
                 (self.r_drain_inner - self.drain_side_lower_interference, 
                  drain_y_start - self.h_drain_inner + self.base_bevel_r),
@@ -431,7 +434,7 @@ class DrainWedge(ad.CompositeShape):
 
     fn: int=ad.dtfield(256, doc='Number of facets')
 
-    EXAMPLE_SHAPE_ARGS=ad.args(hole_h_delta=0.2)
+    EXAMPLE_SHAPE_ARGS=ad.args(hole_h_delta=0.2, r_drain_inner=115.8 / 2)
 
     def build(self) -> ad.Maker:
         maker = self.rotate_extrude_node().solid('wedge').at(post=ad.rotZ(45))

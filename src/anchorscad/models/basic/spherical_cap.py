@@ -28,7 +28,7 @@ class SphericalCap(ad.CompositeShape):
     rotate_node: ad.Node=ad.ShapeNode(ad.RotateExtrude, 
             {'path': None}, prefix='rotate_', expose_all=True)
     
-    EXAMPLE_SHAPE_ARGS=ad.args(r=30, degrees=95, as_cage=False, fn=16)
+    EXAMPLE_SHAPE_ARGS=ad.args(r=30, degrees=95, hide_cage=False, fn=16)
     EXAMPLE_ANCHORS=()
 
     def build(self) -> ad.Maker:

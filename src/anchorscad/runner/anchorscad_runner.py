@@ -603,6 +603,9 @@ def remove_from_list(l, v):
         
 def run():
     runner = AnchorScadRunner(sys.argv[1:])
+    
+    # if not ENVIRON_NAME in runner.env:
+    #     runner = AnchorScadRunner(['src\\anchorscad\\models\\components'])
     runner.run()
 
 if __name__ == '__main__':

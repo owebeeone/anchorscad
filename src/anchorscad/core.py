@@ -536,7 +536,7 @@ class ShapeNamer:
     def minkowski(self, name):
         return self.named_shape(name, ModeShapeFrame.MINKOWSKI)
 
-    def named_shape_by_index(self, name, index, *modes):
+    def by_index(self, name, index, *modes):
         '''Select the shape mode by the index given over the provided modes.'''
         if not index:
             index = 0
@@ -544,12 +544,12 @@ class ShapeNamer:
     
     def solid_hole(self, name, is_hole):
         '''Choose the mode as solid or hole determined by the is_hole parameter.'''
-        return self.named_shape_by_index(
+        return self.by_index(
             name, is_hole, ModeShapeFrame.SOLID, ModeShapeFrame.HOLE)
         
     def solid_cage(self, name, is_cage):
         '''Choose the mode as solid or cage determined by the is_cage parameter.'''
-        return self.named_shape_by_index(
+        return self.by_index(
             name, is_cage, ModeShapeFrame.SOLID, ModeShapeFrame.CAGE)
 
 class ShapeMaker:
@@ -576,6 +576,22 @@ class ShapeMaker:
     
     def as_minkowski(self, name, reference_frame):
         return self.as_maker(name, ModeShapeFrame.MINKOWSKI, reference_frame)
+    
+    def by_index(self, name, index, *modes):
+        '''Select the shape mode by the index given over the provided modes.'''
+        if not index:
+            index = 0
+        return self.as_maker(name, modes[index])
+    
+    def as_solid_hole(self, name, is_hole):
+        '''Choose the mode as solid or hole determined by the is_hole parameter.'''
+        return self.by_index(
+            name, is_hole, ModeShapeFrame.SOLID, ModeShapeFrame.HOLE)
+        
+    def as_solid_cage(self, name, is_cage):
+        '''Choose the mode as solid or cage determined by the is_cage parameter.'''
+        return self.by_index(
+            name, is_cage, ModeShapeFrame.SOLID, ModeShapeFrame.CAGE)
 
 
 class LazyNamedShape(NamedShapeBase):
@@ -1047,18 +1063,18 @@ class CageOfProperties:
     name: str='cage'
     colour: tuple=(0.0, 1.0, 0.35, 0.4)
     
-    def apply(self, shape, as_cage, name=None):
+    def apply(self, shape, hide_cage, name=None):
         '''Apply this object's properties to shape.
         Args:
               shape: Shape to be made a cage.
-              as_cage: If true, the shape will be treated as a cage and not rendered
+              hide_cage: If true, the shape will be treated as a cage and not rendered
                        If false, it will be rendered transparent with the given colour.
         '''
         if isinstance(shape, BoundNode):
             shape = shape()
         if name is None:
             name = self.name
-        if as_cage:
+        if hide_cage:
             return shape.cage(name)
         return (shape.solid(name)
                     .colour(self.colour)
@@ -1066,7 +1082,7 @@ class CageOfProperties:
 
 
 def cageof(shape: Shape=None, 
-           as_cage: bool=True,
+           hide_cage: bool=True,
            cage_name: object=None,
            properties: CageOfProperties=CageOfProperties()):
     '''Conditionally returns either a cage mode or solid (but transparent)
@@ -1075,17 +1091,17 @@ def cageof(shape: Shape=None,
     properties parameter but can be overridden by a cage_name parameter.
     Args:
       shape: Shape to be made a cage.
-      as_cage: If true, the shape will be treated as a cage and not rendered
+      hide_cage: If true, the shape will be treated as a cage and not rendered
                If false, it will be rendered transparent with the given colour.
       cage_name: The name of the resulting Maker.
       properties: to be applied.
     '''
-    return properties.apply(shape, as_cage, name=cage_name)
+    return properties.apply(shape, hide_cage, name=cage_name)
 
 class CageOfNode(Node):
 
     def __init__(self, *args_, **kwds_):
-        super().__init__(cageof, 'as_cage', *args_, **kwds_)
+        super().__init__(cageof, 'hide_cage', *args_, **kwds_)
 
 @dataclass(frozen=True)
 class AbsoluteReference:

@@ -37,8 +37,8 @@ class BoxCylinder(ad.CompositeShape):
         init=False)
     
     EXAMPLE_SHAPE_ARGS=ad.args(fn=32,
-                               box_cage_as_cage=False,
-                               cylinder_cage_as_cage=False)
+                               box_cage_hide_cage=False,
+                               cylinder_cage_hide_cage=False)
     EXAMPLE_ANCHORS=(
         ad.surface_args('face_centre', 'base'),
         ad.surface_args('face_centre', 'back'),

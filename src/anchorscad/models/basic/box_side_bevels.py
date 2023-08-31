@@ -45,7 +45,7 @@ class BoxSideBevels(ad.CompositeShape):
     EXAMPLES_EXTENDED={
         'show_cage': ad.ExampleParams(
             shape_args=ad.args([50., 30., 20.], 8,
-                                cage_as_cage=False,
+                                cage_hide_cage=False,
                                 fn=64),
             anchors=(ad.surface_args('face_edge', 0, 0),))
         }

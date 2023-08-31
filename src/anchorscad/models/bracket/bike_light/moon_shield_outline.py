@@ -73,7 +73,7 @@ class MoonShieldOutline(ad.CompositeShape):
     
     epsilon: float=ad.dtfield(0.01, doc='An epsilon value for tearing suppression.')
     
-    EXAMPLE_SHAPE_ARGS=ad.args(as_cage=False, fn=32)
+    EXAMPLE_SHAPE_ARGS=ad.args(hide_cage=False, fn=32)
     EXAMPLE_ANCHORS=(
         ad.surface_args('face_edge', 'top', 3),
         ad.surface_args('boss', 'surface', 0, -90),

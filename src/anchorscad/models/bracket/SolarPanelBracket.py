@@ -96,7 +96,7 @@ class SolarPanelInnerWasher(ad.CompositeShape):
     
     epsilon: float=0.01
     
-    as_cage: bool=True
+    hide_cage: bool=True
     cage_node: ad.Node=ad.CageOfNode()
 
 
@@ -137,7 +137,7 @@ class SolarPanelOuterWasher(ad.CompositeShape):
     tnut_outer_node: ad.Node=ad.dtfield(ad.ShapeNode(
         tnut_washer.TnutWasherOuter, prefix='tnut_outer_'))
     
-    as_cage: bool=True
+    hide_cage: bool=True
     cage_node: ad.Node=ad.CageOfNode()
     
     def build(self) -> ad.Maker:

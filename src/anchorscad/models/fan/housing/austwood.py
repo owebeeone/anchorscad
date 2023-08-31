@@ -321,7 +321,7 @@ class FanHousing(ad.CompositeShape):
     
     mount_screw_margin: float=ad.dtfield(10, 'Mount screw margin')
     
-    EXAMPLE_SHAPE_ARGS=ad.args(as_cage=True, fn=128)
+    EXAMPLE_SHAPE_ARGS=ad.args(hide_cage=True, fn=128)
     SCREW_ANCHORS=(
         ad.surface_args('mount_screw', 0,),
         ad.surface_args('mount_screw', 1,),

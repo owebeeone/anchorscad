@@ -51,7 +51,7 @@ class TerminalKF301Terminal(ad.CompositeShape):
     
     cage_node: ad.Node=ad.CageOfNode()
     
-    EXAMPLE_SHAPE_ARGS=ad.args(as_cage=False)
+    EXAMPLE_SHAPE_ARGS=ad.args(hide_cage=False)
     EXAMPLE_ANCHORS=(ad.surface_args('face_edge', 1, 0, scale_anchor=0.3),
                      ad.surface_args('pin', 'top', scale_anchor=0.3),)
     
@@ -108,7 +108,7 @@ class TerminalKF301Body(ad.CompositeShape):
     count: int=3
     cage_node: ad.Node=ad.CageOfNode()
     
-    EXAMPLE_SHAPE_ARGS=ad.args(as_cage=True)
+    EXAMPLE_SHAPE_ARGS=ad.args(hide_cage=True)
     EXAMPLE_ANCHORS=(ad.surface_args('face_edge', 1, 0),)
     
     def build(self) -> ad.Maker:
@@ -154,9 +154,9 @@ class TerminalKF301(ad.CompositeShape):
     
     terminal: ad.Node=ad.ShapeNode(TerminalKF301Terminal)
     
-    EXAMPLE_SHAPE_ARGS=ad.args(as_cage=True, 
-                                 block_access_as_hole=True,
-                                 screw_access_as_hole=True)
+    EXAMPLE_SHAPE_ARGS=ad.args(hide_cage=True, 
+                               block_access_as_hole=True,
+                               screw_access_as_hole=True)
     EXAMPLE_ANCHORS=(ad.surface_args('face_edge', 1, 0),)
     
     def build(self) -> ad.Maker:

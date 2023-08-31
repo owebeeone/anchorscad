@@ -99,7 +99,7 @@ class RaspberryPiCase(CompositeShape):
                          'main', 'fan', 'grille', ('spoke', 7), ('inner', 'mid', 0), 0),)
     EXAMPLE_SHAPE_ARGS=args(fn=36, 
                             make_case_top=True, 
-                            rpi_cage_as_cage=True, 
+                            rpi_cage_hide_cage=True, 
                             show_cut_box=False)
     
     # Some anchor locations for locating flange position and sizes.

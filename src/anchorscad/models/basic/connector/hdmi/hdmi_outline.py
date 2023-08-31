@@ -30,7 +30,7 @@ class HdmiOutline(CompositeShape):
     cage_shape: Shape=dtfield(ShapeNode(Box), init=False)
     cage_node: Node=ad.CageOfNode()
 
-    EXAMPLE_SHAPE_ARGS=args(as_cage=False)
+    EXAMPLE_SHAPE_ARGS=args(hide_cage=False)
     NOEXAMPLE_ANCHORS=(
         surface_args('face_edge', 0, 0),)
     

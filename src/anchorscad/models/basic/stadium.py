@@ -59,7 +59,7 @@ class StadiumPrism(ad.CompositeShape):
     cage_size: tuple=ad.dtfield(self_default=lambda s: 
         (s.r * 2 + s.w, s.r * 2, s.h))
    
-    as_cage: bool=False
+    hide_cage: bool=False
     cage_box_node: ad.Node=ad.ShapeNode(ad.Box, prefix='cage_')
     
     cage_node: ad.Node=ad.CageOfNode()

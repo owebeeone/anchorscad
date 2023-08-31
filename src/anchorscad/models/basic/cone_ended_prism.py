@@ -32,7 +32,7 @@ class ConeEndedPrism(ad.CompositeShape):
     box_cage_node: ad.Node=ad.Node(ad.cageof, prefix='box_cage_')
     
     EXAMPLE_SHAPE_ARGS=ad.args(
-        110, 50, 33 * 4 / np.pi, 5, box_cage_as_cage=False)
+        110, 50, 33 * 4 / np.pi, 5, box_cage_hide_cage=False)
     EXAMPLE_ANCHORS=(
         ad.surface_args('top'),
         ad.surface_args('base'),

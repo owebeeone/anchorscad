@@ -26,7 +26,7 @@ class Sleeve(ad.CompositeShape):
             ad.ShapeNode(ad.RotateExtrude, {}), init=False)
     epsilon: float=0.01 
      
-    EXAMPLE_SHAPE_ARGS=ad.args(as_cage=False, h=10, fn=16, 
+    EXAMPLE_SHAPE_ARGS=ad.args(hide_cage=False, h=10, fn=16, 
                                start_degrees=20, 
                                end_degrees=330)
     EXAMPLE_ANCHORS=(ad.surface_args('surface', 0),
@@ -96,7 +96,7 @@ class SleeveAndKeyway(ad.CompositeShape):
             ad.ShapeNode(ad.LinearExtrude, 'h'), init=False)
     epsilon: float=0.01 
      
-    EXAMPLE_SHAPE_ARGS=ad.args(as_cage=False, h=10, fn=16, 
+    EXAMPLE_SHAPE_ARGS=ad.args(hide_cage=False, h=10, fn=16, 
                                start_degrees=20,
                                keyway_start_degrees=20,
                                keyway_end_degrees=80, 

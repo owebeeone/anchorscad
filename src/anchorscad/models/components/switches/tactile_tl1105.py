@@ -40,7 +40,7 @@ class TactileSwitchTL1105Lead(ad.CompositeShape):
     cage_size: tuple=None
     
     
-    EXAMPLE_SHAPE_ARGS=ad.args(as_cage=False)
+    EXAMPLE_SHAPE_ARGS=ad.args(hide_cage=False)
     EXAMPLE_ANCHORS=(ad.surface_args('body_edge', scale_anchor=0.2),
                      ad.surface_args('cage', 'face_centre', 5, scale_anchor=0.2),)
 
@@ -130,14 +130,14 @@ class TactileSwitchTL1105(ad.CompositeShape):
     leada_node: ad.Node=ad.dtfield(
         init=True,
         default=ad.ShapeNode(TactileSwitchTL1105Lead, prefix='leada_'))
-    leads_as_cages: bool=False
+    leads_hide_cages: bool=False
 
     leadx_cage_node: ad.Node=ad.CageOfNode(prefix='leadx_cage_')
     fn: int=32
     
-    EXAMPLE_SHAPE_ARGS=ad.args(leadx_cage_as_cage=True,
-                                 leada_as_cage=True,
-                                 leads_as_cages=False)
+    EXAMPLE_SHAPE_ARGS=ad.args(leadx_cage_hide_cage=True,
+                                 leada_hide_cage=True,
+                                 leads_hide_cages=False)
     EXAMPLE_ANCHORS=tuple(ad.surface_args('lead_hole', i + 1, at_end=True,
                                        scale_anchor=0.3) for i in range(4))
     
@@ -155,7 +155,7 @@ class TactileSwitchTL1105(ad.CompositeShape):
         lead_pos_cage = ad.Box([self.between_leads, 1, 1])
         
         leads_mode = (ad.ModeShapeFrame.CAGE 
-                      if self.leads_as_cages 
+                      if self.leads_hide_cages 
                       else ad.ModeShapeFrame.SOLID)
         faces = (('face_edge', 0, 0), ('face_edge', 3, 2))
         for i, f in enumerate(faces):
@@ -232,12 +232,12 @@ class TactileSwitchTL59(ad.CompositeShape):
     leada_node: ad.Node=ad.dtfield(
         init=True,
         default=ad.ShapeNode(TactileSwitchTL59Lead, prefix='leada_'))
-    leads_as_cages: bool=False
+    leads_hide_cages: bool=False
 
     leadx_cage_node: ad.Node=ad.CageOfNode(prefix='leadx_cage_')
     fn: int=32
     
-    EXAMPLE_SHAPE_ARGS=ad.args(leadx_cage_as_cage=True)
+    EXAMPLE_SHAPE_ARGS=ad.args(leadx_cage_hide_cage=True)
     EXAMPLE_ANCHORS=tuple(ad.surface_args('lead_hole', i + 1, at_end=True, 
                                        scale_anchor=0.3) for i in range(2))
     
@@ -254,7 +254,7 @@ class TactileSwitchTL59(ad.CompositeShape):
         
         lead_shape = self.leada_node()
         leads_mode = (ad.ModeShapeFrame.CAGE 
-                      if self.leads_as_cages 
+                      if self.leads_hide_cages 
                       else ad.ModeShapeFrame.SOLID)
         maker.add_at(self.leadx_cage_node(
                         lead_pos_cage, 
@@ -291,7 +291,7 @@ class TactileSwitchOutline(ad.CompositeShape):
     for leads and switch access from the base of the switch.
     '''
     
-    leads_as_cages: bool=True
+    leads_hide_cages: bool=True
     switch_shape: ad.Shape=TactileSwitchTL59()
     lead_hole_h: float=10
     lead_hole_r: float=1.4

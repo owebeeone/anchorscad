@@ -60,7 +60,7 @@ class FanVent(CompositeShape):
     screw_hole_tap_dia_scale: float=0.95 # Needs more to tap onto.
     screw_hole_extension: float=1.5
     screw_params: FanVentScrewHoleParams=FAN_30x7_TYPE2
-    fan_cage_as_cage: bool=True
+    fan_cage_hide_cage: bool=True
     fan_cage: Node=Node(cageof, prefix='fan_cage_')
     r_outer: float=None
     r_inner: float=None
@@ -70,7 +70,7 @@ class FanVent(CompositeShape):
     as_cutout: bool=False
     fn: int=36
     
-    EXAMPLE_SHAPE_ARGS=args(fan_cage_as_cage=False)
+    EXAMPLE_SHAPE_ARGS=args(fan_cage_hide_cage=False)
     EXAMPLE_ANCHORS=()
     
     def build(self) -> Maker:

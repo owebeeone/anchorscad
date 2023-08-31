@@ -70,9 +70,9 @@ class ButtonBody(CompositeShape):
             prefix='cap_')
     fn: int=64
     
-    EXAMPLE_SHAPE_ARGS=args(as_cage=True,
-                                plate_cage_as_cage=False, 
-                                rim_cage_as_cage=False,
+    EXAMPLE_SHAPE_ARGS=args(hide_cage=True,
+                                plate_cage_hide_cage=False, 
+                                rim_cage_hide_cage=False,
                                 degrees=270)
     EXAMPLE_ANCHORS=(surface_args('base', scale_anchor=0.5),
                      surface_args('plate', scale_anchor=0.5),)
@@ -155,7 +155,7 @@ class ButtonForTactileSwitch(CompositeShape):
     Button housing for tactile switches.
     '''
     
-    leads_as_cages: bool=True
+    leads_hide_cages: bool=True
     switch_type: str=None
     tl1105_node: Node=ShapeNode(tactile_switches.TactileSwitchTL1105, 
                                      {'leada_node': 'tl1105_leada_node'})
@@ -228,8 +228,8 @@ class ButtonAssemblyTest(CompositeShape):
     wing_angle: float=20
 
     EXAMPLE_SHAPE_ARGS=args(switch_type='TL1105',
-                            body_as_cage=True,
-                            body_plate_cage_as_cage=False, 
+                            body_hide_cage=True,
+                            body_plate_cage_hide_cage=False, 
                             body_degrees=270, 
                             body_ex_degrees=270,
                             fn=64)
@@ -241,7 +241,7 @@ class ButtonAssemblyTest(CompositeShape):
         
         maker = shape.solid('base').at(post=ROTZ_90)
 
-        switch = shape.select_switch()(leads_as_cages=False)
+        switch = shape.select_switch()(leads_hide_cages=False)
         
         maker.add_at(switch.solid('switch').colour([1, 0.3, 0.1, 1]).at('switch_base'),
                      'switch_hole', 'switch_base')

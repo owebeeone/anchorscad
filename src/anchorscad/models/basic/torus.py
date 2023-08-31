@@ -76,7 +76,7 @@ class Torus(ad.CompositeShape):
         section_sweep_angle_degrees=120,
         path_fn=32,
         fn=64,
-        as_cage=False)
+        hide_cage=False)
     
     EXAMPLE_ANCHORS=(
         ad.surface_args('surface', section_degrees=10, degrees=10),

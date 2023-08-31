@@ -30,7 +30,7 @@ class ButtonWings(ad.CompositeShape):
     winge_cageof_node: ad.Node=ad.Node(ad.cageof, prefix='wings_cage_')
     fn=128
     
-    EXAMPLE_SHAPE_ARGS=ad.args(wings_cage_as_cage=False,
+    EXAMPLE_SHAPE_ARGS=ad.args(wings_cage_hide_cage=False,
                                wing_angle=10,
                                wing_r_inner_size=2,
                                wing_count=4)
@@ -89,7 +89,7 @@ class ButtonCap(ad.CompositeShape):
     wings_node: ad.Node=ad.ShapeNode(ButtonWings)
     engrave_shape: ad.Shape=None
     
-    EXAMPLE_SHAPE_ARGS=ad.args(fn=128, bc_cage_as_cage=False)
+    EXAMPLE_SHAPE_ARGS=ad.args(fn=128, bc_cage_hide_cage=False)
     EXAMPLE_ANCHORS=(ad.surface_args('base'),
                      ad.surface_args('top'),)
     

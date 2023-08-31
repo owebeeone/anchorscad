@@ -62,7 +62,7 @@ class HingeHole(ad.CompositeShape):
             ad.ShapeNode(ad.Cylinder, prefix='cage_'), init=False)
     cage_of_node: ad.Node=ad.CageOfNode()
     
-    EXAMPLE_SHAPE_ARGS=ad.args(fn=256, as_cage=False)
+    EXAMPLE_SHAPE_ARGS=ad.args(fn=256, hide_cage=False)
     EXAMPLE_ANCHORS=(ad.surface_args('base', scale_anchor=.4),)
 
     def build(self) -> ad.Maker:
@@ -126,7 +126,7 @@ class HingeBar3XEndHoles(ad.CompositeShape):
     hinge_bar_shape: HingeBar3X
     cage_of_node: ad.Node=ad.CageOfNode()
     
-    EXAMPLE_SHAPE_ARGS=ad.args(HingeBar3X(fn=128), as_cage=False)
+    EXAMPLE_SHAPE_ARGS=ad.args(HingeBar3X(fn=128), hide_cage=False)
     EXAMPLE_ANCHORS=(ad.surface_args('base', scale_anchor=0.4),
                      ad.surface_args('base_hole', 'base', scale_anchor=0.4))
     
@@ -168,7 +168,7 @@ class HingeBar3XMiddleHole(ad.CompositeShape):
     hinge_bar_shape: HingeBar3X
     cage_of_node: ad.Node=ad.CageOfNode()
     
-    EXAMPLE_SHAPE_ARGS=ad.args(HingeBar3X(fn=128), as_cage=False)
+    EXAMPLE_SHAPE_ARGS=ad.args(HingeBar3X(fn=128), hide_cage=False)
     EXAMPLE_ANCHORS=()
     
     def build(self) -> ad.Maker:
@@ -192,15 +192,15 @@ class Hinge3XTestPrint(ad.CompositeShape):
     Test shape for 3x hinge.
     '''
     bar_node: ad.Node=ad.ShapeNode(HingeBar3X,  
-                                           {'as_cage': 'bar_cage_as_cage'},
+                                           {'hide_cage': 'bar_cage_hide_cage'},
                                            expose_all=True)
     hinge_bar_shape: ad.Shape=ad.dtfield(
             self_default=lambda s: s.bar_node(), init=False)
     sleeves_node: ad.Node=ad.ShapeNode(HingeBar3XEndHoles, 
-                                           {'as_cage': 'bar_ends_as_cage'},
+                                           {'hide_cage': 'bar_ends_hide_cage'},
                                            expose_all=True)
     sleeve_middle_node: ad.Node=ad.ShapeNode(HingeBar3XMiddleHole, 
-                                           {'as_cage': 'bar_middle_as_cage'},
+                                           {'hide_cage': 'bar_middle_hide_cage'},
                                            expose_all=True)
     
     cage_size: tuple=ad.dtfield(
@@ -218,9 +218,9 @@ class Hinge3XTestPrint(ad.CompositeShape):
             doc='Size of plate')
     plate_node: ad.Node=ad.ShapeNode(ad.Box, prefix='plate_')
     
-    EXAMPLE_SHAPE_ARGS=ad.args(as_cage=True,
-                               bar_middle_as_cage=True,
-                               bar_ends_as_cage=True,
+    EXAMPLE_SHAPE_ARGS=ad.args(hide_cage=True,
+                               bar_middle_hide_cage=True,
+                               bar_ends_hide_cage=True,
                                sep=0.1,
                                fn=128)
     EXAMPLE_ANCHORS=()
@@ -285,7 +285,7 @@ class HingeBar(ad.CompositeShape):
     cyl_sleeve_with_key_node: ad.Node=ad.dtfield(ad.ShapeNode(
             SleeveAndKeyway, prefix='sleeve_', exclude=('h',)), init=False)
     
-    EXAMPLE_SHAPE_ARGS=ad.args(fn=32, as_cage=False)
+    EXAMPLE_SHAPE_ARGS=ad.args(fn=32, hide_cage=False)
     EXAMPLE_ANCHORS=()
     
     def build(self) -> ad.Maker:
@@ -343,7 +343,7 @@ class HingeBarSleeveHoles(ad.CompositeShape):
     
     EXAMPLE_SHAPE_ARGS=ad.args(HingeBar(fn=16, seg_count=7, bar_h=50), 
                                side=0, 
-                               as_cage=False)
+                               hide_cage=False)
     EXAMPLE_ANCHORS=(ad.surface_args('base', scale_anchor=0.4),
                      ad.surface_args(('hole', 0), 'base', scale_anchor=0.4))
     
@@ -353,7 +353,7 @@ class HingeBarSleeveHoles(ad.CompositeShape):
                 shape_args=ad.args(
                         HingeBar(fn=16, seg_count=7, bar_h=50), 
                         side=1, 
-                        as_cage=False),
+                        hide_cage=False),
                 anchors=())
         }
     
@@ -423,13 +423,13 @@ class Hinge(ad.CompositeShape):
     A completed hinge 
     '''
     bar_node: ad.Node=ad.ShapeNode(HingeBar,  
-                                           {'as_cage': 'bar_cage_as_cage'},
+                                           {'hide_cage': 'bar_cage_hide_cage'},
                                            expose_all=True)
     hinge_bar_shape: ad.Shape=ad.dtfield(
             self_default=lambda s: s.bar_node(), init=False)
     sleeves_node: ad.Node=ad.ShapeNode(
         HingeBarSleeveHoles, 
-        {'as_cage': 'bar_ends_as_cage'},
+        {'hide_cage': 'bar_ends_hide_cage'},
         exclude=('side',),
         expose_all=True)    
     
@@ -488,7 +488,7 @@ class HingeTestPrint(ad.CompositeShape):
             init=False)
     locator_node: ad.Node=ad.ShapeNode(ad.Box, prefix='locator_')
     
-    EXAMPLE_SHAPE_ARGS=ad.args(as_cage=True,
+    EXAMPLE_SHAPE_ARGS=ad.args(hide_cage=True,
                                sep=0.25,
                                seg_count=7,
                                fn=64)
