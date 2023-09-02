@@ -32,12 +32,13 @@ ENVIRON_NAME = '__ANCHORSCAD_RUNNER_KEY__'
 
 PATH_SEPARATOR = ';' if platform.system() == 'Windows' else ':'
 
-OPENSCAD_FILENAME=openscad_exe_location()
+OPENSCAD_FILENAME_DEV=openscad_exe_location()
 
 def make_openscad_stl_command_line(stl_file, png_file, scad_file, imgsize):
     stl_options = ('-o', stl_file) if stl_file else ()
     png_options = ('-o', png_file) if png_file else ()
-    return (OPENSCAD_FILENAME,) + stl_options + png_options + (
+    dev_options = ('--enable', 'manifold') if OPENSCAD_FILENAME_DEV[1] else ()
+    return (OPENSCAD_FILENAME_DEV[0],) + stl_options + dev_options + png_options + (
         '--autocenter',
         '--view',
         'axes',
