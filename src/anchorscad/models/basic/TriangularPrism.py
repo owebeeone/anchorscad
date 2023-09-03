@@ -16,9 +16,11 @@ class TriangularPrism(ad.CompositeShape):
     anchors.
     '''
     size: tuple
+    skew: float=ad.dtfield(0.0, 
+            'Skew factor, 0.5 will create an isocelies triange 0 and 1 are right angled.')
     
-    EXAMPLE_SHAPE_ARGS=ad.args([30, 10, 3])
-    EXAMPLE_ANCHORS=(ad.surface_args('base'),
+    EXAMPLE_SHAPE_ARGS=ad.args([30, 10, 3], 0.5)
+    EXAMPLE_ANCHORS=(ad.surface_args('base', 0.5),
                      ad.surface_args('face_centre', 1),)
     
     def build(self) -> ad.Maker:
@@ -27,7 +29,7 @@ class TriangularPrism(ad.CompositeShape):
         
         path = (ad.PathBuilder()
             .move([0, 0])
-            .line([0, self.size[0]], 'face1')
+            .line([self.size[1] * self.skew, self.size[0]], 'face1')
             .line([self.size[1], 0], 'face2')
             .line([0, 0], 'face3')
             .build())
@@ -39,9 +41,9 @@ class TriangularPrism(ad.CompositeShape):
         
         return maker
 
-    @ad.anchor('Base of the prism.')
-    def base(self, *args, **kwds):
-        return self.maker.at('prism', 'face3', 1, *args, **kwds)
+    @ad.anchor('Base of the prism corner.')
+    def base(self, r=1, **kwds):
+        return self.maker.at('prism', 'face3', r, **kwds) * ad.ROTY_180
     
     
 # Uncomment the line below to default to writing OpenSCAD files
