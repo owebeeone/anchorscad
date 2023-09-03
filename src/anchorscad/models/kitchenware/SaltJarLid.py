@@ -237,8 +237,45 @@ class HingedLid(ad.CompositeShape):
         maker.add_at(hinge_shape.composite('hinge').at('centre'),
                      'cut_box', 'face_centre', 'top',
                      post=ad.ROTY_90)
-        return maker    
+        return maker
+
+
+@ad.shape
+@ad.datatree
+class HingedLidLabel(ad.CompositeShape):
     
+    hinged_lid_node: ad.Node=ad.ShapeNode(HingedLid)
+    hinged_lid: ad.Maker=ad.dtfield(self_default=lambda s: s.hinged_lid_node())
+
+    label_text: str=ad.dtfield('SALT', 'Label for the model')
+    label_fn: int=ad.dtfield(32, 'Number of facets for the text')
+    label_halign: str=ad.dtfield('centre', 'Horizontal alignment of text')
+    label_depth: float=ad.dtfield(0.3, 'Height of text')
+    label_node: ad.Node=ad.ShapeNode(
+        ad.Text, {'fn': 'label_fn'}, expose_all=True, prefix='label_')
+    label_size: float=ad.dtfield(
+        self_default=lambda s: s.big_lid_w * 0.6,
+        doc='Size of text')
+    label_boss: float=ad.dtfield(0.2, 'Height of boss for label')
+        
+    EXAMPLE_SHAPE_ARGS=ad.args(
+            sep=0.2,
+            hinge_seg_count=14,
+            lid_fn=512,
+            screw_fn=32,
+            fn=128)
+    
+    def build(self) -> ad.Maker:
+        maker = self.hinged_lid.solid('lid').at()
+
+        maker.add_at(self.label_node().solid('text').colour((1, 0, 0)).at('default'),
+                     'big_lid_arc', 0.5, rh=1,
+                     post=ad.ROTY_180 
+                        * ad.ROTX_270 
+                        * ad.tranZ(-self.label_depth + self.label_boss)
+                        * ad.tranY(self.big_lid_w * 0.75))
+        return maker
+
     
 @ad.shape
 @ad.datatree
