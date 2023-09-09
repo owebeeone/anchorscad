@@ -7,7 +7,7 @@ Created on 7 Jan 2021
 from collections.abc import Iterable
 from dataclasses import dataclass, field
 from types import FunctionType
-from typing import List
+from typing import List, Tuple
 
 from frozendict import frozendict
 
@@ -68,7 +68,12 @@ LIST_3_FLOAT = l.list_of(l.strict_float, len_min_max=(3, 3), fill_to_min=0.0)
 LIST_3X2_FLOAT = l.list_of(LIST_2_FLOAT, len_min_max=(3, 3), fill_to_min=None)
 LIST_23X2_FLOAT = l.list_of(LIST_2_FLOAT, len_min_max=(2, 3), fill_to_min=None)
 
+def _vlen2(v):
+    '''Returns the sqaure of the length of a vector.'''
+    return np.sum(v**2)
+
 def _vlen(v):
+    '''Returns the length of a vector.'''
     return np.sqrt(np.sum(v**2))
 
 def _normalize(v):
@@ -273,6 +278,171 @@ class NullMapBuilder:
     def append(self, op: OpBase, point: tuple, count: int=None, t: float=None):
         pass
 
+def _eval_overlapping_range(a, b, tolerance=EPSILON):
+    '''Returns the range of a that overlaps with b. The ranges may be directional,
+    i.e. a may be [0, 10] or [10, 0] and are identical.'''
+    
+    a = a if a[0] < a[1] else (a[1], a[0])
+    b = b if b[0] < b[1] else (b[1], b[0])
+    
+    # If the ranges do not overlap then return None.
+    if b[0] + tolerance > a[1] or b[1] < a[0] + tolerance:
+        return None
+
+    return (max(a[0], b[0]), min(a[1], b[1]))   
+
+@dataclass
+class ColinearSegment:
+    range: np.ndarray
+    direction: np.ndarray  # Unit vector
+    origin: np.ndarray
+    
+def _eval_removed_range(base_range: np.ndarray, remove_range: np.ndarray, tolerance=EPSILON) -> Tuple[np.ndarray]:
+    '''Returns 0, 1 or 2 ranges that are the result of removing the remove_range from
+    the base_range.
+    The ranges must overlap or touch.
+    If the remove range is None or smaller than the tolerance then the base range is returned.
+    '''
+    
+    if remove_range is None or np.abs(remove_range[0] - remove_range[1]) < tolerance:
+        return (base_range,)
+    
+    # If the start of the ranges is the same:
+    if np.abs(remove_range[0] - base_range[0]) < tolerance:
+        # if the end of the remove range is the same or greater than the base range
+        if remove_range[1] - base_range[1] > -tolerance:
+            return ()  # Nothing remains.
+        # The remove range is inside the base range.
+        return (np.array((remove_range[1], base_range[1])),)
+        
+    # If the end of the ranges is the same:
+    if np.abs(remove_range[1] - base_range[1]) < tolerance:
+        # The remove range is inside the base range.
+        return (np.array((base_range[0], remove_range[0])),)
+    
+    return (np.array((base_range[0], remove_range[0])),
+                np.array((remove_range[1], base_range[1])))
+
+   
+@dataclass
+class Segment:
+    points: List[np.ndarray]  # 2 points
+    
+    def __init__(self, points: List[np.ndarray]):
+        self.points = np.array(LIST_2_FLOAT(points))
+
+    def isparallel(self, other: 'Segment', tolerance=EPSILON):
+        '''Returns true if the two segments are parallel.'''
+        return np.abs(np.cross(self.points[1] - self.points[0], 
+                               other.points[1] - other.points[0])) < tolerance
+    
+    def iscolinear(self, other: 'Segment', tolerance=EPSILON):
+        '''Returns true if the two segments are colinear.'''
+        return self.isparallel(other, tolerance) and self.ispointon(other.points[0], tolerance)
+    
+    def ispointon(self, point: np.ndarray, tolerance=EPSILON):
+        '''Returns true if the point is on the segment.'''
+        return np.abs(np.cross(self.points[1] - self.points[0], 
+                               point - self.points[0])) < tolerance
+        
+    def rebuild_segment(self, 
+            ranges: List[np.ndarray], direction: np.ndarray, origin: np.ndarray) -> 'Segment':
+        '''Returns a new segment that is the range of this segment.'''
+        if not ranges:
+            return None # No range left.
+        
+        assert len(ranges) == 1, 'Merge of ranges not implemented yet.'
+        
+        range = ranges[0]
+        
+        points = [origin + direction * range[0], origin + direction * range[1]]
+        
+        return Segment(points)
+        
+    
+    def _remove_coincidence(self, other: 'Segment') -> Tuple['Segment', 'Segment']:
+        '''Removes the coincident part of the segments. This assumes they are colinear'''
+        # The vector referenced to the start of this segment.
+        v = self.points[1] - self.points[0]
+        v_len = _vlen(v)
+        v_dir = v / v_len
+        
+        # The start and ends of the last segment which may overlap.
+        w = other.points - self.points[0]
+    
+        other_range = np.dot(w, v_dir)
+        self_range = np.array([0.0, v_len])
+        overlapping_range = _eval_overlapping_range(self_range, other_range)
+        
+        self_remaining = _eval_removed_range(self_range, overlapping_range)
+        other_remaining = _eval_removed_range(other_range, overlapping_range)
+        
+        new_self = self.rebuild_segment(self_remaining, v_dir, self.points[0])
+        new_other = self.rebuild_segment(other_remaining, v_dir, self.points[0])
+        
+        return new_self, new_other
+    
+    def remove_colinear_segment(self, other: 'Segment', tolerance=EPSILON):
+        '''Return a replacement set of segments.'''
+        
+        # if the segments are not colinear, then no change is needed.
+        if not self.iscolinear(other, tolerance):
+            return self, other
+        
+        segments = self._remove_coincidence(other)
+        
+        return segments
+
+def _remove_zero_length_segments(points: np.ndarray, tolerance=EPSILON) -> np.ndarray:
+    diffs = points[1:] - points[:-1]
+    
+    # find 0 length segments (or segments that are less than tolerance in length)
+    zl_segments = np.sum(diffs * diffs, axis=1) < tolerance * tolerance
+    
+    # If there are no zero length segments then return the points.
+    if not np.any(zl_segments):
+        return points
+    
+    # Reassemble the points without the zero length segments.
+    new_points = [points[0]]
+    for i in range(len(points) - 1):
+        if not zl_segments[i]:
+            new_points.append(points[i + 1])
+    
+    return np.array(new_points)
+    
+
+def clean_polygons(points: np.ndarray, tolerance=EPSILON) -> np.ndarray:
+    '''Returns a cleaned polygon. Removes colinear segments.'''
+    
+    points = _remove_zero_length_segments(points, tolerance)
+    
+    last_len = 0
+    
+    # Remove colinear segments until there are no more to remove.
+    while len(points) != last_len:
+        
+        last_len = len(points)
+        if last_len < 3:
+            return points
+        
+        last = Segment(points[-2:][::-1])
+        first = Segment(points[:2])
+
+        new_first, new_last = first.remove_colinear_segment(last)
+        
+        if not new_first:
+            points = points[1:]
+        else:
+            points[0:2] = new_first.points
+            
+        if not new_last:
+            points = points[:-1]
+        else:
+            points[-2:] = new_last.points[::-1]
+            
+    return points
+
 
 @dataclass(frozen=True)
 class Path():
@@ -336,9 +506,18 @@ class Path():
             meta_data, map_builder_type=MapBuilder)
     
     def polygons(self, meta_data, map_builder_type=None):
-        points, ranges, _ = self.polygons_with_map_ops(meta_data)
+        points, ranges, _ = self.polygons_with_map_ops(meta_data, map_builder_type)
         if ranges:
             return points, ranges
+        return (points,)
+    
+    def cleaned_polygons(self, meta_data, map_builder_type=None):
+        points, ranges, _ = self.polygons_with_map_ops(meta_data, map_builder_type)
+        if ranges:
+            return points, ranges
+        
+        points = clean_polygons(points)
+
         return (points,)
     
     def svg_path_render(self, svg_model):
@@ -1517,7 +1696,7 @@ class BasicPathGenerator(PathGenerator):
     polygons: tuple=field(init=False)
     
     def get_r_generator(self, metadata):
-        self.polygons = self.path.polygons(metadata)
+        self.polygons = self.path.cleaned_polygons(metadata)
         if len(self.polygons) == 1:
             self.polygons = self.polygons + (None,)
         fn = metadata.fn
@@ -1739,7 +1918,7 @@ class LinearExtrude(ExtrudedShape):
             return self.render_as_linear_extrude(renderer)
 
     def render_as_linear_extrude(self, renderer):
-        polygon = renderer.model.Polygon(*self.path.polygons(
+        polygon = renderer.model.Polygon(*self.path.cleaned_polygons(
             self if self.fn else renderer.get_current_attributes()))
         params = core.fill_params(
             self, 
@@ -1762,7 +1941,7 @@ class LinearExtrude(ExtrudedShape):
             for i in range(1, slices + 1))
 
     def render_as_polyhedron(self, renderer):
-        points_paths = self.path.polygons(
+        points_paths = self.path.cleaned_polygons(
             self if self.fn else renderer.get_current_attributes())
         builders = PolyhedronBuilder.create_builders_from_paths(points_paths)
         
@@ -1948,7 +2127,7 @@ class RotateExtrude(ExtrudedShape):
 
     def render_rotate_extrude(self, renderer):
         polygon = renderer.model.Polygon(
-            *self.path.polygons(self.select_path_attrs(renderer)))
+            *self.path.cleaned_polygons(self.select_path_attrs(renderer)))
         params = core.fill_params(
             self, 
             renderer, 
@@ -1984,7 +2163,7 @@ class RotateExtrude(ExtrudedShape):
         
     def render_as_polyhedron(self, renderer):
         builders = PolyhedronBuilder.create_builders_from_paths(
-            self.path.polygons(self.select_path_attrs(renderer)))
+            self.path.cleaned_polygons(self.select_path_attrs(renderer)))
         
         rotations, transforms = self.generate_transforms(renderer)
         pos_dir = rotations < 0
