@@ -42,11 +42,13 @@ class ExtrudeTest(TestCase):
     def testColinearRemoveal_doubleOverlap(self):
         path = (extrude.PathBuilder()
                 .move([10, 0])
+                .line([20, 0])
                 .line([-10, 0])
                 .line([-10, 10])
                 .line([10, 10])
                 .line([10, 0])
                 .line([20, 0])
+                .line([10, 0])
                 .build())
         
         #path = path.transform(ad.rotZ(45) * ad.translate([1, 1, 0]))
@@ -57,9 +59,9 @@ class ExtrudeTest(TestCase):
         
         iterable_assert(self.assertAlmostEqual, removed,
                         ([10.,  0.],
+                        [-10.,  0.],
+                        [-10.,  10.],
                         [10.,  10.],
-                        [20.,  10.],
-                        [20.,  0.],
                         [10.,  0.]))
 
 

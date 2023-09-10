@@ -6,3 +6,4 @@ from .fabricate_lib import *
 from .linear import *
 from .renderer import *
 from .path_ops import *
+from .path_utils import *

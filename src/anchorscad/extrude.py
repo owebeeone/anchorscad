@@ -13,6 +13,7 @@ from frozendict import frozendict
 
 import anchorscad.core as core
 import anchorscad.linear as l
+from anchorscad.path_utils import remove_colinear_points
 import numpy as np
 import pyclipper as pc
 import traceback as tb
@@ -291,12 +292,6 @@ def _eval_overlapping_range(a, b, tolerance=EPSILON):
 
     return (max(a[0], b[0]), min(a[1], b[1]))   
 
-@dataclass
-class ColinearSegment:
-    range: np.ndarray
-    direction: np.ndarray  # Unit vector
-    origin: np.ndarray
-    
 def _eval_removed_range(base_range: np.ndarray, remove_range: np.ndarray, tolerance=EPSILON) -> Tuple[np.ndarray]:
     '''Returns 0, 1 or 2 ranges that are the result of removing the remove_range from
     the base_range.
@@ -393,29 +388,11 @@ class Segment:
         
         return segments
 
-def _remove_zero_length_segments(points: np.ndarray, tolerance=EPSILON) -> np.ndarray:
-    diffs = points[1:] - points[:-1]
-    
-    # find 0 length segments (or segments that are less than tolerance in length)
-    zl_segments = np.sum(diffs * diffs, axis=1) < tolerance * tolerance
-    
-    # If there are no zero length segments then return the points.
-    if not np.any(zl_segments):
-        return points
-    
-    # Reassemble the points without the zero length segments.
-    new_points = [points[0]]
-    for i in range(len(points) - 1):
-        if not zl_segments[i]:
-            new_points.append(points[i + 1])
-    
-    return np.array(new_points)
-    
 
 def clean_polygons(points: np.ndarray, tolerance=EPSILON) -> np.ndarray:
     '''Returns a cleaned polygon. Removes colinear segments.'''
     
-    points = _remove_zero_length_segments(points, tolerance)
+    points = remove_colinear_points(points, tolerance)
     
     last_len = 0
     
@@ -440,6 +417,8 @@ def clean_polygons(points: np.ndarray, tolerance=EPSILON) -> np.ndarray:
             points = points[:-1]
         else:
             points[-2:] = new_last.points[::-1]
+            
+        points = remove_colinear_points(points, tolerance)
             
     return points
 
