@@ -182,7 +182,8 @@ class TorusChain(ad.CompositeShape):
         r_hole=10,
         r_section=4,
         path_fn=32,
-        fn=32)
+        metadata_fn=32,
+        fn=128)
     
     EXAMPLE_ANCHORS=(ad.surface_args(
             'surface', section_degrees=10, degrees=10),)
@@ -201,6 +202,6 @@ class TorusChain(ad.CompositeShape):
         return maker
 
 
-MAIN_DEFAULT=ad.ModuleDefault(True)
+MAIN_DEFAULT=ad.ModuleDefault(all=True)
 if __name__ == "__main__":
     ad.anchorscad_main(False)
