@@ -54,6 +54,7 @@ class Segments(object):
 class SvgPathRenderer(object):
     '''Render visitor/builder for anchorscad.Path. Creates an SVG path string.'''
     last_position: np.array = None
+    is_path_closed: bool = True
     _builder: list = dt.dtfield(default=None, init=False, repr=False)
     _paths: list = dt.dtfield(default_factory=list, init=False)
     _segs: list = dt.dtfield(default_factory=Segments, init=False)
@@ -72,7 +73,7 @@ class SvgPathRenderer(object):
     def _finish_path(self):
         if self._builder:
             self._paths.append(' '.join(self._builder))
-            self._builder = None
+            #self._builder = None
 
     def moveto(self, end_point, name, trace=None):
         # Starting a new path means closing the current if any.
@@ -114,7 +115,8 @@ class SvgPathRenderer(object):
     def close(self):
         '''Closes the path by creating a line from the last added point to the
         previous moveto() position.'''
-        self._builder.append('Z')
+        if self.is_path_closed:
+            self._builder.append('Z')
         self._finish_path()
         self.last_position = None
 

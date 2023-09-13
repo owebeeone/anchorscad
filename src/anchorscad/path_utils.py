@@ -43,7 +43,7 @@ def remove_colinear_points(points: np.ndarray, tolerance: float=EPSILON) -> np.n
     '''
     # Remove duplicate adjacent points first. This algorithm below assumes that there are no
     # duplicate adjacent points.
-    #points = remove_duplicate_adjacent_points(points, tolerance=tolerance)
+    points = remove_duplicate_adjacent_points(points, tolerance=tolerance)
     
     # Find where the determinant is larger than the tolerance.
     tolerance_squared = tolerance ** 2
