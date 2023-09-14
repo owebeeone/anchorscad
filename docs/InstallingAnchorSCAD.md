@@ -12,7 +12,7 @@ Non [PyPi PIP](https://pypi.org/project/pip/) packages required are:
 - [OpenSCAD](https://openscad.org/) 2021.01 or higher
 - [Graphviz](https://graphviz.org/) 2.30.2 or higher (likely works with earlier versions)
 
-[Git](https://git-scm.com/) is also required for downloading the [AnchorSCAD](https://bitbucket.org/owebeeone/anchorscad/src/master/) and [PythonOpenScad](https://bitbucket.org/owebeeone/pythonopenscad/src/master/) repositories and also for contributing any models to [AnchorSCAD](https://bitbucket.org/owebeeone/anchorscad/src/master/)‘s .models package or bug fixes or improvements.
+[Git](https://git-scm.com/) is also required for downloading the [AnchorSCAD](https://github.com/owebeeone/anchorscad.git) and [PythonOpenScad](https://github.com/owebeeone/pythonopenscad.git) repositories and also for contributing any models to [AnchorSCAD](https://github.com/owebeeone/anchorscad.git)‘s .models package or bug fixes or improvements.
 
 It is highly recommended that a Python IDE be used. While not endorsing any IDE in particular, I have found LiClipse (or Eclipse + Pydev) and VS Code work sufficiently well. An old fashioned simple editor and command line execution of shape modules may be used if that is a preference.
 ## Linux (Debian, Ubuntu, Raspberry Pi OS)
