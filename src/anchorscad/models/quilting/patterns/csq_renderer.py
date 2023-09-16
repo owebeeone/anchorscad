@@ -6,7 +6,7 @@
 
 import anchorscad.datatrees as dt
 import numpy as np
-from src.anchorscad.svg_renderer import Segments, Segment
+from anchorscad.svg_renderer import Segments, Segment
 
 
 @dt.datatree

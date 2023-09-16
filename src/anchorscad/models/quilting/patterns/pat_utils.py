@@ -4,7 +4,7 @@ Quilt pattern utilities.
 
 import anchorscad as ad
 import anchorscad.svg_renderer as svgr
-from src.anchorscad.models.quilting.patterns.csq_renderer import CsqPathRenderer
+from anchorscad.models.quilting.patterns.csq_renderer import CsqPathRenderer
 import argparse as ap
 from dataclasses import dataclass, field
 from typing import List
