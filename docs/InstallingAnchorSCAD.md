@@ -26,7 +26,7 @@ On Linux (Debian, Ubuntu, Raspberry Pi etc based distros), the following command
 	git clone https://github.com/owebeeone/anchorscad.git
 	cd anchorscad
 	git clone https://github.com/owebeeone/pythonopenscad.git
- pip3 install -r src/anchorscad/requirements.txt
+ 	pip3 install -r src/anchorscad/requirements.txt
 
 ## Windows
 Download and install the latest versions of:
