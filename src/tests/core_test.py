@@ -155,7 +155,7 @@ class CoreTest(unittest.TestCase):
         self.write(maker, 'Coordinates')
 
     def testAnnotated(self):
-        coordinates = AnnotatedCoordinates(Coordinates())
+        coordinates = AnnotatedCoordinates(coordinates=Coordinates())
         maker = coordinates.solid('coordinates').fn(27).at('origin')
         self.write(maker, 'AnnotatedCoordinates')
         
@@ -410,5 +410,5 @@ class CoreTest(unittest.TestCase):
         self.write(maker, 'rotAlign')
 
 if __name__ == "__main__":
-    #import sys;sys.argv = ['', 'Test.testName']
+    # import sys;sys.argv = ['', 'CoreTest.testAnnotated']
     unittest.main()

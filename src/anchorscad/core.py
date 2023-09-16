@@ -22,6 +22,7 @@ from abc import abstractmethod
 from anchorscad import linear as l
 from anchorscad.datatrees import Node, BoundNode, datatree, dtfield,\
                                  METADATA_DOCS_NAME, _field_assign, get_injected_fields
+from anchorscad.colours import Colour
 from anchorscad.svg_renderer import HtmlRenderer
 import numpy as np
 import pythonopenscad as posc
@@ -198,15 +199,6 @@ def inner_args(*args, scale_anchor=None, **kwds):
     '''Defines an instance of an anchor example for anchors inside an object.'''
     return AnchorArgs((inner_anchor_renderer, (args, kwds)),
                       scale_anchor=scale_anchor)
-
-@dataclass(frozen=True)
-class Colour(object):
-    value: tuple
-    
-    def __init__(self, value):
-        value = value.value if isinstance(value, Colour) else value
-        object.__setattr__(
-            self, 'value', tuple(posc.VECTOR3OR4_FLOAT(value)))
 
 def fn_field(fn=None):
     return dtfield(fn, 'fixed number of segments. Overrides fa and fs')
@@ -2024,6 +2016,7 @@ class AnnotatedCoordinates(CompositeShape):
     hide_y: bool=dtfield(self_default=lambda s: not 'y' in s.coord_labels)
     hide_z: bool=dtfield(self_default=lambda s: not 'z' in s.coord_labels)
     coordinates_node: Coordinates=dtfield(init=False, default=ShapeNode(Coordinates))
+    coordinates: Coordinates=dtfield(init=True, self_default=lambda s: s.coordinates_node())
     
     EXAMPLE_SHAPE_ARGS=args(label='This is label')
     
