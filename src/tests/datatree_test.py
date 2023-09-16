@@ -8,6 +8,7 @@ import unittest
 from anchorscad.datatrees import datatree, dtargs, override, Node, \
     dtfield, field_docs, BindingDefault, get_injected_fields
 from dataclasses import dataclass, field
+import builtins
 
 @datatree
 class LeafType1():
@@ -659,6 +660,16 @@ class Test(unittest.TestCase):
             f.write(injected.generate_html_page(lambda x: str(x)))
 
 
+    def test_equal(self):
+        
+        @datatree(frozen=True)
+        class A:
+            value: tuple=dtfield(default=(0, 0, 0, 1), compare=True)
+            
+            def __init__(self, x) -> None:
+                builtins.object.__setattr__(self, 'value', x)
+                
+        self.assertNotEqual(A((1, 2, 3, 6)), A((1, 2, 3, 4)))
 
 
 if __name__ == "__main__":

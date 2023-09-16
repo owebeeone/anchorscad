@@ -133,6 +133,10 @@ class ColourTest(unittest.TestCase):
         self.assertRaises(AssertionError, Colour, b=1, hsv=(0, 0, 1, 1))
         self.assertRaises(AssertionError, Colour, 1, 1, 1, 1, hsv=(0, 0, 1, 1))
         
+    def test_copy(self):
+        c1 = Colour('red')
+        self.assertEqual(c1, Colour(c1))
+        
 
 if __name__ == "__main__":
     #import sys;sys.argv = ['', 'Test.testName']

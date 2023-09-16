@@ -268,8 +268,9 @@ class ModelAttributes(object):
         d[fname] = value
         return ModelAttributes(**d)
     
-    def with_colour(self, colour):
-        return self._with('colour', None if colour is None else Colour(colour))
+    def with_colour(self, *colour_args, **colour_kwds):
+        return self._with('colour', \
+            Colour(*colour_args, **colour_kwds) if colour_args or colour_kwds else None)
     
     def with_fa(self, fa):
         return self._with('fa', fa)
@@ -419,9 +420,10 @@ class NamedShapeBase(object):
             attributes = EMPTY_ATTRS
         return attributes
         
-    def colour(self, colour):
+    def colour(self, *colour_args, **colour_kwds):
         return self._with(
-            'attributes', self.get_attributes_or_default().with_colour(colour))
+            'attributes', 
+            self.get_attributes_or_default().with_colour(*colour_args, **colour_kwds))
     
     def fa(self, fa):
         return self._with(
@@ -1058,7 +1060,7 @@ class CageOfProperties:
     '''
     
     name: str='cage'
-    colour: tuple=(0.0, 1.0, 0.35, 0.4)
+    colour: object=(0.0, 1.0, 0.35, 0.4)
     
     def apply(self, shape, hide_cage, name=None):
         '''Apply this object's properties to shape.
@@ -1964,9 +1966,9 @@ class CoordinatesCage(Shape):
 class Coordinates(CompositeShape):
     
     overlap: float=3.0
-    colour_x: Colour=Colour([1, 0, 0])
-    colour_y: Colour=Colour([0, 1, 0])
-    colour_z: Colour=Colour([0, 0, 1])
+    colour_x: Colour=Colour('red')
+    colour_y: Colour=Colour('green')
+    colour_z: Colour=Colour('blue')
     hide_x: bool=False
     hide_y: bool=False
     hide_z: bool=True
