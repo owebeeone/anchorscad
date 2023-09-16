@@ -3,9 +3,12 @@
 from dataclasses import dataclass
 import numbers
 import numpy as np
+import colorsys
 
 @dataclass(frozen=True)
 class Colour:
+    '''A colour class that can be used to specify rgb colours and convert them
+    to and from hsv.'''
     
     value: tuple = (0, 0, 0, 1)
 
@@ -162,15 +165,61 @@ class Colour:
         'transparent': (0/255, 0/255, 0/255, 0/255),
     }
     
-    def __init__(self, corr: object, g: float=None, b: float=None, a: float=None):
+    def __init__(self, 
+                 corr: object=None, 
+                 g: float=None, 
+                 b: float=None, 
+                 a: float=None, 
+                 hsv: tuple=None):
+        '''Create a colour from a colour name, a hex colour specifier, RGB tuple, 
+        RGBA tuple, or HSV tuple.
         
-        if isinstance(corr, str):
+        Raw Colours are specified with floats between 0 and 1 or a tuple of 3 or 4 floats.
+        e.g Colour(1, 0, 0) == Colour("red") and Colour((1, 0, 0)) == Colour("red")
+        
+        An alpha value can be specified as a separate argument or as the 4th element of
+        an RGBA tuple.
+        e.g. Colour(1, 0, 0, 0.5) == Colour("red", 0.5) == Colour((1, 0, 0), a=0.5)
+        
+        It is an error to specify both an alpha value and an alpha value in the tuple.
+        
+        HSV colour values can be specified as a tuple of 3 or 4 floats and passed in
+        as the parameter hsv.  If hsv is specified, all other parameters must be None
+        except for 'a' (alpha) whcih can be specified if the hsv tuple has 3 elements.
+        e.g. Colour(hsv=(0, 1, 1)) == Colour("red") 
+             Colour(hsv=(0, 1, 1, 0.5)) == Colour("red", 0.5)
+             Colour('red').to_hsv() == (0, 1, 1, 1)
+        
+        Args:
+          corr: A colour name, a hex colour specifier, RGB tuple, RGBA tuple or red value
+          g: The green value (or alpha value if corr is a tuple and a is not specified.)
+          b: The blue value
+          a: The alpha value
+          hsv: A tuple of 3 or 4 floats representing the HSV values of the colour.
+          
+        '''
+        if hsv is not None:
+            assert isinstance(hsv, tuple) and len(hsv) == 3 or len(hsv) == 4, \
+                "hsv must be a tuple of 3 or 4 elements"
+            assert all(isinstance(v, numbers.Number) for v in hsv), \
+                'All entries must be numbers'
+            assert corr is None and g is None and b is None, \
+                "hsv and r, g and b cannot be specified together"
+            rgb = colorsys.hsv_to_rgb(*hsv[:3])
+            if len(hsv) == 4:
+                assert a is None, \
+                    'Alpha specified twice, once as a={a} and once as hsva={hsv}'
+                a = hsv[3]        
+        elif isinstance(corr, str):
             rgb = self.COLOUR_MAP.get(corr, None)
+            if rgb is None and corr.startswith('#'):  # hex color
+                rgb = self.parse_hex_color(corr)
             assert rgb is not None, f'Colour {corr} not found'
             if not g is None and a is None and len(rgb) == 3:
                 # Assume g is alpha
                 a , g = g, a
-            assert g is None and b is None, f'Colour name specified "{corr}" and also g={g} and b={b} not alloed.'
+            assert g is None and b is None, \
+                f'Colour name specified "{corr}" and also g={g} and b={b} not alloed.'
         elif isinstance(corr, Colour):
             rgb = corr.value
             assert g is None and b is None, 'Too many arguments'
@@ -196,7 +245,7 @@ class Colour:
             
         if len(rgb) == 3:
             if a is None:
-                a = 1
+                a = 1.0
             else:
                 assert isinstance(a, numbers.Number), \
                     f'Alpha must be a number, not {type(a)}'
@@ -210,6 +259,28 @@ class Colour:
         
         object.__setattr__(self, 'value', rgb)    
         assert len(self.value) == 4, 'RGBA tuple must have 4 elements'
+    
+    @classmethod
+    def parse_hex_color(c, hex_color: str) -> tuple:
+        '''Parse a hex color string into an RGB or RGBA tuple'''
+        hex_color = hex_color.lstrip('#')
+        length = len(hex_color)
+        if length == 3 or length == 4:  # short form
+            hex_color = ''.join([c*2 for c in hex_color])
+            length = len(hex_color)
+        
+        # Check length.
+        assert length == 6 or length == 8, f'Invalid hex color: {hex_color}'
+
+        try:            
+            rgb = tuple(int(hex_color[i:i+2], 16)/255 for i in range(0, 6, 2))
+            if length == 8:  # alpha specified
+                a = int(hex_color[6:8], 16)/255
+                rgb += (a,)
+        except ValueError as e:
+            raise AssertionError(str(e))
+        
+        return rgb
 
     def alpha(self, a: float):
         '''Return a new colour with the same RGB values but with the specified alpha'''
@@ -238,4 +309,11 @@ class Colour:
         assert 0 <= weight <= 1, 'Weight must be between 0 and 1'
         return Colour(*np.array(self.value) * (1 - weight) + np.array(other.value) * weight)     
 
-
+    def to_hex(self):
+        '''Return a hex string representation of this colour'''
+        return '#' + ''.join(f'{int(v*255):02x}' for v in self.value)
+    
+    def to_hsv(self):
+        '''Return a HSV representation of this colour'''
+        r, g, b, a = self.value
+        return colorsys.rgb_to_hsv(r, g, b) + (a,)
