@@ -116,7 +116,7 @@ class ModelGroup:
         for model in self.models:
             model.export_build(build)
 
-        return generate_pretty_xml(root)
+        return generate_pretty_xml(root, False)
     
     def add_new_model_by_tris(self, model_id, vertices, triangles, colour_group):
         self.models.append(Model(model_id, colour_group.id, vertices, triangles, colour_group))
@@ -210,7 +210,6 @@ def stl_to_3mf(stl_files, output_file):
     
     xmlstr = models.generate_xml()
     
-    print(xmlstr)
     with ZipFile(output_file, 'w') as zipfile:
         zipfile.writestr('_rels/.rels', RELS)
         zipfile.writestr('[Content_Types].xml', CONTENT_TYPES)
