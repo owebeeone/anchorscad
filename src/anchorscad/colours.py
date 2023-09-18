@@ -311,7 +311,9 @@ class Colour:
 
     def to_hex(self):
         '''Return a hex string representation of this colour'''
-        return '#' + ''.join(f'{int(v*255):02x}' for v in self.value)
+        if self.value[3] >= 255 / 255.9999:
+            return '#' + ''.join(f'{int(v*255.9999):02x}' for v in self.value[:3])
+        return '#' + ''.join(f'{int(v*255.9999):02x}' for v in self.value)
     
     def to_hsv(self):
         '''Return a HSV representation of this colour'''

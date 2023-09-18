@@ -29,10 +29,10 @@ class RoundedSquarePlateWithText(ad.CompositeShape):
     label_size: float = ad.dtfield(30, doc='The size of the text')
     label_valign: str = ad.dtfield("center", doc='The vertical alignment of the text')
     label_halign: str = ad.dtfield("center", doc='The horizontal alignment of the text')
-    label_node: ad.Node = ad.dtfield(ad.ShapeNode(ad.Text, prefix="label_"))
     label_font: str = ad.dtfield("Ariel", doc='The font of the label')
     label_anchor_point: str = ad.dtfield("front", doc='The anchor point of the label')
     label_horiz_fixer_size: float = ad.dtfield((0.1, 0.1, 0.1), doc='The size of the horizontal fixer')
+    label_node: ad.Node = ad.dtfield(ad.ShapeNode(ad.Text, prefix="label_"))
     
     cage_size: tuple = ad.dtfield(self_default=lambda s: (
         s.plate_size[0], 
