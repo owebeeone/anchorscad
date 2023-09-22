@@ -61,8 +61,9 @@ complex relationships that require a large number of parameters.
 '''
 
 from dataclasses import dataclass, field, Field, MISSING
-from typing import List, Dict
+from typing import AbstractSet, Any, List, Dict
 from frozendict import frozendict
+from sortedcollections import OrderedSet
 from types import FunctionType
 import inspect
 import builtins
@@ -100,6 +101,21 @@ class IllegalMetadataClass(Exception):
 
 class SpecifiedMultipleDefaults(Exception):
     '''Attempting to specify default and self_default parameters.'''
+    
+class _OrderedSet(OrderedSet):
+    
+    def union(self, other):
+        result = _OrderedSet(self)
+        for item in other:
+            result.add(item)
+        return result
+    
+    def intersection(self, other):
+        result = _OrderedSet()
+        for item in self:
+            if item in other:
+                result.add(item)
+        return result
 
 
 def _update_name_map(clz, name_map, from_name, to_value, description):
@@ -121,8 +137,8 @@ def _update_name_multi_map(clz, name_map, from_name, to_value):
 def _dupes_and_allset(itr):
     '''Returns a tuple containing a set of duplicates and a set of all non 
     duplicated items in itr.'''
-    seen = set()
-    return set((x for x in itr if x in seen or seen.add(x))), seen
+    seen = _OrderedSet()
+    return _OrderedSet((x for x in itr if x in seen or seen.add(x))), seen
 
 
 @dataclass
@@ -338,20 +354,22 @@ class Node:
                 f'Field names have multiple specifiers {dupes!r}')
 
         params = self.init_signature.parameters
-        init_fields = set(params.keys())
+        init_fields = _OrderedSet(params.keys())
         if self.expose_all:
             # Add all the fields not already specified.
-            all_fields = set(name
+            all_fields = _OrderedSet(name
                              for name in init_fields
                              if name != OVERRIDE_FIELD_NAME and not name in exclude)
-            fields_specified = set(fields_specified).union(
+            fields_specified = _OrderedSet(fields_specified).union(
                 all_fields - all_specified)
+
         elif expose_if_avail:
-            all_fields = set(name
+            all_fields = _OrderedSet(name
                              for name in init_fields
                              if name != OVERRIDE_FIELD_NAME)
-            fields_specified = set(fields_specified).union(
+            fields_specified = _OrderedSet(fields_specified).union(
                 all_fields.intersection(expose_if_avail) - all_specified)
+
         expose_dict = {}
         expose_rev_dict = {}
 

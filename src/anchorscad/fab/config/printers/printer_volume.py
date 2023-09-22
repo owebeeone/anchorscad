@@ -14,6 +14,13 @@ class BuildVolume(ad.CompositeShape):
     plate_depth: float = ad.dtfield(4, doc='Depth of the build plate in mm')
     plate_colour: str = ad.dtfield(ad.Colour('brown', 0.3), doc='Colour of the build plate')
     
+    front_label_text: str = ad.dtfield('Front', doc='Text to display on the front of the build volume')
+    front_label_size: float = ad.dtfield(40, doc='Size of the front label text in mm')
+    front_label_halign: str = ad.dtfield('centre', doc='Horizontal alignment of the front label text')
+    front_label_valign: str = ad.dtfield('top', doc='Vertical alignment of the front label text')
+    front_label_node: ad.Node = ad.dtfield(
+        ad.ShapeNode(ad.Text, prefix='front_label_'))
+    
     EXAMPLE_SHAPE_ARGS = ad.args(Mk3)
     
     EPSILON = 0.005  # To avoid Z-fighting
@@ -29,6 +36,10 @@ class BuildVolume(ad.CompositeShape):
                      .at('face_centre', 'top', post=ad.ROTX_180 * ad.tranZ(-self.EPSILON)), 
                      'volume', 'face_centre', 'base')
         
+        font_text = self.front_label_node()
+        maker.add_at(font_text.solid('front_label').at('default'), 
+                     'volume', 'face_edge', 'front', 0, post=ad.ROTX_270 * ad.tranZ(-10))
+        
         return maker
     
     @ad.anchor('The default model origin is the center of the build volume')
@@ -39,8 +50,8 @@ class BuildVolume(ad.CompositeShape):
 @ad.shape
 @ad.datatree
 class BuildVolumeVisual(ad.CompositeShape):
+    '''Build volume model for a 3D printer and a shape rendered at the model_origin.'''
     
-    printer: PrinterConfig = ad.dtfield(doc='Configuration for the printer')
     build_volume: ad.Node = ad.dtfield(
         ad.ShapeNode(BuildVolume), doc='Build volume to render')
     
@@ -48,13 +59,20 @@ class BuildVolumeVisual(ad.CompositeShape):
         default_factory=lambda: ad.Cone.example()[0],
         doc='Shape to render in the build volume')
     
-    EXAMPLE_SHAPE_ARGS = ad.args(Mk3, model_to_render=ad.Cone.example()[0])
+    base_anchor: ad.AnchorArgs = ad.dtfield(
+        ad.surface_args('base'), 
+        doc='Anchor point for the base of the build volume')
     
+    EXAMPLE_SHAPE_ARGS = ad.args(Mk3, 
+                                 model_to_render=ad.Box.example()[0],
+                                 base_anchor=ad.surface_args('face_centre', 'base'))
     
     def build(self) -> ad.Maker:
         maker = self.build_volume().solid('volume').at()
         
-        maker.add_at(self.model_to_render.solid('model').at('base'), 'model_origin')
+        maker.add_at(
+            self.model_to_render.solid('model').at(anchor=self.base_anchor), 
+            'model_origin')
         
         return maker
     

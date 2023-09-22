@@ -5,4 +5,5 @@ dataclasses_json
 debugpy
 dill
 sortedcontainers
+sortedcollections
 graphviz
