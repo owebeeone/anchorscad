@@ -1358,7 +1358,7 @@ class AnchorsBuilder():
 def _build_args_doc(clz, init_only=True):
     fields = getattr(clz, '__dataclass_fields__', None)
     if fields is None:
-        return None
+        return None, None
     with_docs = '\n'.join(f'    {n}: {f.metadata[METADATA_DOCS_NAME].get_doc()}'
                      for n, f in fields.items()
                      if f.metadata 
@@ -1374,12 +1374,18 @@ def _build_args_doc(clz, init_only=True):
                      )
     return with_docs, wo_docs
 
-def  shape(clazz_or_name=None, /, *, name=None, level=10):
+def shape(clazz_or_name=None, /, *, name=None, level=10):
+    '''Decorator for shape classes.
+    This finds and registers all @anchor functions in the class.
+    If level is provided, it is used as the selector for which shapes examples are
+    built when runnin anchorscad_runner.'''
+    
     if isinstance(clazz_or_name, str):
         name = clazz_or_name
         clazz_or_name = None
     
     def decorator(clazz):
+        '''Actual decorator function for @shape.'''
         builder = AnchorsBuilder(name, level)
         for func_name in dir(clazz):
             if func_name.startswith("__"):
@@ -1405,6 +1411,7 @@ def  shape(clazz_or_name=None, /, *, name=None, level=10):
             clazz.__doc__ = curr_doc + 'Other args:\n    ' + args_no_doc
             
         return clazz
+    
     if clazz_or_name is None:
         return decorator
     
@@ -1417,6 +1424,11 @@ class FabricatorParams:
 
 
 def fabricator(clazz=None, /, *, level=10):
+    '''Decorator for fabricator classes.
+    Fabricator classes are used to generate shapes that can be used as buildable
+    shapes. They can be ready to slice projects and can be used to invoke
+    OpenSCAD and slicers.'''
+    
     def wrap(clazz):
         clazz.anchorscad_fabricator = FabricatorParams(level)
         return clazz
@@ -1428,6 +1440,7 @@ def fabricator(clazz=None, /, *, level=10):
 
     # We're called as @datatree without parens.
     return wrap(clazz)
+
 
 
 @shape
