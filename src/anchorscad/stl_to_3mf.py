@@ -76,17 +76,17 @@ class Model:
 import xml.dom.minidom
 
 def generate_pretty_xml(root, do_pretty=True):
+    
+    if do_pretty:
+        ET.indent(root)
+        
     xml_string = ET.tostring(
             root, 
             encoding='utf-8', 
             method='xml', 
             xml_declaration=True
         ).decode()
-    
-    if do_pretty:
-        dom = xml.dom.minidom.parseString(xml_string)
-        return dom.toprettyxml(indent="  ")
-    
+
     return xml_string
 
 
@@ -218,9 +218,11 @@ def stl_to_3mf(stl_files, output_file):
     return 0
 
 def main():
-    assert len(sys.argv) > 3, 'Usage: stl_to_3mf.py {<stl file>} <output file>'
-    files = sys.argv[1:-1]
-    outfile = sys.argv[-1]
+    argv = sys.argv
+    # argv= ('stl_to_3mf.py', 'test2.stl', 'test2.stl', 'test2x3.3mf')
+    assert len(argv) >= 3, 'Usage: stl_to_3mf.py {<stl file>} <output file>'
+    files = argv[1:-1]
+    outfile = argv[-1]
     status = stl_to_3mf(files, outfile)
     exit(status)
 
