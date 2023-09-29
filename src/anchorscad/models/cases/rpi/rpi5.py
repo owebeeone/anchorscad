@@ -7,6 +7,9 @@ Created on 29 Sep 2023
 
 WARNING: THIS HAS NOT BEEN TESTED. THIS IS NOT GUARANTEED TO WORK.
 
+The link to the Raspberry Pi 5 product brief is here:
+https://datasheets.raspberrypi.com/rpi5/raspberry-pi-5-product-brief.pdf
+(where the dimensions were used to configure the outline model)
 
 '''
 
