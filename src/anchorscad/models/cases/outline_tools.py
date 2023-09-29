@@ -85,6 +85,13 @@ ETHERNET = ShapeFactory(
     OBOX_ANCHOR, 
     box_expander([0.3] * 3))
 
+POWER_SW = ShapeFactory(
+    core.Cylinder, core.args(r=2, h=4), 
+    [0, 2.7, 1], 
+    CYL_ANCHOR, 
+    OCYL_ANCHOR, 
+    cyl_expander(1))
+
 USBA=ShapeFactory(
     core.Box, core.args([15,  17.5, 16.4]), 
     [0, 3.0, 0], 
@@ -142,10 +149,25 @@ CPU_PACKAGE=ShapeFactory(
     IBOX_ANCHOR, 
     no_op)
 
+CPU_PACKAGE_PI5=ShapeFactory(
+    core.Box, 
+    core.args([17,  17, 2.4]),
+    [0, 0, 0], 
+    core.args('face_edge', 1, 0, 1), 
+    IBOX_ANCHOR, 
+    no_op)
+
 HEADER_100=ShapeFactory(
     core.Box, 
     core.args([51,  5.1, 8.7]), [0, -1.75, 0], 
     core.args('face_edge', 1, 0, 1), 
+    IBOX_ANCHOR, 
+    no_op)
+
+HEADER_100_CENTRE=ShapeFactory(
+    core.Box, 
+    core.args([51,  5.1, 8.7]), [0, -1.75, 0], 
+    core.args('face_edge', 1, 0), 
     IBOX_ANCHOR, 
     no_op)
 

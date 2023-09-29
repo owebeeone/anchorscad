@@ -159,6 +159,8 @@ class RaspberryPiCase(CompositeShape):
     VERS_LOWER = surface_args(
         'shell', 'face_edge', 1, 1, 0.15, post=translate([0, 2, epsilon]))
     
+    CUT_PLANE = surface_args('outline', 'audio', 'base', post=ROTX_270)
+    
     EXAMPLES_EXTENDED={'bottom': ExampleParams(
                             shape_args=args(
                                 show_cut_box=False, 
@@ -183,7 +185,7 @@ class RaspberryPiCase(CompositeShape):
         split_box = self.split_box_node().solid('split_box').at('centre')
         split_box_cage.add(split_box)
         
-        cut_point = (ROTX_90 * maker.at('outline', 'audio', 'base')).get_translation()
+        cut_point = (ROTX_90 * maker.at(anchor=self.CUT_PLANE)).get_translation()
         cut_ref = maker.at('inner', 'face_centre', 4).get_translation()
         cut_xlation = cut_point - cut_ref
         
