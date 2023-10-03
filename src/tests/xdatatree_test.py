@@ -1,63 +1,107 @@
 from anchorscad.xdatatrees import xdatatree, xfield, Attribute, Metadata,\
-    Element, KeyOrNameConverter, deserialize
+    Element, CamelSnakeConverter, deserialize
+
+from anchorscad import GMatrix, GVector, datatree, dtfield
 
 from typing import List
 import re
 import lxml.etree as etree 
-
+import numpy as np
 
 from unittest import TestCase, main
-
-
-class CamelSnakeConverter(KeyOrNameConverter):
-    '''A "key transform", converts between camel case and snake case.
-    This converter will convert keys corresponding to xml element names to the
-    xml equivalent. For example, the key 'sourceFile' will be converted to
-    the xml element name 'source_file'.
-    '''
-    @classmethod
-    def to_xml(clz, name):
-        name = re.sub('(.)([A-Z][a-z]+)', r'\1_\2', name)
-        return re.sub('([a-z0-9])([A-Z])', r'\1_\2', name).lower()
-
-    @classmethod
-    def from_xml(clz, name):
-        components = name.split('_')
-        return ''.join(x.title() for x in components)
 
 
 '''Create a default config for all xdatatree annotationed classes.'''
 DEFAULT_CONFIG=xfield(ename_transform=CamelSnakeConverter, ftype=Element)
 
+
+class FullDeserializeChecker:
+    '''Mixin class that checks if all XML elements and attributes are used.'''
+    def __post_init__(self):
+        assert self.xdatatree_unused_xml_elements is None, 'Unused XML elements found'
+        assert self.xdatatree_unused_xml_attributes is None, 'Unused XML attributes found'
+
+
+@datatree
+class MatrixConverter:
+    '''Convert a string like "1 0 0 0 0 1 0 0 0 0 1 0 0 0 0 1" to a GMatrix
+    and back.'''
+    matrix: GMatrix = dtfield(doc='The matrix as a GMatrix')
+
+    def __init__(self, matrix_str: str):
+        nparray = np.array([float(x) for x in re.split(r'\s+', matrix_str)])
+        self.matrix = GMatrix(nparray.reshape((4, 4)))
+    
+    def __str__(self):
+        return ' '.join([str(x) for x in self.matrix.A.flatten()])
+
+@datatree
+class TransformConverter:
+    '''Convert a string like "1 0 0 0 1 0 0 0 1 40 40 10" to a GMatrix
+    and back.'''
+    matrix: GMatrix = dtfield(doc='The matrix as a GMatrix')
+
+    def __init__(self, matrix_str: str):
+        nparray = np.array([float(x) for x in re.split(r'\s+', matrix_str)])
+        self.matrix = GMatrix(nparray.reshape((3, 4), order='F'))
+    
+    def __str__(self):
+        nparray = self.matrix.A[0:3].reshape((1, 12), order='F')
+        return ' '.join([str(x) for x in nparray])
+    
+@datatree
+class VectorConverter:
+    '''Convert a string like "1 2 3" to a GVector and back.'''
+    vector: GVector = xfield(ftype=Metadata, doc='The vector as a numpy array')
+
+    def __init__(self, vector_str: str):
+        self.vector = GVector([float(x) for x in re.split(r'\s+', vector_str)])
+    
+    def __str__(self):
+        return ' '.join([str(x) for x in self.vector.A[0:3]])
+
+
 @xdatatree
-class Part:
+class MeshStat(FullDeserializeChecker):
+    XDATATREE_CONFIG=DEFAULT_CONFIG(ftype=Attribute)
+    edges_fixed: int = xfield(doc='Number of fixed edges')
+    degenerate_facets: int = xfield(doc='Number of degenerate facets')
+    facets_removed: int = xfield(doc='Number of facets removed')
+    facets_reversed: int = xfield(doc='Number of facets reversed')
+    backwards_edges: int = xfield(doc='Number of backwards edges')
+
+@xdatatree
+class Part(FullDeserializeChecker):
     XDATATREE_CONFIG=DEFAULT_CONFIG(ftype=Metadata)
     id: str = xfield(ftype=Attribute, doc='Id of the part')
     subtype: str = xfield(ftype=Attribute, doc='Subtype of the part')
+    name: str = xfield(ftype=Metadata, doc='Name of the part')
+    matrix: MatrixConverter = xfield(ftype=Metadata, doc='Frame of ref of the object')
     source_file: str
     source_object_id: str
     source_volume_id: str
     source_offset_x: float
     source_offset_y: float
     source_offset_z: float
+    mesh_stat: MeshStat= xfield(ftype=Element, doc='Mesh statistics of the part')
     
 @xdatatree
-class Object:
+class Object(FullDeserializeChecker):
     XDATATREE_CONFIG=DEFAULT_CONFIG(ftype=Attribute)
     id: int = xfield(ftype=Attribute, doc='Id of the object')
-    name: str = xfield(ftype=Metadata, aname='name', doc='Name of the object')
+    name: str = xfield(ftype=Metadata, doc='Name of the object')
     extruder: str = xfield(ftype=Metadata, doc='Name of the object')
     parts: List[Part] = xfield(ftype=Element, doc='List of parts')
 
 @xdatatree
-class ModelInstance:
+class ModelInstance(FullDeserializeChecker):
     XDATATREE_CONFIG=DEFAULT_CONFIG(ftype=Metadata)
     object_id: str
     instance_id: str
     identify_id: str
 
 @xdatatree
-class Plate:
+class Plate(FullDeserializeChecker):
     XDATATREE_CONFIG=DEFAULT_CONFIG(ftype=Metadata)
     plater_id: str
     plater_name: str
@@ -69,25 +113,26 @@ class Plate:
         ename='model_instance', ftype=Element, doc='instances of models on the plate')
 
 @xdatatree
-class AssembleItem:
+class AssembleItem(FullDeserializeChecker):
     XDATATREE_CONFIG=DEFAULT_CONFIG(ftype=Attribute)
     object_id: str
     instance_id: str
-    transform: str
-    offset: str
+    transform: TransformConverter
+    offset: VectorConverter
     
 @xdatatree
-class Assemble:
+class Assemble(FullDeserializeChecker):
     XDATATREE_CONFIG=DEFAULT_CONFIG(ftype=Element)
     assemble_items: List[AssembleItem] = xfield(ename='assemble_item', doc='List of assemble items') 
 
 
 @xdatatree
-class Config:
+class Config(FullDeserializeChecker):
     XDATATREE_CONFIG=DEFAULT_CONFIG
     objects: List[Object] = xfield(ename='object', doc='List of objects')
     plate: Plate
     assemble: Assemble
+
 
 XML_DATA = '''\
 <?xml version="1.0" encoding="UTF-8"?>
@@ -190,7 +235,6 @@ XML_DATA = '''\
 '''
 
 
-
 class ExtrudeTest(TestCase):
 
     def getXml(self):
@@ -211,13 +255,14 @@ class ExtrudeTest(TestCase):
 
         self.assertEqual(conf3.ftype, Attribute)
         self.assertEqual(conf3.ename, 'object')
-        
-
 
 
     def testDeserialize(self):
         xml_tree = self.getXml()
-        config = deserialize(xml_tree, Config)
+        config, status = deserialize(xml_tree, Config)
+
+        self.assertEqual(status.contains_unknown_elements, False)
+        self.assertEqual(status.contains_unknown_attributes, False)
 
         self.assertEqual(len(config.objects), 4)
 
