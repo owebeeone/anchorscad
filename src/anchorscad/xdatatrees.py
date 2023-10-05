@@ -79,6 +79,24 @@ class CamelSnakeConverter(PythonNameToXmlNameProvider):
         '''This is just for completeness, it is not used by the xdatatree.'''
         components = name.split('_')
         return ''.join(x.title() for x in components)
+    
+class SnakeCamelConverter(PythonNameToXmlNameProvider):
+    '''A PythonNameToXmlNameProvider converts between camel case and snake case.
+    This converter will transform python field and class names to corresponding
+    xml element names and attribute names.
+    '''
+    @classmethod
+    def to_xml(clz, name):
+        '''This is just for completeness, it is not used by the xdatatree.'''
+        components = name.split('_')
+        return ''.join(x.title() for x in components)
+    
+    @classmethod
+    def from_xml(clz, name):
+        '''This method overrides the superclass method to_xml.'''
+        name = re.sub('(.)([A-Z][a-z]+)', r'\1_\2', name)
+        return re.sub('([a-z0-9])([A-Z])', r'\1_\2', name).lower()
+
 
 
 class XmlDataType:
@@ -190,6 +208,14 @@ class XmlObjectBuilder:
             self.contains_unknown_elements or sub_result.contains_unknown_elements
 
 @dataclass
+class XmlParserOptions:
+    '''Options for deserializing.'''
+    respect_namespace: bool = field(default=True)
+
+DESERIALIZE_OPTIONS=XmlParserOptions()
+
+
+@dataclass
 class XmlParserSpec:
     '''Specification for parsing an xml element.'''
     
@@ -217,13 +243,12 @@ class XmlParserSpec:
                 f'field {current_spec.get_field_name()}.')
         specs[xml_name] = field_spec
         
-    def deserialize_subelement(self, xml_element: etree.ElementBase):
+    def deserialize_subelement(self, xml_element: etree.ElementBase, options: XmlParserOptions):
         '''Parse the xml element and return a dictionary of values.'''
         result = XmlObjectBuilder(xml_element)
         
         for attr_name, attr_value in xml_element.items():
-            attr_qname = etree.QName(attr_name)
-            field_spec = self.xml_attribute_specs.get(attr_qname.localname, None)
+            field_spec = self.xml_attribute_specs.get(attr_name, None)
             
             if field_spec is None:
                 result.add_unknown_attribute(attr_name, attr_value)
@@ -232,13 +257,17 @@ class XmlParserSpec:
                 
         
         for elem in xml_element.getchildren():
-            elem_qname = etree.QName(elem.tag)
-            field_spec = self.xml_element_specs.get(elem_qname.localname, None)
+            field_spec = self.xml_element_specs.get(elem.tag, None)
             
             if field_spec is None:
+                elem_qname = etree.QName(elem.tag)
                 if elem_qname.localname == 'metadata':
                     metadata_name = elem.attrib.get('key', None)
-                    metadata_value = elem.attrib.get('value', None)
+                    if metadata_name:
+                        metadata_value = elem.attrib.get('value', None)
+                    else:
+                        metadata_name = elem.attrib.get('name', None)
+                        metadata_value = elem.text if elem.text else ''
                     
                     if metadata_name is None:
                         raise ValueError(
@@ -270,9 +299,9 @@ class XmlParserSpec:
                 
         return result
     
-    def deserialize(self, xml_element: etree.ElementBase, clz: type):
+    def deserialize(self, xml_element: etree.ElementBase, clz: type, options: XmlParserOptions=DESERIALIZE_OPTIONS):
         '''Parse the xml element and return an instance of clz.'''
-        result = self.deserialize_subelement(xml_element)
+        result = self.deserialize_subelement(xml_element, options)
         
         kwds = {}
         for name, value in result.result_dict.items():
@@ -284,13 +313,14 @@ class XmlParserSpec:
         new_obj = clz(**kwds)
         return new_obj, result
 
-def deserialize(xml_element: etree.ElementBase, clz: type):
+def deserialize(xml_element: etree.ElementBase, clz: type, options: XmlParserOptions=DESERIALIZE_OPTIONS):
     '''Parse the xml element and return an instance of clz.'''
     parser_spec = getattr(clz, XDATATREE_PARSER_SPEC, None)
     if parser_spec is None:
         raise ValueError(f'Class {clz.__name__} is not a xdatatree class.')
     
-    return parser_spec.deserialize(xml_element, clz)
+    return parser_spec.deserialize(xml_element, clz, options)
+
 
 @datatree(frozen=True)
 class _XFieldParams:
@@ -321,25 +351,28 @@ class _XFieldParams:
     other_params: dict = UNSPECIFIED  # Other parameters to pass to datatrees.dtfield
     
     def __post_init__(self):
-        assert self.ftype is UNSPECIFIED or issubclass(self.ftype, XmlDataType), \
+        allowed = (UNSPECIFIED, None)
+        assert self.ftype in allowed or issubclass(self.ftype, XmlDataType), \
             f'ftype must be an instance of XmlDataType, Attribute, Element or Metadata'
-        assert self.ename is UNSPECIFIED or isinstance(self.ename, str), \
+        assert self.ename in allowed  or isinstance(self.ename, str), \
             f'ename must be a string'
-        assert self.exmlns is UNSPECIFIED or isinstance(self.exmlns, str), \
+        assert self.exmlns in allowed  or isinstance(self.exmlns, str), \
             f'exmlns must be a string'
-        assert self.ename_transform is UNSPECIFIED \
+        assert self.ename_transform in allowed  \
             or isinstance(self.ename_transform, PythonNameToXmlNameProvider) \
             or issubclass(self.ename_transform, PythonNameToXmlNameProvider), \
             f'ename_transform must be an instance of KeyOrNameConverter'
-        assert self.aname is UNSPECIFIED or isinstance(self.aname, str), \
+        assert self.aname in allowed  or isinstance(self.aname, str), \
             f'aname must be a string'
-        assert self.axmlns is UNSPECIFIED or isinstance(self.axmlns, str), \
+        assert self.axmlns in allowed  or isinstance(self.axmlns, str), \
             f'axmlns must be a string'
-        assert self.aname_transform is UNSPECIFIED or isinstance(self.aname_transform, PythonNameToXmlNameProvider), \
+        assert self.aname_transform in allowed  \
+            or isinstance(self.aname_transform, PythonNameToXmlNameProvider) \
+            or issubclass(self.aname_transform, PythonNameToXmlNameProvider), \
             f'aname_transform must be an instance of KeyOrNameConverter'
-        assert self.exclude is UNSPECIFIED or isinstance(self.exclude, bool), \
+        assert self.exclude in allowed  or isinstance(self.exclude, bool), \
             f'exclude must be a bool'
-        assert self.other_params is UNSPECIFIED or isinstance(self.other_params, dict), \
+        assert self.other_params in allowed  or isinstance(self.other_params, dict), \
             f'other_params must be a dict'
         if not self.other_params is UNSPECIFIED:
             invalid_params = set(self.other_params.keys()).difference(_ALLOWED_XFIELD_PARAMS)
@@ -347,6 +380,7 @@ class _XFieldParams:
     
     def __call__(self, 
                  ftype: 'XmlDataType' = UNSPECIFIED, 
+                 xmlns: Optional[str] = UNSPECIFIED,
                  exmlns: Optional[str] = UNSPECIFIED,
                  ename_transform: PythonNameToXmlNameProvider = UNSPECIFIED,
                  ename: str = UNSPECIFIED,
@@ -357,6 +391,12 @@ class _XFieldParams:
                  **kwds: Any) -> Any:
         '''Create a new instance of this class with the passed in values
         overriding the values in this instance.'''
+        
+        if not xmlns is UNSPECIFIED:
+            if exmlns is UNSPECIFIED:
+                exmlns = xmlns
+            if axmlns is UNSPECIFIED:
+                axmlns = xmlns
 
         if ftype is UNSPECIFIED:
             ftype = self.ftype
@@ -495,17 +535,17 @@ class Attribute(XmlDataType):
             field_config: _XFieldParams):
         # The name has been specified, no transform is required.
         if not field_config.aname is UNSPECIFIED:
-            return field_config.aname
+            return field_config.aname, field_config.axmlns
         
         # attribute names are based on the python field name.
         if field_config.aname_transform is UNSPECIFIED:
-            return python_field_name
+            return python_field_name, field_config.axmlns
 
         return _select_name_from_spec(
             clz,
             field_config.aname_transform,
             field_types[0],
-            python_field_name)
+            python_field_name), field_config.axmlns
     
     @classmethod
     def apply_collector_type(
@@ -525,17 +565,17 @@ class Element(XmlDataType):
             field_config: _XFieldParams):
         # attribute names are based on the python field name.
         if not field_config.ename is UNSPECIFIED:
-            return field_config.ename
+            return field_config.ename, field_config.exmlns
         
         # attribute names are based on the python field name.
         if field_config.ename_transform is UNSPECIFIED:
-            return python_field_name
+            return python_field_name, field_config.exmlns
 
         return _select_name_from_spec(
             clz,
             field_config.ename_transform,
             field_types[0],
-            python_field_name)
+            python_field_name), field_config.exmlns
     
     @classmethod
     def apply_collector_type(
@@ -552,8 +592,10 @@ class Metadata(XmlDataType):
             field_types: List[Type], 
             python_field_name: str,
             field_config: _XFieldParams):
-        return Attribute.xml_field_name_of(
+        xml_name, xmlns = Attribute.xml_field_name_of(
             container, field_types, python_field_name, field_config)
+        # Metadata does not use the namespaces.
+        return xml_name, None
 
     @classmethod 
     def apply_collector_type(
@@ -562,14 +604,15 @@ class Metadata(XmlDataType):
 
 
 def xfield(ftype: 'XmlDataType' = UNSPECIFIED, 
-            exmlns: Optional[str] = UNSPECIFIED,
-            ename_transform: PythonNameToXmlNameProvider = UNSPECIFIED,
-            ename: str = UNSPECIFIED,
-            axmlns: Optional[str] = UNSPECIFIED,
-            aname_transform: PythonNameToXmlNameProvider = UNSPECIFIED,
-            aname: str = UNSPECIFIED,
-            exclude: bool = UNSPECIFIED,
-            **kwargs) -> _XFieldParams:
+           xmlns: Optional[str] = UNSPECIFIED,
+           exmlns: Optional[str] = UNSPECIFIED,
+           ename_transform: PythonNameToXmlNameProvider = UNSPECIFIED,
+           ename: str = UNSPECIFIED,
+           axmlns: Optional[str] = UNSPECIFIED,
+           aname_transform: PythonNameToXmlNameProvider = UNSPECIFIED,
+           aname: str = UNSPECIFIED,
+           exclude: bool = UNSPECIFIED,
+           **kwargs) -> _XFieldParams:
     '''Like datatrees.dtfield but also supports annotations for xml parsing.
     Args:
       ftype: The type of the xml data. One of Attribute, Element or Metadata.
@@ -579,6 +622,12 @@ def xfield(ftype: 'XmlDataType' = UNSPECIFIED,
     # Validate the parameters.
     invalid_params = set(kwargs.keys()).difference(_ALLOWED_XFIELD_PARAMS)
     assert not invalid_params, f'xfield Invalid parameters {invalid_params}'
+
+    if not xmlns is UNSPECIFIED:
+        if exmlns is UNSPECIFIED:
+            exmlns = xmlns
+        if axmlns is UNSPECIFIED:
+            axmlns = xmlns
 
     return _XFieldParams(
             ftype=ftype, 
@@ -616,8 +665,13 @@ def get_xml_field_name(
     
     container, field_types = _get_field_type(field_annotation)
     
-    return ftype.xml_field_name_of(
+    xml_field_name, xmlns = ftype.xml_field_name_of(
         container, field_types, python_field_name, field_config)
+    
+    if xmlns in (None, UNSPECIFIED):
+        return xml_field_name
+    
+    return etree.QName(xmlns, xml_field_name).text
 
 
 def _get_field_as_params(current_field_value: Field) \
@@ -722,14 +776,14 @@ def _process_field(
     clz: type,
     field_name: str, 
     field_annotation: Any,
-    default_params: _XFieldParams,
+    class_config: _XFieldParams,
     parser_spec: XmlParserSpec) -> Field:
     '''Process a field annotation. If the structure is a Field, then the
     user has applied the dtfield or field value directly to the field so we
     need to apply a default value to the field.
     '''
     
-    field_config = default_params
+    field_config = class_config
     default_value = getattr(clz, field_name, UNSPECIFIED)
     
     if isinstance(default_value, _XFieldParams):

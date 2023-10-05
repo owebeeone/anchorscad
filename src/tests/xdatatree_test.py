@@ -1,5 +1,5 @@
 from anchorscad.xdatatrees import xdatatree, xfield, Attribute, Metadata,\
-    Element, CamelSnakeConverter, deserialize
+    Element, CamelSnakeConverter, SnakeCamelConverter, deserialize
 
 from anchorscad import GMatrix, GVector, datatree, dtfield
 
@@ -13,7 +13,6 @@ from unittest import TestCase, main
 
 '''Create a default config for all xdatatree annotationed classes.'''
 DEFAULT_CONFIG=xfield(ename_transform=CamelSnakeConverter, ftype=Element)
-
 
 class FullDeserializeChecker:
     '''Mixin class that checks if all XML elements and attributes are used.'''
@@ -234,11 +233,144 @@ XML_DATA = '''\
 </config>
 '''
 
+class XmlNamespaces:
+    '''Helper for namespace definitions for XML.'''
+    def __init__(self, xml="http://www.w3.org/XML/1998/namespace", **kwargs):
+        self.xml = xml
+        self.__dict__.update(kwargs)
+
+NAMESPACES=XmlNamespaces(
+    xmlns="http://schemas.microsoft.com/3dmanufacturing/core/2015/02",
+    xml="http://www.w3.org/XML/1998/namespace",
+    slic3rpe="http://schemas.slic3r.org/3mf/2017/06",
+    p="http://schemas.microsoft.com/3dmanufacturing/production/2015/06"
+)
+
+DEFAULT_CONFIGX=DEFAULT_CONFIG(xmlns=NAMESPACES.xmlns)
+DEFAULT_CONFIG2=xfield(
+    ename_transform=SnakeCamelConverter,
+    aname_transform=SnakeCamelConverter,
+    ftype=Attribute)
+DEFAULT_CONFIG2X=xfield(
+    xmlns=NAMESPACES.xmlns,
+    ename_transform=SnakeCamelConverter,
+    aname_transform=SnakeCamelConverter,
+    ftype=Attribute)
+
+
+@xdatatree
+class Component:
+    XDATATREE_CONFIG=DEFAULT_CONFIGX(ftype=Attribute)
+    path: str = xfield(xmlns=NAMESPACES.p, doc='Path of the component')
+    objectid: str = xfield(xmlns=None, doc='Object id of the component')
+    transform: TransformConverter = xfield(xmlns=None, doc='Transform of the component')
+
+@xdatatree
+class Components:
+    XDATATREE_CONFIG=DEFAULT_CONFIGX
+    components: List[Component] = xfield(ftype=Element, doc='List of components')
+
+@xdatatree
+class Object2:
+    XDATATREE_CONFIG=DEFAULT_CONFIGX
+    id: int = xfield(ftype=Attribute, xmlns=None, doc='Id of the object')
+    uuid: str = xfield(ftype=Attribute, xmlns=NAMESPACES.p, doc='Uuid of the object')
+    type: str = xfield(ftype=Attribute, xmlns=None, doc='Type of the object')
+    components: List[Components] = xfield(ftype=Element, doc='List of components')
+
+@xdatatree
+class Resources:
+    XDATATREE_CONFIG=DEFAULT_CONFIGX
+    objects: List[Object2] = DEFAULT_CONFIG(ename='object', doc='List of objects')
+
+@xdatatree
+class Item:
+    XDATATREE_CONFIG=DEFAULT_CONFIGX(ftype=Attribute, xmlns=None)
+    objectid: str = xfield(doc='Object id of the item')
+    uuid: str = xfield(xmlns=NAMESPACES.p, doc='Uuid of the item')
+    transform: TransformConverter = xfield(doc='Transform of the item')
+    printable: bool = xfield(doc='Printable of the item')
+
+@xdatatree
+class Build:
+    XDATATREE_CONFIG=DEFAULT_CONFIGX
+    uuid: str = xfield(ftype=Attribute, xmlns=NAMESPACES.p, doc='Uuid of the build')
+    items: List[Item] = xfield(doc='List of items')
+
+@xdatatree
+class Model:
+    XDATATREE_CONFIG=DEFAULT_CONFIG2X(ftype=Metadata)
+    unit: str = xfield(ftype=Attribute, aname='unit', xmlns=None, doc='Unit of the model')
+    lang: str = DEFAULT_CONFIG(ftype=Attribute, aname='lang', xmlns=NAMESPACES.xml, doc='Language of the model')
+    requiredextensions: str = DEFAULT_CONFIG(ftype=Attribute, aname='requiredextensions', xmlns=None, doc='Required extensions')
+    application: str = xfield(doc='Application creating this model')
+    x3mf_content: str = xfield(aname='BambuStudio:3mfVersion', doc='BambuStudio:3mfVersion')
+    copyright: str = xfield(aname='CopyRight', doc='The copyright string')
+    creation_date: str = xfield(doc='The creation date')
+    description: str = xfield(doc='The description string')
+    designer: str = xfield(doc='The designer string')
+    designer_cover: str = xfield(doc='The designer cover string')
+    designer_user_id: str = xfield(doc='The designer user id string')
+    license: str = xfield(doc='The license string')
+    modification_date: str = xfield(doc='The modification date')
+    origin: str = xfield(doc='The origin string')
+    title: str = xfield(doc='The title string')
+    resources: Resources = xfield(ftype=Element, ename='resources', doc='The resources')
+    build: Build = DEFAULT_CONFIGX(ftype=Element, doc='The build')
+
+XML_DATA2 = '''\
+<?xml version="1.0" encoding="UTF-8"?>
+<model unit="millimeter" xml:lang="en-US" xmlns="http://schemas.microsoft.com/3dmanufacturing/core/2015/02" xmlns:slic3rpe="http://schemas.slic3r.org/3mf/2017/06" xmlns:p="http://schemas.microsoft.com/3dmanufacturing/production/2015/06" requiredextensions="p">
+ <metadata name="Application">BambuStudio-01.07.04.52</metadata>
+ <metadata name="BambuStudio:3mfVersion">1</metadata>
+ <metadata name="CopyRight"></metadata>
+ <metadata name="CreationDate">2023-09-22</metadata>
+ <metadata name="Description"></metadata>
+ <metadata name="Designer"></metadata>
+ <metadata name="DesignerCover"></metadata>
+ <metadata name="DesignerUserId"></metadata>
+ <metadata name="License"></metadata>
+ <metadata name="ModificationDate">2023-09-22</metadata>
+ <metadata name="Origin"></metadata>
+ <metadata name="Title"></metadata>
+ <resources>
+  <object id="2" p:uuid="00000001-61cb-4c03-9d28-80fed5dfa1dc" type="model">
+   <components>
+    <component p:path="/3D/Objects/OpenSCAD Model_1.model" objectid="1" transform="1 0 0 0 1 0 0 0 1 0 0 0"/>
+   </components>
+  </object>
+  <object id="4" p:uuid="00000002-61cb-4c03-9d28-80fed5dfa1dc" type="model">
+   <components>
+    <component p:path="/3D/Objects/OpenSCAD Model_2.model" objectid="3" transform="1 0 0 0 1 0 0 0 1 0 0 0"/>
+   </components>
+  </object>
+  <object id="6" p:uuid="00000003-61cb-4c03-9d28-80fed5dfa1dc" type="model">
+   <components>
+    <component p:path="/3D/Objects/OpenSCAD Model_3.model" objectid="5" transform="1 0 0 0 1 0 0 0 1 0 0 0"/>
+   </components>
+  </object>
+  <object id="8" p:uuid="00000004-61cb-4c03-9d28-80fed5dfa1dc" type="model">
+   <components>
+    <component p:path="/3D/Objects/OpenSCAD Model_4.model" objectid="7" transform="1 0 0 0 1 0 0 0 1 0 0 0"/>
+   </components>
+  </object>
+ </resources>
+ <build p:uuid="d8eb061-b1ec-4553-aec9-835e5b724bb4">
+  <item objectid="2" p:uuid="00000002-b1ec-4553-aec9-835e5b724bb4" transform="1 0 0 0 1 0 0 0 1 160.251097 160.519201 10" printable="1"/>
+  <item objectid="4" p:uuid="00000004-b1ec-4553-aec9-835e5b724bb4" transform="1 0 0 0 1 0 0 0 1 100.251097 160.519201 10" printable="1"/>
+  <item objectid="6" p:uuid="00000006-b1ec-4553-aec9-835e5b724bb4" transform="1 0 0 0 1 0 0 0 1 100.251097 100.519201 10" printable="1"/>
+  <item objectid="8" p:uuid="00000008-b1ec-4553-aec9-835e5b724bb4" transform="1 0 0 0 1 0 0 0 1 160.251097 100.519201 10" printable="1"/>
+ </build>
+</model>
+'''
 
 class ExtrudeTest(TestCase):
 
     def getXml(self):
          return etree.fromstring(XML_DATA.encode('utf-8'))
+    
+    def getXml2(self):
+         return etree.fromstring(XML_DATA2.encode('utf-8'))
     
     def testXfieldFtypeResolution(self):
         conf = DEFAULT_CONFIG
@@ -265,6 +397,16 @@ class ExtrudeTest(TestCase):
         self.assertEqual(status.contains_unknown_attributes, False)
 
         self.assertEqual(len(config.objects), 4)
+
+    
+    def testDeserialize2(self):
+        xml_tree = self.getXml2()
+        model, status = deserialize(xml_tree, Model)
+
+        self.assertEqual(status.contains_unknown_elements, False)
+        self.assertEqual(status.contains_unknown_attributes, False)
+
+        self.assertEqual(len(model.build.items), 4)
 
 
 if __name__ == "__main__":
