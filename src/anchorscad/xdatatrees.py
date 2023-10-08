@@ -11,6 +11,8 @@ from types import FunctionType
 import lxml.etree as etree
 import inspect
 import re
+from itertools import chain
+from copy import deepcopy
 
 
 class TooManyValuesError(ValueError):
@@ -128,7 +130,7 @@ class XmlFieldSpec:
 
     field_name: str
     xml_name: str    
-    ftype: Type[XmlDataType]
+    ftype: XmlDataType
     collector_type: 'ValueCollector'
 
     def __post_init__(self):
@@ -551,6 +553,12 @@ class _Attribute(XmlDataType):
     def apply_collector_type(
         clz, parser_spec: XmlParserSpec, xml_field_spec: XmlFieldSpec):
         parser_spec.add_attribute_spec(xml_field_spec)
+        
+    
+    def serialize(self, xml_node: etree.ElementBase, name: str, value: Any):
+        '''Place the attribute value in the xml_node.'''
+        xml_node.set(name, str(value))
+
 
 Attribute=_Attribute()
         
@@ -582,11 +590,25 @@ class _Element(XmlDataType):
     def apply_collector_type(
         clz, parser_spec: XmlParserSpec, xml_field_spec: XmlFieldSpec):
         parser_spec.add_element_spec(xml_field_spec)
+        
+        
+    def serialize(self, xml_node: etree.ElementBase, name: str, value: Any):
+        '''Place the element value in the xml_node.'''
+        if isinstance(value, list):
+            for item in value:
+                child = etree.SubElement(xml_node, name)
+                _serialize(child, item)
+        else:
+            child = etree.SubElement(xml_node, name)
+            _serialize(child, value)
+
 
 Element=_Element()
 
+@dataclass
 class _Metadata(XmlDataType):
     '''The type for metadata elements containing "name" and "value" attributes.'''
+    is_key_value: bool = field(default=True)
  
     def xml_field_name_of(
             self,
@@ -603,8 +625,52 @@ class _Metadata(XmlDataType):
     def apply_collector_type(
         clz, parser_spec: XmlParserSpec, xml_field_spec: XmlFieldSpec):
         parser_spec.add_metadata_spec(xml_field_spec)
+        
+    def serialize(self, xml_node: etree.ElementBase, name: str, value: Any):
+        '''Place the metadata value in the xml_node.'''
+        if self.is_key_value:
+            etree.SubElement(xml_node, 'metadata', key=name, value=str(value))
+        else:
+            etree.SubElement(xml_node, 'metadata', name=name).text = str(value)
+
 
 Metadata=_Metadata()
+
+
+def _serialize(xml_node: etree.ElementBase, xdatatree_object: Any):
+    '''Serialize an xdatatree to an xml node.'''
+    
+    parser_spec = xdatatree_object.XDATATREE_PARSER_SPEC
+    
+    all_values = chain(
+        parser_spec.xml_attribute_specs.items(),
+        parser_spec.metadata_specs.items(),
+        parser_spec.xml_element_specs.items())
+        
+    for xml_name, field_spec in all_values:
+        field_name = field_spec.field_name
+        value = getattr(xdatatree_object, field_name)
+        field_spec.ftype.serialize(xml_node, xml_name, value)
+    
+    if xdatatree_object.xdatatree_unused_xml_attributes:
+        for name, value in xdatatree_object.xdatatree_unused_xml_attributes:
+            xml_node.set(name, value)
+    
+    if xdatatree_object.xdatatree_unused_xml_elements:
+        for elem in xdatatree_object.xdatatree_unused_xml_elements:
+            elem = deepcopy(elem)
+            xml_node.append(elem)
+        
+    
+    return xml_node
+
+def serialize(xdatatree_object: Any, name: str, namespaces: Optional[Dict[str, str]] = None):
+    '''Serialize an xdatatree to a new xml node with the given name.'''
+    
+    xml_node = etree.Element(name, nsmap=namespaces) if namespaces else etree.Element(name)
+    
+    return _serialize(xml_node, xdatatree_object)
+
 
 def xfield(ftype: 'XmlDataType' = UNSPECIFIED, 
            xmlns: Optional[str] = UNSPECIFIED,

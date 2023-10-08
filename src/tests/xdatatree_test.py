@@ -1,5 +1,5 @@
 from anchorscad.xdatatrees import xdatatree, xfield, Attribute, Metadata,\
-    Element, CamelSnakeConverter, SnakeCamelConverter, deserialize
+    Element, CamelSnakeConverter, SnakeCamelConverter, deserialize, serialize
 
 from anchorscad import GMatrix, GVector, datatree, dtfield
 
@@ -21,6 +21,24 @@ class FullDeserializeChecker:
         assert self.xdatatree_unused_xml_attributes is None, 'Unused XML attributes found'
 
 
+def remove_trailing_dot(string):
+  """Removes a trailing "." from a string.
+
+  Args:
+    string: A string.
+
+  Returns:
+    A string with the trailing "." removed, if it exists.
+  """
+  
+  string = string.rstrip('0')
+
+  if string.endswith('.'):
+    return string[:-1]
+  else:
+    return string
+
+
 @datatree
 class MatrixConverter:
     '''Convert a string like "1 0 0 0 0 1 0 0 0 0 1 0 0 0 0 1" to a GMatrix
@@ -32,7 +50,11 @@ class MatrixConverter:
         self.matrix = GMatrix(nparray.reshape((4, 4)))
     
     def __str__(self):
-        return ' '.join([str(x) for x in self.matrix.A.flatten()])
+        return ' '.join([remove_trailing_dot(str(x)) for x in self.matrix.A.flatten()])
+    
+    def __repr__(self):
+        return self.__str__()
+    
 
 @datatree
 class TransformConverter:
@@ -46,7 +68,10 @@ class TransformConverter:
     
     def __str__(self):
         nparray = self.matrix.A[0:3].reshape((1, 12), order='F')
-        return ' '.join([str(x) for x in nparray])
+        return ' '.join([remove_trailing_dot(str(x)) for x in nparray[0]])
+    
+    def __repr__(self):
+        return self.__str__()
     
 @datatree
 class VectorConverter:
@@ -57,7 +82,10 @@ class VectorConverter:
         self.vector = GVector([float(x) for x in re.split(r'\s+', vector_str)])
     
     def __str__(self):
-        return ' '.join([str(x) for x in self.vector.A[0:3]])
+        return ' '.join([remove_trailing_dot(str(x)) for x in self.vector.A[0:3]])
+    
+    def __repr__(self):
+        return self.__str__()
 
 
 @xdatatree
@@ -397,6 +425,12 @@ class ExtrudeTest(TestCase):
         self.assertEqual(status.contains_unknown_attributes, False)
 
         self.assertEqual(len(config.objects), 4)
+        
+        xml_serialized = serialize(config, 'config', xml_tree.nsmap)
+        
+        config2, status = deserialize(xml_serialized, Config)
+        
+        self.assertEqual(config, config2)
 
     
     def testDeserialize2(self):
@@ -407,6 +441,24 @@ class ExtrudeTest(TestCase):
         self.assertEqual(status.contains_unknown_attributes, False)
 
         self.assertEqual(len(model.build.items), 4)
+        
+        xml_serialized = serialize(model, 'model', xml_tree.nsmap)
+        
+        model2, status = deserialize(xml_serialized, Model)
+        
+        self.assertEqual(model, model2)
+        
+        
+    def testTransformConverter(self):
+        value = TransformConverter("1 0 0 0 1 0 0 0 1 40 40 10")
+        value_str = str(value)
+        self.assertEqual(value_str, "1 0 0 0 1 0 0 0 1 40 40 10")
+        
+        
+    def testVectorConverter(self):
+        value = VectorConverter("1 2 4")
+        value_str = str(value)
+        self.assertEqual(value_str, "1 2 4")
 
 
 if __name__ == "__main__":
