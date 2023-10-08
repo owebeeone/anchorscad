@@ -58,7 +58,7 @@ class PythonNameToXmlNameProvider:
         xml_data_type is not an Element, otherwise it returns the class name.
         This is somewhat consistent with how XML element names being associated
         with the class of objects they represent.'''
-        if xml_data_type is Element:
+        if isinstance(xml_data_type, _Element):
             return class_name
         return field_name
 
@@ -134,7 +134,7 @@ class XmlFieldSpec:
     def __post_init__(self):
         assert isinstance(self.field_name, str), 'field_name must be a string'
         assert isinstance(self.xml_name, str), 'xml_name must be a string'
-        assert issubclass(self.ftype, XmlDataType), 'ftype must be a XmlDataType'
+        assert isinstance(self.ftype, XmlDataType), 'ftype must be a XmlDataType'
     
     def new_collector(self):
         return self.collector_type()
@@ -322,6 +322,8 @@ def deserialize(xml_element: etree.ElementBase, clz: type, options: XmlParserOpt
     return parser_spec.deserialize(xml_element, clz, options)
 
 
+UNSPECIFIED_OR_NONE = (UNSPECIFIED, None)
+
 @datatree(frozen=True)
 class _XFieldParams:
     '''Stores parameters for fields. These parameters include all those
@@ -351,28 +353,27 @@ class _XFieldParams:
     other_params: dict = UNSPECIFIED  # Other parameters to pass to datatrees.dtfield
     
     def __post_init__(self):
-        allowed = (UNSPECIFIED, None)
-        assert self.ftype in allowed or issubclass(self.ftype, XmlDataType), \
+        assert self.ftype in UNSPECIFIED_OR_NONE or isinstance(self.ftype, XmlDataType), \
             f'ftype must be an instance of XmlDataType, Attribute, Element or Metadata'
-        assert self.ename in allowed  or isinstance(self.ename, str), \
+        assert self.ename in UNSPECIFIED_OR_NONE  or isinstance(self.ename, str), \
             f'ename must be a string'
-        assert self.exmlns in allowed  or isinstance(self.exmlns, str), \
+        assert self.exmlns in UNSPECIFIED_OR_NONE  or isinstance(self.exmlns, str), \
             f'exmlns must be a string'
-        assert self.ename_transform in allowed  \
+        assert self.ename_transform in UNSPECIFIED_OR_NONE  \
             or isinstance(self.ename_transform, PythonNameToXmlNameProvider) \
             or issubclass(self.ename_transform, PythonNameToXmlNameProvider), \
             f'ename_transform must be an instance of KeyOrNameConverter'
-        assert self.aname in allowed  or isinstance(self.aname, str), \
+        assert self.aname in UNSPECIFIED_OR_NONE  or isinstance(self.aname, str), \
             f'aname must be a string'
-        assert self.axmlns in allowed  or isinstance(self.axmlns, str), \
+        assert self.axmlns in UNSPECIFIED_OR_NONE  or isinstance(self.axmlns, str), \
             f'axmlns must be a string'
-        assert self.aname_transform in allowed  \
+        assert self.aname_transform in UNSPECIFIED_OR_NONE  \
             or isinstance(self.aname_transform, PythonNameToXmlNameProvider) \
             or issubclass(self.aname_transform, PythonNameToXmlNameProvider), \
             f'aname_transform must be an instance of KeyOrNameConverter'
-        assert self.exclude in allowed  or isinstance(self.exclude, bool), \
+        assert self.exclude in UNSPECIFIED_OR_NONE  or isinstance(self.exclude, bool), \
             f'exclude must be a bool'
-        assert self.other_params in allowed  or isinstance(self.other_params, dict), \
+        assert self.other_params in UNSPECIFIED_OR_NONE  or isinstance(self.other_params, dict), \
             f'other_params must be a dict'
         if not self.other_params is UNSPECIFIED:
             invalid_params = set(self.other_params.keys()).difference(_ALLOWED_XFIELD_PARAMS)
@@ -516,7 +517,7 @@ def _select_name_from_spec(
         python_type: str, 
         python_field_name: str):
     '''Return the name selected by the transform.'''
-    if transform is UNSPECIFIED:
+    if transform in UNSPECIFIED_OR_NONE:
         return python_field_name
     
     selected_name = transform.xml_name_selector(
@@ -524,25 +525,24 @@ def _select_name_from_spec(
 
     return transform.to_xml(selected_name)
 
-class Attribute(XmlDataType):
+class _Attribute(XmlDataType):
     '''The type for XML attribute'''
-    @classmethod    
     def xml_field_name_of(
-            clz,
+            self,
             container: Type, 
             field_types: List[Type], 
             python_field_name: str,
             field_config: _XFieldParams):
         # The name has been specified, no transform is required.
-        if not field_config.aname is UNSPECIFIED:
+        if not field_config.aname in UNSPECIFIED_OR_NONE:
             return field_config.aname, field_config.axmlns
         
         # attribute names are based on the python field name.
-        if field_config.aname_transform is UNSPECIFIED:
+        if field_config.aname_transform in UNSPECIFIED_OR_NONE:
             return python_field_name, field_config.axmlns
 
         return _select_name_from_spec(
-            clz,
+            self,
             field_config.aname_transform,
             field_types[0],
             python_field_name), field_config.axmlns
@@ -551,28 +551,29 @@ class Attribute(XmlDataType):
     def apply_collector_type(
         clz, parser_spec: XmlParserSpec, xml_field_spec: XmlFieldSpec):
         parser_spec.add_attribute_spec(xml_field_spec)
+
+Attribute=_Attribute()
         
     
-class Element(XmlDataType):
+class _Element(XmlDataType):
     '''The type for XML element'''
     
-    @classmethod    
     def xml_field_name_of(
-            clz,
+            self,
             container: Type, 
             field_types: List[Type], 
             python_field_name: str,
             field_config: _XFieldParams):
         # attribute names are based on the python field name.
-        if not field_config.ename is UNSPECIFIED:
+        if not field_config.ename in UNSPECIFIED_OR_NONE:
             return field_config.ename, field_config.exmlns
         
         # attribute names are based on the python field name.
-        if field_config.ename_transform is UNSPECIFIED:
+        if field_config.ename_transform in UNSPECIFIED_OR_NONE:
             return python_field_name, field_config.exmlns
 
         return _select_name_from_spec(
-            clz,
+            self,
             field_config.ename_transform,
             field_types[0],
             python_field_name), field_config.exmlns
@@ -582,12 +583,13 @@ class Element(XmlDataType):
         clz, parser_spec: XmlParserSpec, xml_field_spec: XmlFieldSpec):
         parser_spec.add_element_spec(xml_field_spec)
 
-class Metadata(XmlDataType):
-    '''The type for metadata elements containing "name" and "value" attributes.'''
+Element=_Element()
 
-    @classmethod    
+class _Metadata(XmlDataType):
+    '''The type for metadata elements containing "name" and "value" attributes.'''
+ 
     def xml_field_name_of(
-            clz,
+            self,
             container: Type, 
             field_types: List[Type], 
             python_field_name: str,
@@ -602,6 +604,7 @@ class Metadata(XmlDataType):
         clz, parser_spec: XmlParserSpec, xml_field_spec: XmlFieldSpec):
         parser_spec.add_metadata_spec(xml_field_spec)
 
+Metadata=_Metadata()
 
 def xfield(ftype: 'XmlDataType' = UNSPECIFIED, 
            xmlns: Optional[str] = UNSPECIFIED,
@@ -807,7 +810,7 @@ def _process_field(
     
     ftype = field_config.ftype
     
-    assert issubclass(ftype, XmlDataType), \
+    assert isinstance(ftype, XmlDataType), \
         f'ftype for field {field_name}, is {_diagnostic_name_of_ftype(ftype)}, ' \
         f'expected an instance of XmlDataType, Attribute, Element or Metadata.'
         
