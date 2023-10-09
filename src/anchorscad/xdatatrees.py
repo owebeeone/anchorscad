@@ -608,7 +608,7 @@ Element=_Element()
 @dataclass
 class _Metadata(XmlDataType):
     '''The type for metadata elements containing "name" and "value" attributes.'''
-    is_key_value: bool = field(default=True)
+    is_name_value: bool = field(default=True)
  
     def xml_field_name_of(
             self,
@@ -628,13 +628,13 @@ class _Metadata(XmlDataType):
         
     def serialize(self, xml_node: etree.ElementBase, name: str, value: Any):
         '''Place the metadata value in the xml_node.'''
-        if self.is_key_value:
-            etree.SubElement(xml_node, 'metadata', key=name, value=str(value))
-        else:
+        if self.is_name_value:
             etree.SubElement(xml_node, 'metadata', name=name).text = str(value)
+        else:
+            etree.SubElement(xml_node, 'metadata', key=name, value=str(value))
 
-
-Metadata=_Metadata()
+Metadata=_Metadata(is_name_value=False)
+MetadataNameValue=_Metadata(is_name_value=True)
 
 
 def _serialize(xml_node: etree.ElementBase, xdatatree_object: Any):

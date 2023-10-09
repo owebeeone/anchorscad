@@ -1,9 +1,10 @@
-from anchorscad.xdatatrees import xdatatree, xfield, Attribute, Metadata,\
-    Element, CamelSnakeConverter, SnakeCamelConverter, deserialize, serialize
+from anchorscad.xdatatrees import xdatatree, xfield, Attribute, Metadata, \
+    Element, CamelSnakeConverter, SnakeCamelConverter, deserialize, serialize, \
+    MetadataNameValue
 
 from anchorscad import GMatrix, GVector, datatree, dtfield
 
-from typing import List
+from typing import List, Union
 import re
 import lxml.etree as etree 
 import numpy as np
@@ -21,18 +22,14 @@ class FullDeserializeChecker:
         assert self.xdatatree_unused_xml_attributes is None, 'Unused XML attributes found'
 
 
-def remove_trailing_dot(string):
-  """Removes a trailing "." from a string.
-
+def float_to_str(value: float) -> str:
+  """Removes a trailing "." from a floating point number string.
   Args:
     string: A string.
-
   Returns:
     A string with the trailing "." removed, if it exists.
   """
-  
-  string = string.rstrip('0')
-
+  string = str(value).rstrip('0')
   if string.endswith('.'):
     return string[:-1]
   else:
@@ -41,16 +38,19 @@ def remove_trailing_dot(string):
 
 @datatree
 class MatrixConverter:
-    '''Convert a string like "1 0 0 0 0 1 0 0 0 0 1 0 0 0 0 1" to a GMatrix
-    and back.'''
+    '''Convert a 16 value string like "1 0 0 0 0 1 0 0 0 0 1 0 0 0 0 1" to a
+    GMatrix and back.'''
     matrix: GMatrix = dtfield(doc='The matrix as a GMatrix')
 
-    def __init__(self, matrix_str: str):
-        nparray = np.array([float(x) for x in re.split(r'\s+', matrix_str)])
-        self.matrix = GMatrix(nparray.reshape((4, 4)))
+    def __init__(self, matrix_str: Union[str, GMatrix]):
+        if isinstance(matrix_str, GMatrix):
+            self.matrix = matrix_str
+        else:
+            nparray = np.array([float(x) for x in re.split(r'\s+', matrix_str)])
+            self.matrix = GMatrix(nparray.reshape((4, 4)))
     
     def __str__(self):
-        return ' '.join([remove_trailing_dot(str(x)) for x in self.matrix.A.flatten()])
+        return ' '.join([float_to_str(x) for x in self.matrix.A.flatten()])
     
     def __repr__(self):
         return self.__str__()
@@ -58,31 +58,39 @@ class MatrixConverter:
 
 @datatree
 class TransformConverter:
-    '''Convert a string like "1 0 0 0 1 0 0 0 1 40 40 10" to a GMatrix
+    '''Convert a 12 value string like "1 0 0 0 1 0 0 0 1 40 40 10" to a GMatrix
     and back.'''
     matrix: GMatrix = dtfield(doc='The matrix as a GMatrix')
 
-    def __init__(self, matrix_str: str):
-        nparray = np.array([float(x) for x in re.split(r'\s+', matrix_str)])
-        self.matrix = GMatrix(nparray.reshape((3, 4), order='F'))
+    def __init__(self, matrix_str: Union[str, GMatrix]):
+        
+        if isinstance(matrix_str, GMatrix):
+            self.matrix = matrix_str
+        else:
+            nparray = np.array([float(x) for x in re.split(r'\s+', matrix_str)])
+            self.matrix = GMatrix(nparray.reshape((3, 4), order='F'))
     
     def __str__(self):
         nparray = self.matrix.A[0:3].reshape((1, 12), order='F')
-        return ' '.join([remove_trailing_dot(str(x)) for x in nparray[0]])
+        return ' '.join([float_to_str(x) for x in nparray[0]])
     
     def __repr__(self):
         return self.__str__()
+
     
 @datatree
 class VectorConverter:
     '''Convert a string like "1 2 3" to a GVector and back.'''
     vector: GVector = xfield(ftype=Metadata, doc='The vector as a numpy array')
 
-    def __init__(self, vector_str: str):
-        self.vector = GVector([float(x) for x in re.split(r'\s+', vector_str)])
+    def __init__(self, vector_str: Union[str, GVector]):
+        if isinstance(vector_str, GVector):
+            self.vector = vector_str
+        else:
+            self.vector = GVector([float(x) for x in re.split(r'\s+', vector_str)])
     
     def __str__(self):
-        return ' '.join([remove_trailing_dot(str(x)) for x in self.vector.A[0:3]])
+        return ' '.join([float_to_str(x) for x in self.vector.A[0:3]])
     
     def __repr__(self):
         return self.__str__()
@@ -327,7 +335,7 @@ class Build:
 
 @xdatatree
 class Model:
-    XDATATREE_CONFIG=DEFAULT_CONFIG2X(ftype=Metadata)
+    XDATATREE_CONFIG=DEFAULT_CONFIG2X(ftype=MetadataNameValue)
     unit: str = xfield(ftype=Attribute, aname='unit', xmlns=None, doc='Unit of the model')
     lang: str = DEFAULT_CONFIG(ftype=Attribute, aname='lang', xmlns=NAMESPACES.xml, doc='Language of the model')
     requiredextensions: str = DEFAULT_CONFIG(ftype=Attribute, aname='requiredextensions', xmlns=None, doc='Required extensions')
@@ -416,7 +424,6 @@ class ExtrudeTest(TestCase):
         self.assertEqual(conf3.ftype, Attribute)
         self.assertEqual(conf3.ename, 'object')
 
-
     def testDeserialize(self):
         xml_tree = self.getXml()
         config, status = deserialize(xml_tree, Config)
@@ -428,10 +435,18 @@ class ExtrudeTest(TestCase):
         
         xml_serialized = serialize(config, 'config', xml_tree.nsmap)
         
-        config2, status = deserialize(xml_serialized, Config)
+        etree.indent(xml_serialized)
+        serialized_string = etree.tostring(xml_serialized)
+        # print(serialized_string.decode())
+        
+        xml_serialized_from_str = etree.fromstring(serialized_string)
+        
+        config2, status = deserialize(xml_serialized_from_str, Config)
+        
+        self.assertEqual(status.contains_unknown_elements, False)
+        self.assertEqual(status.contains_unknown_attributes, False)
         
         self.assertEqual(config, config2)
-
     
     def testDeserialize2(self):
         xml_tree = self.getXml2()
@@ -444,16 +459,28 @@ class ExtrudeTest(TestCase):
         
         xml_serialized = serialize(model, 'model', xml_tree.nsmap)
         
-        model2, status = deserialize(xml_serialized, Model)
+        etree.indent(xml_serialized)
+        serialized_string = etree.tostring(xml_serialized)
+        # print(serialized_string.decode())
+        
+        xml_serialized_from_str = etree.fromstring(serialized_string)
+        
+        model2, status = deserialize(xml_serialized_from_str, Model)
+        
+        self.assertEqual(status.contains_unknown_elements, False)
+        self.assertEqual(status.contains_unknown_attributes, False)
         
         self.assertEqual(model, model2)
         
+    def testMatrixConverter(self):
+        value = MatrixConverter("1. 0 0 0 0 1 0 0 0 0 1 0 0 0 0 1")
+        value_str = str(value)
+        self.assertEqual(value_str, "1 0 0 0 0 1 0 0 0 0 1 0 0 0 0 1")
         
     def testTransformConverter(self):
         value = TransformConverter("1 0 0 0 1 0 0 0 1 40 40 10")
         value_str = str(value)
         self.assertEqual(value_str, "1 0 0 0 1 0 0 0 1 40 40 10")
-        
         
     def testVectorConverter(self):
         value = VectorConverter("1 2 4")
