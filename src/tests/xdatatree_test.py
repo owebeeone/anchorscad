@@ -305,6 +305,34 @@ class Component:
 class Components:
     XDATATREE_CONFIG=DEFAULT_CONFIGX
     components: List[Component] = xfield(ftype=Element, doc='List of components')
+    
+@xdatatree
+class Vertex:
+    x: float = xfield(ftype=Attribute, doc='X coordinate of the vertex')
+    y: float = xfield(ftype=Attribute, doc='Y coordinate of the vertex')
+    z: float = xfield(ftype=Attribute, doc='Z coordinate of the vertex')
+    
+@xdatatree
+class Triangle:
+    v1: int = xfield(ftype=Attribute, doc='V1 of the triangle')
+    v2: int = xfield(ftype=Attribute, doc='V2 of the triangle')
+    v3: int = xfield(ftype=Attribute, doc='V3 of the triangle')
+    
+@xdatatree
+class Triangles:
+    XDATATREE_CONFIG=DEFAULT_CONFIGX
+    triangles: List[Triangle] = xfield(ftype=Element, doc='List of triangles')
+    
+@xdatatree
+class Vertices:
+    XDATATREE_CONFIG=DEFAULT_CONFIGX
+    vertices: List[Vertex] = xfield(ftype=Element, doc='List of vertices')
+
+@xdatatree
+class Mesh:
+    XDATATREE_CONFIG=DEFAULT_CONFIGX
+    vertices: Vertices = xfield(ftype=Element, doc='List of vertices')
+    triangles: Triangles = xfield(ftype=Element, doc='List of triangles')
 
 @xdatatree
 class Object2:
@@ -313,6 +341,7 @@ class Object2:
     uuid: str = xfield(ftype=Attribute, xmlns=NAMESPACES.p, doc='Uuid of the object')
     type: str = xfield(ftype=Attribute, xmlns=None, doc='Type of the object')
     components: List[Components] = xfield(ftype=Element, doc='List of components')
+    mesh: Mesh = xfield(ftype=Element, doc='Mesh of the object')
 
 @xdatatree
 class Resources:
@@ -400,6 +429,43 @@ XML_DATA2 = '''\
 </model>
 '''
 
+XML_DATA3 = '''\
+<?xml version="1.0" encoding="UTF-8"?>
+<model unit="millimeter" xml:lang="en-US" xmlns="http://schemas.microsoft.com/3dmanufacturing/core/2015/02" xmlns:slic3rpe="http://schemas.slic3r.org/3mf/2017/06" xmlns:p="http://schemas.microsoft.com/3dmanufacturing/production/2015/06" requiredextensions="p">
+ <metadata name="BambuStudio:3mfVersion">1</metadata>
+ <resources>
+  <object id="3" type="model">
+   <mesh>
+    <vertices>
+     <vertex x="-10" y="-10" z="-10"/>
+     <vertex x="-10" y="-10" z="10"/>
+     <vertex x="-10" y="10" z="-10"/>
+     <vertex x="-10" y="10" z="10"/>
+     <vertex x="10" y="-10" z="-10"/>
+     <vertex x="10" y="-10" z="10"/>
+     <vertex x="10" y="10" z="-10"/>
+     <vertex x="10" y="10" z="10"/>
+    </vertices>
+    <triangles>
+     <triangle v1="0" v2="1" v3="3"/>
+     <triangle v1="0" v2="2" v3="6"/>
+     <triangle v1="0" v2="3" v3="2"/>
+     <triangle v1="0" v2="4" v3="5"/>
+     <triangle v1="0" v2="5" v3="1"/>
+     <triangle v1="0" v2="6" v3="4"/>
+     <triangle v1="1" v2="5" v3="3"/>
+     <triangle v1="2" v2="3" v3="6"/>
+     <triangle v1="3" v2="5" v3="7"/>
+     <triangle v1="3" v2="7" v3="6"/>
+     <triangle v1="4" v2="6" v3="5"/>
+     <triangle v1="5" v2="6" v3="7"/>
+    </triangles>
+   </mesh>
+  </object>
+ </resources>
+</model>
+'''
+
 class ExtrudeTest(TestCase):
 
     def getXml(self):
@@ -407,6 +473,9 @@ class ExtrudeTest(TestCase):
     
     def getXml2(self):
          return etree.fromstring(XML_DATA2.encode('utf-8'))
+     
+    def getXml3(self):
+         return etree.fromstring(XML_DATA3.encode('utf-8'))
     
     def testXfieldFtypeResolution(self):
         conf = DEFAULT_CONFIG
@@ -472,6 +541,33 @@ class ExtrudeTest(TestCase):
         
         self.assertEqual(model, model2)
         
+    def testDeserialize3(self):
+        xml_tree = self.getXml3()
+        model, status = deserialize(xml_tree, Model)
+
+        self.assertEqual(status.contains_unknown_elements, False)
+        self.assertEqual(status.contains_unknown_attributes, False)
+        
+        obj = model.resources.objects[0]
+        verts = model.resources.objects[0].mesh.vertices.vertices
+
+        self.assertEqual(len(model.resources.objects[0].mesh.vertices.vertices), 8)
+        
+        xml_serialized = serialize(model, 'model', xml_tree.nsmap)
+        
+        etree.indent(xml_serialized)
+        serialized_string = etree.tostring(xml_serialized)
+        print(serialized_string.decode())
+        
+        xml_serialized_from_str = etree.fromstring(serialized_string)
+        
+        model2, status = deserialize(xml_serialized_from_str, Model)
+        
+        self.assertEqual(status.contains_unknown_elements, False)
+        self.assertEqual(status.contains_unknown_attributes, False)
+        
+        self.assertEqual(model, model2)
+        
     def testMatrixConverter(self):
         value = MatrixConverter("1. 0 0 0 0 1 0 0 0 0 1 0 0 0 0 1")
         value_str = str(value)
@@ -488,5 +584,6 @@ class ExtrudeTest(TestCase):
         self.assertEqual(value_str, "1 2 4")
 
 
-if __name__ == "__main__":
+if __name__ == "__main__":    
+    #import sys; sys.argv = ['', 'ExtrudeTest.testDeserialize3']
     main()

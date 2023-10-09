@@ -557,6 +557,8 @@ class _Attribute(XmlDataType):
     
     def serialize(self, xml_node: etree.ElementBase, name: str, value: Any):
         '''Place the attribute value in the xml_node.'''
+        if value is None:
+            return
         xml_node.set(name, str(value))
 
 
@@ -599,6 +601,8 @@ class _Element(XmlDataType):
                 child = etree.SubElement(xml_node, name)
                 _serialize(child, item)
         else:
+            if value is None:
+                return
             child = etree.SubElement(xml_node, name)
             _serialize(child, value)
 
@@ -628,10 +632,14 @@ class _Metadata(XmlDataType):
         
     def serialize(self, xml_node: etree.ElementBase, name: str, value: Any):
         '''Place the metadata value in the xml_node.'''
+        if value is None:
+            return
+        
+        value_str = value if isinstance(value, str) else str(value)
         if self.is_name_value:
-            etree.SubElement(xml_node, 'metadata', name=name).text = str(value)
+            etree.SubElement(xml_node, 'metadata', name=name).text = value_str
         else:
-            etree.SubElement(xml_node, 'metadata', key=name, value=str(value))
+            etree.SubElement(xml_node, 'metadata', key=name, value=value_str)
 
 Metadata=_Metadata(is_name_value=False)
 MetadataNameValue=_Metadata(is_name_value=True)
@@ -639,6 +647,8 @@ MetadataNameValue=_Metadata(is_name_value=True)
 
 def _serialize(xml_node: etree.ElementBase, xdatatree_object: Any):
     '''Serialize an xdatatree to an xml node.'''
+    if xdatatree_object is None:
+        return
     
     parser_spec = xdatatree_object.XDATATREE_PARSER_SPEC
     
