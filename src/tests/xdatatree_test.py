@@ -1,6 +1,6 @@
 from anchorscad.xdatatrees import xdatatree, xfield, Attribute, Metadata, \
     Element, CamelSnakeConverter, SnakeCamelConverter, deserialize, serialize, \
-    MetadataNameValue
+    MetadataNameValue, ValueCollector
 
 from anchorscad import GMatrix, GVector, datatree, dtfield
 
@@ -312,21 +312,81 @@ class Vertex:
     y: float = xfield(ftype=Attribute, doc='Y coordinate of the vertex')
     z: float = xfield(ftype=Attribute, doc='Z coordinate of the vertex')
     
+    def get_array(self):
+        return np.array([self.x, self.y, self.z])
+    
 @xdatatree
 class Triangle:
     v1: int = xfield(ftype=Attribute, doc='V1 of the triangle')
     v2: int = xfield(ftype=Attribute, doc='V2 of the triangle')
     v3: int = xfield(ftype=Attribute, doc='V3 of the triangle')
     
+    def get_array(self):
+        return np.array([self.v1, self.v2, self.v3])
+    
+@datatree
+class TriangesCustomConverter(ValueCollector):
+    '''A custom converter for a field representing a list of Triange objects.
+    This will represent the list of trianges as a numpy array and allow to serialize it
+    back to a list of Triange objects.'''
+    triangles: List[np.ndarray] = dtfield(default_factory=list, doc='List of vertices')
+    
+    # This defines is used to read and write the values as xml element.
+    CONTAINED_TYPE = Triangle
+    
+    def append(self, item: CONTAINED_TYPE):
+        if not isinstance(item, self.CONTAINED_TYPE):
+            raise ValueError(f'Item must be of type {self.CONTAINED_TYPE.__name__} but received {type(item).__name__}')
+        self.triangles.append(item.get_array())
+
+    def get(self):
+        return np.array(self.triangles)
+    
+    @classmethod
+    def to_contained_type(cls, triangles: np.ndarray):
+        return (cls.CONTAINED_TYPE(*x) for x in triangles)
+    
 @xdatatree
 class Triangles:
     XDATATREE_CONFIG=DEFAULT_CONFIGX
-    triangles: List[Triangle] = xfield(ftype=Element, doc='List of triangles')
+    triangles: List[Triangle] = xfield(ftype=Element, ename='triangle', builder=TriangesCustomConverter,  doc='List of triangles')
     
+    def __eq__(self, __value: object) -> bool:
+        return np.array_equal(self.triangles, __value.triangles)
+
+
+@datatree
+class VerticesCustomConverter(ValueCollector):
+    '''A custom converter for a field representing a list of Vertex objects.
+    This will represent the list of vertices as a numpy array and allow to serialize it
+    back to a list of Vertex objects.'''
+    vertices: List[np.ndarray] = dtfield(default_factory=list, doc='List of vertices')
+    
+    # This defines is used to read and write the values as xml element.
+    CONTAINED_TYPE = Vertex
+    
+    def append(self, item: CONTAINED_TYPE):
+        if not isinstance(item, self.CONTAINED_TYPE):
+            raise ValueError(f'Item must be of type {self.CONTAINED_TYPE.__name__} but received {type(item).__name__}')
+        self.vertices.append(item.get_array())
+
+    def get(self):
+        return np.array(self.vertices)
+    
+    @classmethod
+    def to_contained_type(cls, vertices: np.ndarray):
+        return (cls.CONTAINED_TYPE(*x) for x in vertices)
+
+
 @xdatatree
 class Vertices:
     XDATATREE_CONFIG=DEFAULT_CONFIGX
-    vertices: List[Vertex] = xfield(ftype=Element, doc='List of vertices')
+    vertices: np.ndarray = xfield(ftype=Element, ename='vertex', builder=VerticesCustomConverter, doc='List of vertices')
+    
+    def __eq__(self, __value: object) -> bool:
+        if not isinstance(__value, Vertices):
+            return False
+        return np.array_equal(self.vertices, __value.vertices)
 
 @xdatatree
 class Mesh:
@@ -557,7 +617,7 @@ class ExtrudeTest(TestCase):
         
         etree.indent(xml_serialized)
         serialized_string = etree.tostring(xml_serialized)
-        print(serialized_string.decode())
+        #print(serialized_string.decode())
         
         xml_serialized_from_str = etree.fromstring(serialized_string)
         

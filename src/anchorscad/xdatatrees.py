@@ -42,6 +42,20 @@ XDATATREE_UNUSED_XML_ATTRIBUTES='xdatatree_unused_xml_attributes'
 XDATATREE_PARSER_SPEC='XDATATREE_PARSER_SPEC'
 
 
+class ValueCollector:
+    '''Base type for collecting values for a field.'''
+    
+    def append(self, value):
+        raise NotImplementedError('Abstract method, implement in subclass')
+    
+    def get(self):
+        raise NotImplementedError('Abstract method, implement in subclass')
+
+    @classmethod    
+    def to_contained_type(self, value):
+        raise NotImplementedError('Abstract method, implement in subclass')
+
+
 class PythonNameToXmlNameProvider:
     '''Derives xml element and sttribute names by transforming the python class or field
     names. This allows for automatic naming consistency between the python and xml forms.'''
@@ -131,7 +145,7 @@ class XmlFieldSpec:
     field_name: str
     xml_name: str    
     ftype: XmlDataType
-    collector_type: 'ValueCollector'
+    collector_type: ValueCollector
 
     def __post_init__(self):
         assert isinstance(self.field_name, str), 'field_name must be a string'
@@ -308,7 +322,7 @@ class XmlParserSpec:
         kwds = {}
         for name, value in result.result_dict.items():
             if isinstance(value, ValueCollector):
-                value = value.value
+                value = value.get()
 
             kwds[name] = value
         
@@ -353,33 +367,36 @@ class _XFieldParams:
     aname: Optional[str] = UNSPECIFIED
     exclude: Optional[bool] = UNSPECIFIED
     other_params: dict = UNSPECIFIED  # Other parameters to pass to datatrees.dtfield
+    builder: Type[ValueCollector] = UNSPECIFIED
     
     def __post_init__(self):
         assert self.ftype in UNSPECIFIED_OR_NONE or isinstance(self.ftype, XmlDataType), \
             f'ftype must be an instance of XmlDataType, Attribute, Element or Metadata'
-        assert self.ename in UNSPECIFIED_OR_NONE  or isinstance(self.ename, str), \
+        assert self.ename in UNSPECIFIED_OR_NONE or isinstance(self.ename, str), \
             f'ename must be a string'
-        assert self.exmlns in UNSPECIFIED_OR_NONE  or isinstance(self.exmlns, str), \
+        assert self.exmlns in UNSPECIFIED_OR_NONE or isinstance(self.exmlns, str), \
             f'exmlns must be a string'
         assert self.ename_transform in UNSPECIFIED_OR_NONE  \
             or isinstance(self.ename_transform, PythonNameToXmlNameProvider) \
             or issubclass(self.ename_transform, PythonNameToXmlNameProvider), \
             f'ename_transform must be an instance of KeyOrNameConverter'
-        assert self.aname in UNSPECIFIED_OR_NONE  or isinstance(self.aname, str), \
+        assert self.aname in UNSPECIFIED_OR_NONE or isinstance(self.aname, str), \
             f'aname must be a string'
-        assert self.axmlns in UNSPECIFIED_OR_NONE  or isinstance(self.axmlns, str), \
+        assert self.axmlns in UNSPECIFIED_OR_NONE or isinstance(self.axmlns, str), \
             f'axmlns must be a string'
         assert self.aname_transform in UNSPECIFIED_OR_NONE  \
             or isinstance(self.aname_transform, PythonNameToXmlNameProvider) \
             or issubclass(self.aname_transform, PythonNameToXmlNameProvider), \
             f'aname_transform must be an instance of KeyOrNameConverter'
-        assert self.exclude in UNSPECIFIED_OR_NONE  or isinstance(self.exclude, bool), \
+        assert self.exclude in UNSPECIFIED_OR_NONE or isinstance(self.exclude, bool), \
             f'exclude must be a bool'
-        assert self.other_params in UNSPECIFIED_OR_NONE  or isinstance(self.other_params, dict), \
+        assert self.other_params in UNSPECIFIED_OR_NONE or isinstance(self.other_params, dict), \
             f'other_params must be a dict'
         if not self.other_params is UNSPECIFIED:
             invalid_params = set(self.other_params.keys()).difference(_ALLOWED_XFIELD_PARAMS)
             assert not invalid_params, f'_XFieldParams Invalid other_params {invalid_params}'
+        assert self.builder in UNSPECIFIED_OR_NONE or issubclass(self.builder, ValueCollector), \
+            f'builder {self.builder} must be a subclass of ValueCollector'
     
     def __call__(self, 
                  ftype: 'XmlDataType' = UNSPECIFIED, 
@@ -391,6 +408,7 @@ class _XFieldParams:
                  aname_transform: PythonNameToXmlNameProvider = UNSPECIFIED,
                  aname: str = UNSPECIFIED,
                  exclude: bool = UNSPECIFIED,
+                 builder: Type[ValueCollector] = UNSPECIFIED,
                  **kwds: Any) -> Any:
         '''Create a new instance of this class with the passed in values
         overriding the values in this instance.'''
@@ -443,6 +461,9 @@ class _XFieldParams:
             
         if exclude is UNSPECIFIED:
             exclude = self.exclude
+            
+        if builder is UNSPECIFIED:
+            builder = self.builder
         
         other_params = kwds
         if not other_params:
@@ -460,6 +481,7 @@ class _XFieldParams:
             aname_transform=aname_transform,
             aname=aname,
             exclude=exclude,
+            builder=builder,
             other_params=other_params)
         
     def apply(self, other: Optional['_XFieldParams']) -> '_XFieldParams':
@@ -478,6 +500,7 @@ class _XFieldParams:
             aname_transform=other.aname_transform,
             aname=other.aname,
             exclude=other.exclude,
+            builder=other.builder,
             **other.other_params)
         
     def is_default_specified(self):
@@ -596,7 +619,7 @@ class _Element(XmlDataType):
         
     def serialize(self, xml_node: etree.ElementBase, name: str, value: Any):
         '''Place the element value in the xml_node.'''
-        if isinstance(value, list):
+        if isinstance(value, list) or inspect.isgenerator(value):
             for item in value:
                 child = etree.SubElement(xml_node, name)
                 _serialize(child, item)
@@ -659,7 +682,9 @@ def _serialize(xml_node: etree.ElementBase, xdatatree_object: Any):
         
     for xml_name, field_spec in all_values:
         field_name = field_spec.field_name
+        collector_type = field_spec.collector_type
         value = getattr(xdatatree_object, field_name)
+        value = collector_type.to_contained_type(value)
         field_spec.ftype.serialize(xml_node, xml_name, value)
     
     if xdatatree_object.xdatatree_unused_xml_attributes:
@@ -691,6 +716,7 @@ def xfield(ftype: 'XmlDataType' = UNSPECIFIED,
            aname_transform: PythonNameToXmlNameProvider = UNSPECIFIED,
            aname: str = UNSPECIFIED,
            exclude: bool = UNSPECIFIED,
+           builder: Type[ValueCollector] = UNSPECIFIED,
            **kwargs) -> _XFieldParams:
     '''Like datatrees.dtfield but also supports annotations for xml parsing.
     Args:
@@ -717,6 +743,7 @@ def xfield(ftype: 'XmlDataType' = UNSPECIFIED,
             aname_transform=aname_transform,
             aname=aname,
             exclude=exclude,
+            builder=builder,
             other_params=kwargs)
 
 
@@ -777,10 +804,6 @@ def _get_field_as_params(current_field_value: Field) \
     return curr_values, default_value
 
 
-class ValueCollector:
-    '''Base type for collecting values for a field.'''
-
-
 def _get_collector_type(annotation: Any) -> Tuple[type, bool]:
     if hasattr(annotation, '__origin__') and hasattr(annotation, '__args__'):
         # Assume it's a typing module annotation specifier.
@@ -802,6 +825,10 @@ def _get_collector_type(annotation: Any) -> Tuple[type, bool]:
                 def get(self):
                     return self.value
                 
+                @classmethod
+                def to_contained_type(cls, value: List[CONTAINED_TYPE]):
+                    return value
+                
             return ListCollector
                 
         elif container_type is tuple:
@@ -819,6 +846,10 @@ def _get_collector_type(annotation: Any) -> Tuple[type, bool]:
                     
                 def get(self):
                     return tuple(self.value)
+                
+                @classmethod
+                def to_contained_type(cls, value: Tuple[CONTAINED_TYPE]):
+                    return value
                 
             return TupleCollector
         
@@ -840,6 +871,11 @@ def _get_collector_type(annotation: Any) -> Tuple[type, bool]:
                 
             def get(self):
                 return self.value
+            
+                
+            @classmethod
+            def to_contained_type(cls, value: CONTAINED_TYPE):
+                return value
             
         return SingleValueCollector
         
@@ -882,7 +918,10 @@ def _process_field(
     if not field_config.is_default_specified():
         field_config = field_config(default=None)
     
-    collector_type = _get_collector_type(field_annotation)
+    if field_config.builder in UNSPECIFIED_OR_NONE:
+        collector_type = _get_collector_type(field_annotation)
+    else:
+        collector_type = field_config.builder
     
     ftype = field_config.ftype
     
