@@ -1,6 +1,9 @@
 from anchorscad.xdatatrees import xdatatree, xfield, Attribute, Metadata, \
     Element, CamelSnakeConverter, SnakeCamelConverter, deserialize, serialize, \
     MetadataNameValue, ValueCollector
+    
+from anchorscad.threemf_config import SERIALIZATION_SPEC as CONFIG_SERIALIZATION_SPEC
+from anchorscad.threemf_model import SERIALIZATION_SPEC as MODEL_SERIALIZATION_SPEC
 
 from anchorscad import GMatrix, GVector, datatree, dtfield
 
@@ -642,7 +645,37 @@ class ExtrudeTest(TestCase):
         value = VectorConverter("1 2 4")
         value_str = str(value)
         self.assertEqual(value_str, "1 2 4")
+        
+    def testSerializationSpec_config(self):
+        config, status = CONFIG_SERIALIZATION_SPEC.deserialize(self.getXml())
+        self.assertEqual(status.contains_unknown_elements, False)
+        self.assertEqual(status.contains_unknown_attributes, False)
+        self.assertEqual(len(config.objects), 4)
+        
+        new_tree = CONFIG_SERIALIZATION_SPEC.serialize(config)
+        config1, status = CONFIG_SERIALIZATION_SPEC.deserialize(new_tree)
+        self.assertEqual(config, config1)
+        
+    def testSerializationSpec_model2(self):
+        model, status = MODEL_SERIALIZATION_SPEC.deserialize(self.getXml2())
+        self.assertEqual(status.contains_unknown_elements, False)
+        self.assertEqual(status.contains_unknown_attributes, False)
+        self.assertEqual(len(model.build.items), 4)
+        
+        new_tree = MODEL_SERIALIZATION_SPEC.serialize(model)
+        model1, status = MODEL_SERIALIZATION_SPEC.deserialize(new_tree)
+        self.assertEqual(model, model1)
 
+        
+    def testSerializationSpec_model3(self):
+        model, status = MODEL_SERIALIZATION_SPEC.deserialize(self.getXml3())
+        self.assertEqual(status.contains_unknown_elements, False)
+        self.assertEqual(status.contains_unknown_attributes, False)
+        self.assertEqual(len(model.resources.objects[0].mesh.vertices.vertices), 8)
+        
+        new_tree = MODEL_SERIALIZATION_SPEC.serialize(model)
+        model1, status = MODEL_SERIALIZATION_SPEC.deserialize(new_tree)
+        self.assertEqual(model, model1)
 
 if __name__ == "__main__":    
     #import sys; sys.argv = ['', 'ExtrudeTest.testDeserialize3']

@@ -223,7 +223,7 @@ class XmlObjectBuilder:
         self.contains_unknown_elements = \
             self.contains_unknown_elements or sub_result.contains_unknown_elements
 
-@dataclass
+@dataclass(frozen=True)
 class XmlParserOptions:
     '''Options for deserializing.'''
     respect_namespace: bool = field(default=True)
@@ -996,3 +996,35 @@ def xdatatree(clz=None, /, *, init=True, repr=True, eq=True, order=False,
 
     # We're called as @datatree without parens.
     return wrap(clz)
+
+
+class XmlNamespaces:
+    '''Provides a container for the XML namespace mappings.'''
+    def __init__(self, xml="http://www.w3.org/XML/1998/namespace", **kwargs):
+        self.xml = xml
+        self._keys = kwargs.keys()
+        self.__dict__.update(kwargs)
+        
+    def to_nsmap(self):
+        '''Returns a dictionary of namespace definitions suitable for lxml.etree.Element.'''
+        kvs = ((k, getattr(self, k)) for k in self._keys)
+        nsmap = {k: getattr(self, k) for k, v in kvs if v is not None}
+        nsmap[None] = self.xml
+        return nsmap
+    
+
+@datatree
+class XmlSerializationSpec:
+    '''Specifies the configuration for XML serialization and deserialization
+    for a specific xdatatree annotated class.'''
+    xml_type: Type = dtfield(doc='The xdatatee annotated class for the top level element.')
+    xml_node_name: str = dtfield(doc='The name of the root element.')
+    xml_namespaces: XmlNamespaces = dtfield(None, doc='The namespaces for the xml document.')
+    options: XmlParserOptions = dtfield(DESERIALIZE_OPTIONS, doc='The options for the deserializer.')
+    
+    def serialize(self, xdatatree_obj):
+        nsmap = self.xml_namespaces.to_nsmap() if self.xml_namespaces else None
+        return serialize(xdatatree_obj, self.xml_node_name, nsmap)
+    
+    def deserialize(self, xml_node: etree.ElementBase):
+        return deserialize(xml_node, self.xml_type, options=self.options)
