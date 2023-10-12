@@ -5,9 +5,12 @@ from anchorscad.xdatatrees import xdatatree, xfield, Attribute, Metadata, \
 from anchorscad.threemf_config import SERIALIZATION_SPEC as CONFIG_SERIALIZATION_SPEC
 from anchorscad.threemf_model import SERIALIZATION_SPEC as MODEL_SERIALIZATION_SPEC
 
+from anchorscad.xdatatree_utils import FullDeserializeChecker, TransformConverter, \
+    VectorConverter, MatrixConverter
+
 from anchorscad import GMatrix, GVector, datatree, dtfield
 
-from typing import List, Union
+from typing import List, Union, Tuple
 import re
 import lxml.etree as etree 
 import numpy as np
@@ -17,86 +20,6 @@ from unittest import TestCase, main
 
 '''Create a default config for all xdatatree annotationed classes.'''
 DEFAULT_CONFIG=xfield(ename_transform=CamelSnakeConverter, ftype=Element)
-
-class FullDeserializeChecker:
-    '''Mixin class that checks if all XML elements and attributes are used.'''
-    def __post_init__(self):
-        assert self.xdatatree_unused_xml_elements is None, 'Unused XML elements found'
-        assert self.xdatatree_unused_xml_attributes is None, 'Unused XML attributes found'
-
-
-def float_to_str(value: float) -> str:
-  """Removes a trailing "." from a floating point number string.
-  Args:
-    string: A string.
-  Returns:
-    A string with the trailing "." removed, if it exists.
-  """
-  string = str(value).rstrip('0')
-  if string.endswith('.'):
-    return string[:-1]
-  else:
-    return string
-
-
-@datatree
-class MatrixConverter:
-    '''Convert a 16 value string like "1 0 0 0 0 1 0 0 0 0 1 0 0 0 0 1" to a
-    GMatrix and back.'''
-    matrix: GMatrix = dtfield(doc='The matrix as a GMatrix')
-
-    def __init__(self, matrix_str: Union[str, GMatrix]):
-        if isinstance(matrix_str, GMatrix):
-            self.matrix = matrix_str
-        else:
-            nparray = np.array([float(x) for x in re.split(r'\s+', matrix_str)])
-            self.matrix = GMatrix(nparray.reshape((4, 4)))
-    
-    def __str__(self):
-        return ' '.join([float_to_str(x) for x in self.matrix.A.flatten()])
-    
-    def __repr__(self):
-        return self.__str__()
-    
-
-@datatree
-class TransformConverter:
-    '''Convert a 12 value string like "1 0 0 0 1 0 0 0 1 40 40 10" to a GMatrix
-    and back.'''
-    matrix: GMatrix = dtfield(doc='The matrix as a GMatrix')
-
-    def __init__(self, matrix_str: Union[str, GMatrix]):
-        
-        if isinstance(matrix_str, GMatrix):
-            self.matrix = matrix_str
-        else:
-            nparray = np.array([float(x) for x in re.split(r'\s+', matrix_str)])
-            self.matrix = GMatrix(nparray.reshape((3, 4), order='F'))
-    
-    def __str__(self):
-        nparray = self.matrix.A[0:3].reshape((1, 12), order='F')
-        return ' '.join([float_to_str(x) for x in nparray[0]])
-    
-    def __repr__(self):
-        return self.__str__()
-
-    
-@datatree
-class VectorConverter:
-    '''Convert a string like "1 2 3" to a GVector and back.'''
-    vector: GVector = xfield(ftype=Metadata, doc='The vector as a numpy array')
-
-    def __init__(self, vector_str: Union[str, GVector]):
-        if isinstance(vector_str, GVector):
-            self.vector = vector_str
-        else:
-            self.vector = GVector([float(x) for x in re.split(r'\s+', vector_str)])
-    
-    def __str__(self):
-        return ' '.join([float_to_str(x) for x in self.vector.A[0:3]])
-    
-    def __repr__(self):
-        return self.__str__()
 
 
 @xdatatree
@@ -298,19 +221,19 @@ DEFAULT_CONFIG2X=xfield(
 
 
 @xdatatree
-class Component:
+class Component(FullDeserializeChecker):
     XDATATREE_CONFIG=DEFAULT_CONFIGX(ftype=Attribute)
     path: str = xfield(xmlns=NAMESPACES.p, doc='Path of the component')
     objectid: str = xfield(xmlns=None, doc='Object id of the component')
     transform: TransformConverter = xfield(xmlns=None, doc='Transform of the component')
 
 @xdatatree
-class Components:
+class Components(FullDeserializeChecker):
     XDATATREE_CONFIG=DEFAULT_CONFIGX
     components: List[Component] = xfield(ftype=Element, doc='List of components')
     
 @xdatatree
-class Vertex:
+class Vertex(FullDeserializeChecker):
     x: float = xfield(ftype=Attribute, doc='X coordinate of the vertex')
     y: float = xfield(ftype=Attribute, doc='Y coordinate of the vertex')
     z: float = xfield(ftype=Attribute, doc='Z coordinate of the vertex')
@@ -319,10 +242,12 @@ class Vertex:
         return np.array([self.x, self.y, self.z])
     
 @xdatatree
-class Triangle:
+class Triangle(FullDeserializeChecker):
     v1: int = xfield(ftype=Attribute, doc='V1 of the triangle')
     v2: int = xfield(ftype=Attribute, doc='V2 of the triangle')
     v3: int = xfield(ftype=Attribute, doc='V3 of the triangle')
+    paint_color: str = xfield(ftype=Attribute, doc='paint_colors of the triangle')
+    
     
     def get_array(self):
         return np.array([self.v1, self.v2, self.v3])
@@ -333,6 +258,7 @@ class TriangesCustomConverter(ValueCollector):
     This will represent the list of trianges as a numpy array and allow to serialize it
     back to a list of Triange objects.'''
     triangles: List[np.ndarray] = dtfield(default_factory=list, doc='List of vertices')
+    paint_colors: List[str] = dtfield(default_factory=list, doc='List of paint colors')
     
     # This defines is used to read and write the values as xml element.
     CONTAINED_TYPE = Triangle
@@ -341,21 +267,24 @@ class TriangesCustomConverter(ValueCollector):
         if not isinstance(item, self.CONTAINED_TYPE):
             raise ValueError(f'Item must be of type {self.CONTAINED_TYPE.__name__} but received {type(item).__name__}')
         self.triangles.append(item.get_array())
+        self.paint_colors.append(item.paint_color)
 
     def get(self):
-        return np.array(self.triangles)
+        return np.array(self.triangles), self.paint_colors
     
     @classmethod
-    def to_contained_type(cls, triangles: np.ndarray):
-        return (cls.CONTAINED_TYPE(*x) for x in triangles)
+    def to_contained_type(cls, triangles_paint_colors: Tuple[np.ndarray, List[str]]):
+        return (cls.CONTAINED_TYPE(*x[0], paint_color=x[1]) for x in zip(*triangles_paint_colors))
     
 @xdatatree
-class Triangles:
+class Triangles(FullDeserializeChecker):
     XDATATREE_CONFIG=DEFAULT_CONFIGX
-    triangles: List[Triangle] = xfield(ftype=Element, ename='triangle', builder=TriangesCustomConverter,  doc='List of triangles')
+    triangles_paint_colors: List[Tuple[Triangle, List[str]]] \
+        = xfield(ftype=Element, ename='triangle', builder=TriangesCustomConverter,  doc='List of triangles')
     
     def __eq__(self, __value: object) -> bool:
-        return np.array_equal(self.triangles, __value.triangles)
+        return np.array_equal(self.triangles_paint_colors[0], __value.triangles_paint_colors[0]) \
+            and (self.triangles_paint_colors[1] == __value.triangles_paint_colors[1])
 
 
 @datatree
@@ -382,7 +311,7 @@ class VerticesCustomConverter(ValueCollector):
 
 
 @xdatatree
-class Vertices:
+class Vertices(FullDeserializeChecker):
     XDATATREE_CONFIG=DEFAULT_CONFIGX
     vertices: np.ndarray = xfield(ftype=Element, ename='vertex', builder=VerticesCustomConverter, doc='List of vertices')
     
@@ -392,13 +321,13 @@ class Vertices:
         return np.array_equal(self.vertices, __value.vertices)
 
 @xdatatree
-class Mesh:
+class Mesh(FullDeserializeChecker):
     XDATATREE_CONFIG=DEFAULT_CONFIGX
     vertices: Vertices = xfield(ftype=Element, doc='List of vertices')
     triangles: Triangles = xfield(ftype=Element, doc='List of triangles')
 
 @xdatatree
-class Object2:
+class Object2(FullDeserializeChecker):
     XDATATREE_CONFIG=DEFAULT_CONFIGX
     id: int = xfield(ftype=Attribute, xmlns=None, doc='Id of the object')
     uuid: str = xfield(ftype=Attribute, xmlns=NAMESPACES.p, doc='Uuid of the object')
@@ -407,12 +336,12 @@ class Object2:
     mesh: Mesh = xfield(ftype=Element, doc='Mesh of the object')
 
 @xdatatree
-class Resources:
+class Resources(FullDeserializeChecker):
     XDATATREE_CONFIG=DEFAULT_CONFIGX
     objects: List[Object2] = DEFAULT_CONFIG(ename='object', doc='List of objects')
 
 @xdatatree
-class Item:
+class Item(FullDeserializeChecker):
     XDATATREE_CONFIG=DEFAULT_CONFIGX(ftype=Attribute, xmlns=None)
     objectid: str = xfield(doc='Object id of the item')
     uuid: str = xfield(xmlns=NAMESPACES.p, doc='Uuid of the item')
@@ -420,13 +349,13 @@ class Item:
     printable: bool = xfield(doc='Printable of the item')
 
 @xdatatree
-class Build:
+class Build(FullDeserializeChecker):
     XDATATREE_CONFIG=DEFAULT_CONFIGX
     uuid: str = xfield(ftype=Attribute, xmlns=NAMESPACES.p, doc='Uuid of the build')
     items: List[Item] = xfield(doc='List of items')
 
 @xdatatree
-class Model:
+class Model(FullDeserializeChecker):
     XDATATREE_CONFIG=DEFAULT_CONFIG2X(ftype=MetadataNameValue)
     unit: str = xfield(ftype=Attribute, aname='unit', xmlns=None, doc='Unit of the model')
     lang: str = DEFAULT_CONFIG(ftype=Attribute, aname='lang', xmlns=NAMESPACES.xml, doc='Language of the model')
@@ -513,12 +442,12 @@ XML_DATA3 = '''\
      <triangle v1="0" v2="1" v3="3"/>
      <triangle v1="0" v2="2" v3="6"/>
      <triangle v1="0" v2="3" v3="2"/>
-     <triangle v1="0" v2="4" v3="5"/>
-     <triangle v1="0" v2="5" v3="1"/>
+     <triangle v1="0" v2="4" v3="5" paint_color="4"/>
+     <triangle v1="0" v2="5" v3="1" paint_color="4"/>
      <triangle v1="0" v2="6" v3="4"/>
-     <triangle v1="1" v2="5" v3="3"/>
+     <triangle v1="1" v2="5" v3="3" paint_color="0C"/>
      <triangle v1="2" v2="3" v3="6"/>
-     <triangle v1="3" v2="5" v3="7"/>
+     <triangle v1="3" v2="5" v3="7" paint_color="0C"/>
      <triangle v1="3" v2="7" v3="6"/>
      <triangle v1="4" v2="6" v3="5"/>
      <triangle v1="5" v2="6" v3="7"/>

@@ -10,7 +10,7 @@ from anchorscad import datatree, dtfield
 
 from anchorscad.xdatatree_utils import FullDeserializeChecker, TransformConverter
 
-from typing import List, Union
+from typing import List, Tuple
 import numpy as np
 
 
@@ -60,43 +60,46 @@ class Triangle(FullDeserializeChecker):
     v1: int = xfield(ftype=Attribute, doc='V1 of the triangle')
     v2: int = xfield(ftype=Attribute, doc='V2 of the triangle')
     v3: int = xfield(ftype=Attribute, doc='V3 of the triangle')
+    paint_color: str = xfield(ftype=Attribute, doc='paint_colors of the triangle')
     
     def get_array(self):
         return np.array([self.v1, self.v2, self.v3])
     
+@datatree
 @datatree
 class TriangesCustomConverter(ValueCollector):
     '''A custom converter for a field representing a list of Triange objects.
     This will represent the list of trianges as a numpy array and allow to serialize it
     back to a list of Triange objects.'''
     triangles: List[np.ndarray] = dtfield(default_factory=list, doc='List of vertices')
+    paint_colors: List[str] = dtfield(default_factory=list, doc='List of paint colors')
     
-    # This defines the type used to read and write the values as xml element.
+    # This defines is used to read and write the values as xml element.
     CONTAINED_TYPE = Triangle
     
     def append(self, item: CONTAINED_TYPE):
         if not isinstance(item, self.CONTAINED_TYPE):
             raise ValueError(f'Item must be of type {self.CONTAINED_TYPE.__name__} but received {type(item).__name__}')
         self.triangles.append(item.get_array())
+        self.paint_colors.append(item.paint_color)
 
     def get(self):
-        return np.array(self.triangles)
+        return np.array(self.triangles), self.paint_colors
     
     @classmethod
-    def to_contained_type(cls, triangles: np.ndarray):
-        return (cls.CONTAINED_TYPE(*x) for x in triangles)
+    def to_contained_type(cls, triangles_paint_colors: Tuple[np.ndarray, List[str]]):
+        return (cls.CONTAINED_TYPE(*x[0], paint_color=x[1]) for x in zip(*triangles_paint_colors))
     
 @xdatatree
 class Triangles(FullDeserializeChecker):
     XDATATREE_CONFIG=DEFAULT_CONFIGX
-    triangles: List[Triangle] = xfield(
-        ftype=Element, 
-        ename='triangle', 
-        builder=TriangesCustomConverter, 
-        doc='List of triangles')
+    triangles_paint_colors: List[Tuple[Triangle, List[str]]] \
+        = xfield(ftype=Element, ename='triangle', builder=TriangesCustomConverter,  doc='List of triangles')
     
     def __eq__(self, __value: object) -> bool:
-        return np.array_equal(self.triangles, __value.triangles)
+        return np.array_equal(self.triangles_paint_colors[0], __value.triangles_paint_colors[0]) \
+            and (self.triangles_paint_colors[1] == __value.triangles_paint_colors[1])
+
 
 
 @datatree
