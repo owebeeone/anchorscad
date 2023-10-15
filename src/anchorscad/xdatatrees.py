@@ -13,6 +13,7 @@ import inspect
 import re
 from itertools import chain
 from copy import deepcopy
+import sys
 
 
 class TooManyValuesError(ValueError):
@@ -207,14 +208,14 @@ class XmlObjectBuilder:
     def add_value(self, field_spec: XmlFieldSpec, value: Any):
         self._add_entry(field_spec.field_name, value, field_spec.collector_type)
         
-    def build_object(self, field_spec: XmlFieldSpec):
-        '''Build the object from the subelement_result.'''
-        kwds = {}
-        for name, value in self.result_dict.items():
-            kwds[name] = value
+    # def build_object(self, field_spec: XmlFieldSpec):
+    #     '''Build the object from the subelement_result.'''
+    #     kwds = {}
+    #     for name, value in self.result_dict.items():
+    #         kwds[name] = value
         
-        new_obj = field_spec.collector_type.CONTAINED_TYPE(**kwds)
-        return new_obj
+    #     new_obj = field_spec.collector_type.CONTAINED_TYPE(**kwds)
+    #     return new_obj
     
     def merge_status(self, sub_result: 'XmlObjectBuilder'):
         '''Merge the status of the sub_result into this result.'''
@@ -227,6 +228,10 @@ class XmlObjectBuilder:
 class XmlParserOptions:
     '''Options for deserializing.'''
     respect_namespace: bool = field(default=True)
+    assert_unused_elements: bool = field(default=False)
+    assert_unused_attributes: bool = field(default=False)
+    print_unused_elements: bool = field(default=False)
+    print_unused_attributes: bool = field(default=False)
 
 DESERIALIZE_OPTIONS=XmlParserOptions()
 
@@ -308,7 +313,8 @@ class XmlParserSpec:
                 # A known element, recursively run the parser.
                 contained_type = field_spec.collector_type.CONTAINED_TYPE
                 parser_spec = getattr(contained_type, XDATATREE_PARSER_SPEC, None)
-                value, sub_result = parser_spec.deserialize(elem, field_spec.collector_type.CONTAINED_TYPE)
+                value, sub_result = parser_spec.deserialize(
+                    elem, field_spec.collector_type.CONTAINED_TYPE, options=options)
                 
                 result.add_value(field_spec, value)
                 result.merge_status(sub_result)
@@ -327,7 +333,77 @@ class XmlParserSpec:
             kwds[name] = value
         
         new_obj = clz(**kwds)
+        
+        # Report unused elements and attributes. These are added to the xdatatree object
+        # and will be rendered as is if the object is serialized back to xml although the
+        # order is not preserved.
+        if XDATATREE_UNUSED_XML_ATTRIBUTES in kwds:
+            name = get_xml_path(xml_element)
+            if options.assert_unused_attributes:
+                raise ValueError(
+                    f'In element {name}, '
+                    f'unknown attributes found: {get_unused_xml_attribute_names(kwds)}')
+            elif options.print_unused_attributes:
+                print(
+                    f'In element {name}, '
+                    f'unknown attributes found: {get_unused_xml_attribute_names(kwds)}',
+                    file=sys.stderr)
+        if XDATATREE_UNUSED_XML_ELEMENTS in kwds:
+            name = xml_element.getroottree().getpath(xml_element)
+            if options.assert_unused_elements:
+                raise ValueError(
+                    f'In element {name}, '
+                    f'unknown elements found: {get_unused_xml_element_names(kwds)}')
+            elif options.print_unused_elements:
+                print(
+                    f'In element {name}, '
+                    f'unknown elements found: {get_unused_xml_element_names(kwds)}',
+                    file=sys.stderr)
+        
         return new_obj, result
+    
+    
+def make_xml_name_from(tag: str, nsmap: dict) -> str:
+    qname = etree.QName(tag)
+    if not qname.namespace:
+        return qname.localname
+    inverted_nsmap = {value: key for key, value in nsmap.items()}
+    if qname.namespace in inverted_nsmap:
+        nsname = inverted_nsmap[qname.namespace]
+        if nsname:
+            return f'{nsname}:{qname.localname}'
+    return qname.localname
+
+
+def get_xml_path(xml_element: etree.ElementBase) -> str:
+    '''Return the xml path of the element.'''
+    root = xml_element.getroottree().getroot()
+    nsmap = root.nsmap
+    path = [make_xml_name_from(xml_element.tag, nsmap)]
+    while not xml_element is root:
+        xml_element = xml_element.getparent()
+        path.append(make_xml_name_from(xml_element.tag, nsmap))
+    return '/'.join(reversed(path))
+
+def get_unused_xml_element_names(kwds: dict) -> List[str]:
+    '''Return a list of unused XML element names.'''
+    return list((_describe_element(e) for e in kwds[XDATATREE_UNUSED_XML_ELEMENTS]))
+
+def get_unused_xml_attribute_names(kwds: dict) -> List[str]:
+    '''Return a list of unused XML attribute names.'''
+    return list((a[0] for a in kwds[XDATATREE_UNUSED_XML_ATTRIBUTES]))
+
+def _describe_element(e: etree.ElementBase) -> str:
+    ename = etree.QName(e.tag).localname
+    if ename == 'metadata':
+        key = e.attrib.get('key', None)
+        if key:
+            return f'metadata(key="{key})"'
+        name = e.attrib.get('name', None)
+        if name:
+            return f'metadata(name="{name})"'
+        return 'metadata (no key or name)'
+        
 
 def deserialize(xml_element: etree.ElementBase, clz: type, options: XmlParserOptions=DESERIALIZE_OPTIONS):
     '''Parse the xml element and return an instance of clz.'''
@@ -1013,7 +1089,7 @@ class XmlNamespaces:
         return nsmap
     
 
-@datatree
+@datatree(frozen=True)
 class XmlSerializationSpec:
     '''Specifies the configuration for XML serialization and deserialization
     for a specific xdatatree annotated class.'''
@@ -1026,5 +1102,7 @@ class XmlSerializationSpec:
         nsmap = self.xml_namespaces.to_nsmap() if self.xml_namespaces else None
         return serialize(xdatatree_obj, self.xml_node_name, nsmap)
     
-    def deserialize(self, xml_node: etree.ElementBase):
-        return deserialize(xml_node, self.xml_type, options=self.options)
+    def deserialize(self, xml_node: etree.ElementBase, options: XmlParserOptions=None):
+        if options is None:
+            options = self.options
+        return deserialize(xml_node, self.xml_type, options=options)

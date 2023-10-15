@@ -9,25 +9,6 @@ from anchorscad import GMatrix, GVector, datatree, dtfield
 from typing import List, Union
 import re
 import numpy as np
-import lxml.etree as etree
-
-
-class FullDeserializeChecker:
-    '''Mixin class that checks if all XML elements and attributes are used.'''
-    def __post_init__(self):
-        assert self.xdatatree_unused_xml_elements is None, \
-            f'Unused XML elements found: {self.get_unused_xml_element_names()}'
-        assert self.xdatatree_unused_xml_attributes is None, \
-            f'Unused XML attributes found: {self.get_unused_xml_attribute_names()}'
-            
-    def get_unused_xml_element_names(self) -> List[str]:
-        '''Return a list of unused XML element names.'''
-        return list((etree.QName(e.tag).localname for e in self.xdatatree_unused_xml_elements))
-    
-    def get_unused_xml_attribute_names(self) -> List[str]:
-        '''Return a list of unused XML attribute names.'''
-        return list((a[0] for a in self.xdatatree_unused_xml_attributes))
-            
 
 
 def float_to_str(value: float) -> str:

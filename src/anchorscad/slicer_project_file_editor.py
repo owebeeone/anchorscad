@@ -13,30 +13,50 @@ by invoking the slicer as part of the fabricator process.
 
 import anchorscad as ad
 from zipfile import ZipFile
-import shutil
 import os
 from typing import Dict
 import lxml.etree as etree 
+import argparse
+from xdatatrees import XmlParserOptions
 
 from anchorscad.threemf_config import SERIALIZATION_SPEC as CONFIG_SPEC
 from anchorscad.threemf_model import SERIALIZATION_SPEC as MODEL_SPEC
 
 
-def parse_xml(xml_3mf_content) -> etree.ElementBase:
+@ad.datatree
+class Options:
+    '''Options for the SlicerProjectFileEditor.'''
+    print_xml_unused: bool = ad.dtfield(doc='Print unknown attributes and elements to stderr')
+    assert_xml_unused: bool = ad.dtfield(doc='Assert on unknown attributes and elements')
+    recover_xml_errors: bool = ad.dtfield(doc='Recover from XML errors')
+    
+    xml_parser_options: XmlParserOptions = ad.dtfield(self_default=
+        lambda s: XmlParserOptions(
+            assert_unused_elements=s.assert_xml_unused,
+            assert_unused_attributes=s.assert_xml_unused,
+            print_unused_elements=s.print_xml_unused,
+            print_unused_attributes=s.print_xml_unused
+        ))
+
+
+def parse_xml(xml_3mf_content, recover: bool) -> etree.ElementBase:
     '''Parse the XML content of a 3mf file and return the XML tree.'''
-    xml_tree = etree.fromstring(xml_3mf_content)
+    parser = etree.XMLParser(recover=recover)
+    xml_tree = etree.fromstring(xml_3mf_content, parser=parser)
     return xml_tree
 
 @ad.datatree(repr=False, eq=False, order=False, unsafe_hash=False, frozen=False)
 class SlicerModel:
     filename: str = ad.dtfield(doc='Name of the 3mf file')
     xml_3mf_content: str = ad.dtfield(doc='XML content of the 3mf file')
-    xml_tree: etree.ElementBase = ad.dtfield(
-        self_default=lambda s: parse_xml(s.xml_3mf_content), 
-        doc='XML tree of the 3mf file')
-    model: MODEL_SPEC.xml_type = ad.dtfield(
-        self_default=lambda s: MODEL_SPEC.deserialize(s.xml_tree),
+    xml_tree: etree.ElementBase = ad.dtfield(init=False, doc='XML tree of the 3mf file')
+    model: MODEL_SPEC.xml_type = ad.dtfield(init=False,
         doc='A Model object representing the 3mf file')
+    
+    def deserialize(self, recover: bool=False, options: XmlParserOptions=None):
+        '''Deserialize the 3mf file into a Model object.'''
+        self.xml_tree = parse_xml(self.xml_3mf_content, recover)
+        self.model = MODEL_SPEC.deserialize(self.xml_tree, options=options)
     
     def objects(self):
         '''Return the ids of the objects in this model file.'''
@@ -68,10 +88,11 @@ class SlicerProjectModel:
     models_ids: Dict[str, SlicerModel] = ad.dtfield(default_factory=dict, doc='Dictionary of models by Id')
     metadata_config: SlicerMetadataConfig = ad.dtfield(None, doc='Name of the metadata/settings.config file')
 
-    def add_model(self, filename, modelXml):
+    def add_model(self, filename, modelXml, options: Options):
         with open('foo.xml', 'wb') as file:
             file.write(modelXml)
         model = SlicerModel(filename, modelXml)
+        model.deserialize(recover=options.recover_xml_errors, options=options.xml_parser_options)
         if filename in self.model_files:
             raise ValueError(f'File {filename} already exists in the slicer project')
         
@@ -107,6 +128,7 @@ class SlicerProjectFileEditor:
     '''
     template_file: str = ad.dtfield(doc='Path to the template file')
     output_file: str = ad.dtfield(doc='Path to the output file')
+    options: Options = ad.dtfield(doc='Options for the SlicerProjectFileEditor')
 
     model: SlicerProjectModel = ad.dtfield(
         default_factory=SlicerProjectModel, doc='Model of the slicer project file')
@@ -130,11 +152,11 @@ class SlicerProjectFileEditor:
                     if self.is_model_file(filename):
                         
                         print(content.decode('utf-8'))
-                        self.model.add_model(filename, content)
+                        self.model.add_model(filename, content, self.options)
                         
                     else:
                         self.model.metafiles[filename] = content
-                        
+
     def is_model_file(self, filename):
         _, suffix = os.path.splitext(filename)
         return suffix == '.model'
@@ -144,15 +166,71 @@ class SlicerProjectFileEditor:
         with ZipFile(self.output_file, 'w') as zipfile:
             for filename, model in self.model.models.items():
                 zipfile.writestr(filename, model.xml_3mf_content)
-                        
+
+
+def arg_parser():
+    '''
+    Parses the command line arguments. It accepts a 3mf file as input and a 3mf file as output.
+    '''
+    parser = argparse.ArgumentParser()
+    parser.add_argument('input_file', help='Path to the input 3mf file')
+    parser.add_argument('output_file', help='Path to the output 3mf file')
+    
+    parser.add_argument('--print-xml-unused', action='store_true', 
+                        help='Print unknown attributes and elements to stderr')
+    parser.add_argument('--noprint-xml-unused', action='store_false', dest='print_xml_unused', 
+                        help='Don\'t print unknown attributes and elements')
+    parser.set_defaults(print_xml_unused=True)
+    
+    
+    parser.add_argument('--assert-xml-unused', action='store_true', 
+                        help='Assert on unknown attributes and elements')
+    parser.add_argument('--noassert-xml-unused', action='store_false', dest='assert_xml_unused', 
+                        help='Do not assert on unknown attributes and elements')
+    parser.set_defaults(assert_xml_unused=True)
+    
+    
+    parser.add_argument('--recover-xml-errors', action='store_true', 
+                        help='Recover from XML errors')
+    parser.add_argument('--norecover-xml-errors', action='store_false', dest='recover_xml_errors', 
+                        help='Fail on XML errors')
+    parser.set_defaults(recover_xml_errors=True)
+    
+    return parser
+    
+           
 def main():
     
+    args = arg_parser().parse_args()
+    
+    options = Options(args.print_xml_unused, args.assert_xml_unused, args.recover_xml_errors)
+    
+    # Ensure the input file exists.
+    if not os.path.exists(args.input_file):
+        raise FileNotFoundError(f'Input file \'{args.input_file}\' does not exist.')
+
+    # Check if the input file has a .3mf extension
+    if not args.input_file.endswith('.3mf'):
+        raise ValueError(f'Input file (\'{args.input_file}\')  must have a .3mf extension.')
+    
+    # Ensure the output file does not exist.
+    if os.path.exists(args.output_file):
+        raise FileExistsError(f'output file \'{args.output_file}\' exists already.')
+    
+    # Check if the input file has a .3mf extension
+    if not args.output_file.endswith('.3mf'):
+        raise ValueError(f'Output file (\'{args.output_file}\') must have a .3mf extension.')
+    
     editor = SlicerProjectFileEditor(
-        template_file='basic_4_model_orca.3mf', 
-        output_file='basic_4_model_orca.3mf_gen.3mf')
+        template_file=args.input_file, 
+        output_file=args.output_file,
+        options=options)
     
     exit(0)
     editor.write()
 
 if __name__ == '__main__':
+    
+    #import sys;sys.argv = [sys.argv[0], 'basic_4_model_orca.3mf', 'basic_4_model_orca.3mf_gen1.3mf']
+    #import sys; sys.argv = [sys.argv[0], "--assert-xml-unused", "--recover-xml-errors", "test3mfs/end-caps.3mf", "test3mfs/jnk.3mf"]
     main()

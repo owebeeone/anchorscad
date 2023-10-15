@@ -5,7 +5,7 @@
 from anchorscad.xdatatrees import xdatatree, xfield, Attribute, Metadata, \
     Element, CamelSnakeConverter, XmlSerializationSpec
     
-from anchorscad.xdatatree_utils import FullDeserializeChecker, MatrixConverter, \
+from anchorscad.xdatatree_utils import MatrixConverter, \
     TransformConverter, VectorConverter
 
 from typing import List
@@ -14,7 +14,7 @@ from typing import List
 DEFAULT_CONFIG=xfield(ename_transform=CamelSnakeConverter, ftype=Element)
 
 @xdatatree
-class MeshStat(FullDeserializeChecker):
+class MeshStat:
     XDATATREE_CONFIG=DEFAULT_CONFIG(ftype=Attribute)
     edges_fixed: int = xfield(doc='Number of fixed edges')
     degenerate_facets: int = xfield(doc='Number of degenerate facets')
@@ -24,7 +24,7 @@ class MeshStat(FullDeserializeChecker):
 
 
 @xdatatree
-class Part(FullDeserializeChecker):
+class Part:
     XDATATREE_CONFIG=DEFAULT_CONFIG(ftype=Metadata)
     id: str = xfield(ftype=Attribute, doc='Id of the part')
     subtype: str = xfield(ftype=Attribute, doc='Subtype of the part')
@@ -40,7 +40,7 @@ class Part(FullDeserializeChecker):
 
 
 @xdatatree
-class Object(FullDeserializeChecker):
+class Object:
     XDATATREE_CONFIG=DEFAULT_CONFIG(ftype=Attribute)
     id: int = xfield(ftype=Attribute, doc='Id of the object')
     name: str = xfield(ftype=Metadata, doc='Name of the object')
@@ -48,14 +48,14 @@ class Object(FullDeserializeChecker):
     parts: List[Part] = xfield(ftype=Element, doc='List of parts')
 
 @xdatatree
-class ModelInstance(FullDeserializeChecker):
+class ModelInstance:
     XDATATREE_CONFIG=DEFAULT_CONFIG(ftype=Metadata)
     object_id: str
     instance_id: str
     identify_id: str
 
 @xdatatree
-class Plate(FullDeserializeChecker):
+class Plate:
     XDATATREE_CONFIG=DEFAULT_CONFIG(ftype=Metadata)
     plater_id: str
     plater_name: str
@@ -67,7 +67,7 @@ class Plate(FullDeserializeChecker):
         ename='model_instance', ftype=Element, doc='instances of models on the plate')
 
 @xdatatree
-class AssembleItem(FullDeserializeChecker):
+class AssembleItem:
     XDATATREE_CONFIG=DEFAULT_CONFIG(ftype=Attribute)
     object_id: str
     instance_id: str
@@ -75,12 +75,12 @@ class AssembleItem(FullDeserializeChecker):
     offset: VectorConverter
     
 @xdatatree
-class Assemble(FullDeserializeChecker):
+class Assemble:
     XDATATREE_CONFIG=DEFAULT_CONFIG(ftype=Element)
     assemble_items: List[AssembleItem] = xfield(ename='assemble_item', doc='List of assemble items') 
 
 @xdatatree
-class Config(FullDeserializeChecker):
+class Config:
     XDATATREE_CONFIG=DEFAULT_CONFIG
     objects: List[Object] = xfield(ename='object', doc='List of objects')
     plate: Plate

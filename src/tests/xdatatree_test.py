@@ -1,6 +1,6 @@
 from anchorscad.xdatatrees import xdatatree, xfield, Attribute, Metadata, \
     Element, CamelSnakeConverter, SnakeCamelConverter, deserialize, serialize, \
-    MetadataNameValue, ValueCollector
+    MetadataNameValue, ValueCollector, XmlParserOptions
     
 from anchorscad.threemf_config import SERIALIZATION_SPEC as CONFIG_SERIALIZATION_SPEC
 from anchorscad.threemf_model import SERIALIZATION_SPEC as MODEL_SERIALIZATION_SPEC
@@ -23,7 +23,7 @@ DEFAULT_CONFIG=xfield(ename_transform=CamelSnakeConverter, ftype=Element)
 
 
 @xdatatree
-class MeshStat(FullDeserializeChecker):
+class MeshStat:
     XDATATREE_CONFIG=DEFAULT_CONFIG(ftype=Attribute)
     edges_fixed: int = xfield(doc='Number of fixed edges')
     degenerate_facets: int = xfield(doc='Number of degenerate facets')
@@ -32,7 +32,7 @@ class MeshStat(FullDeserializeChecker):
     backwards_edges: int = xfield(doc='Number of backwards edges')
 
 @xdatatree
-class Part(FullDeserializeChecker):
+class Part:
     XDATATREE_CONFIG=DEFAULT_CONFIG(ftype=Metadata)
     id: str = xfield(ftype=Attribute, doc='Id of the part')
     subtype: str = xfield(ftype=Attribute, doc='Subtype of the part')
@@ -47,7 +47,7 @@ class Part(FullDeserializeChecker):
     mesh_stat: MeshStat= xfield(ftype=Element, doc='Mesh statistics of the part')
     
 @xdatatree
-class Object(FullDeserializeChecker):
+class Object:
     XDATATREE_CONFIG=DEFAULT_CONFIG(ftype=Attribute)
     id: int = xfield(ftype=Attribute, doc='Id of the object')
     name: str = xfield(ftype=Metadata, doc='Name of the object')
@@ -55,14 +55,14 @@ class Object(FullDeserializeChecker):
     parts: List[Part] = xfield(ftype=Element, doc='List of parts')
 
 @xdatatree
-class ModelInstance(FullDeserializeChecker):
+class ModelInstance:
     XDATATREE_CONFIG=DEFAULT_CONFIG(ftype=Metadata)
     object_id: str
     instance_id: str
     identify_id: str
 
 @xdatatree
-class Plate(FullDeserializeChecker):
+class Plate:
     XDATATREE_CONFIG=DEFAULT_CONFIG(ftype=Metadata)
     plater_id: str
     plater_name: str
@@ -74,7 +74,7 @@ class Plate(FullDeserializeChecker):
         ename='model_instance', ftype=Element, doc='instances of models on the plate')
 
 @xdatatree
-class AssembleItem(FullDeserializeChecker):
+class AssembleItem:
     XDATATREE_CONFIG=DEFAULT_CONFIG(ftype=Attribute)
     object_id: str
     instance_id: str
@@ -82,13 +82,13 @@ class AssembleItem(FullDeserializeChecker):
     offset: VectorConverter
     
 @xdatatree
-class Assemble(FullDeserializeChecker):
+class Assemble:
     XDATATREE_CONFIG=DEFAULT_CONFIG(ftype=Element)
     assemble_items: List[AssembleItem] = xfield(ename='assemble_item', doc='List of assemble items') 
 
 
 @xdatatree
-class Config(FullDeserializeChecker):
+class Config:
     XDATATREE_CONFIG=DEFAULT_CONFIG
     objects: List[Object] = xfield(ename='object', doc='List of objects')
     plate: Plate
@@ -221,19 +221,19 @@ DEFAULT_CONFIG2X=xfield(
 
 
 @xdatatree
-class Component(FullDeserializeChecker):
+class Component:
     XDATATREE_CONFIG=DEFAULT_CONFIGX(ftype=Attribute)
     path: str = xfield(xmlns=NAMESPACES.p, doc='Path of the component')
     objectid: str = xfield(xmlns=None, doc='Object id of the component')
     transform: TransformConverter = xfield(xmlns=None, doc='Transform of the component')
 
 @xdatatree
-class Components(FullDeserializeChecker):
+class Components:
     XDATATREE_CONFIG=DEFAULT_CONFIGX
     components: List[Component] = xfield(ftype=Element, doc='List of components')
     
 @xdatatree
-class Vertex(FullDeserializeChecker):
+class Vertex:
     x: float = xfield(ftype=Attribute, doc='X coordinate of the vertex')
     y: float = xfield(ftype=Attribute, doc='Y coordinate of the vertex')
     z: float = xfield(ftype=Attribute, doc='Z coordinate of the vertex')
@@ -242,7 +242,7 @@ class Vertex(FullDeserializeChecker):
         return np.array([self.x, self.y, self.z])
     
 @xdatatree
-class Triangle(FullDeserializeChecker):
+class Triangle:
     v1: int = xfield(ftype=Attribute, doc='V1 of the triangle')
     v2: int = xfield(ftype=Attribute, doc='V2 of the triangle')
     v3: int = xfield(ftype=Attribute, doc='V3 of the triangle')
@@ -277,7 +277,7 @@ class TriangesCustomConverter(ValueCollector):
         return (cls.CONTAINED_TYPE(*x[0], paint_color=x[1]) for x in zip(*triangles_paint_colors))
     
 @xdatatree
-class Triangles(FullDeserializeChecker):
+class Triangles:
     XDATATREE_CONFIG=DEFAULT_CONFIGX
     triangles_paint_colors: List[Tuple[Triangle, List[str]]] \
         = xfield(ftype=Element, ename='triangle', builder=TriangesCustomConverter,  doc='List of triangles')
@@ -311,7 +311,7 @@ class VerticesCustomConverter(ValueCollector):
 
 
 @xdatatree
-class Vertices(FullDeserializeChecker):
+class Vertices:
     XDATATREE_CONFIG=DEFAULT_CONFIGX
     vertices: np.ndarray = xfield(ftype=Element, ename='vertex', builder=VerticesCustomConverter, doc='List of vertices')
     
@@ -321,13 +321,13 @@ class Vertices(FullDeserializeChecker):
         return np.array_equal(self.vertices, __value.vertices)
 
 @xdatatree
-class Mesh(FullDeserializeChecker):
+class Mesh:
     XDATATREE_CONFIG=DEFAULT_CONFIGX
     vertices: Vertices = xfield(ftype=Element, doc='List of vertices')
     triangles: Triangles = xfield(ftype=Element, doc='List of triangles')
 
 @xdatatree
-class Object2(FullDeserializeChecker):
+class Object2:
     XDATATREE_CONFIG=DEFAULT_CONFIGX
     id: int = xfield(ftype=Attribute, xmlns=None, doc='Id of the object')
     uuid: str = xfield(ftype=Attribute, xmlns=NAMESPACES.p, doc='Uuid of the object')
@@ -336,12 +336,12 @@ class Object2(FullDeserializeChecker):
     mesh: Mesh = xfield(ftype=Element, doc='Mesh of the object')
 
 @xdatatree
-class Resources(FullDeserializeChecker):
+class Resources:
     XDATATREE_CONFIG=DEFAULT_CONFIGX
     objects: List[Object2] = DEFAULT_CONFIG(ename='object', doc='List of objects')
 
 @xdatatree
-class Item(FullDeserializeChecker):
+class Item:
     XDATATREE_CONFIG=DEFAULT_CONFIGX(ftype=Attribute, xmlns=None)
     objectid: str = xfield(doc='Object id of the item')
     uuid: str = xfield(xmlns=NAMESPACES.p, doc='Uuid of the item')
@@ -349,13 +349,13 @@ class Item(FullDeserializeChecker):
     printable: bool = xfield(doc='Printable of the item')
 
 @xdatatree
-class Build(FullDeserializeChecker):
+class Build:
     XDATATREE_CONFIG=DEFAULT_CONFIGX
     uuid: str = xfield(ftype=Attribute, xmlns=NAMESPACES.p, doc='Uuid of the build')
     items: List[Item] = xfield(doc='List of items')
 
 @xdatatree
-class Model(FullDeserializeChecker):
+class Model:
     XDATATREE_CONFIG=DEFAULT_CONFIG2X(ftype=MetadataNameValue)
     unit: str = xfield(ftype=Attribute, aname='unit', xmlns=None, doc='Unit of the model')
     lang: str = DEFAULT_CONFIG(ftype=Attribute, aname='lang', xmlns=NAMESPACES.xml, doc='Language of the model')
@@ -458,6 +458,8 @@ XML_DATA3 = '''\
 </model>
 '''
 
+DESERIALIZE_OPTIONS=XmlParserOptions(assert_unused_elements=True, assert_unused_attributes=True)
+
 class ExtrudeTest(TestCase):
 
     def getXml(self):
@@ -502,7 +504,7 @@ class ExtrudeTest(TestCase):
         
         xml_serialized_from_str = etree.fromstring(serialized_string)
         
-        config2, status = deserialize(xml_serialized_from_str, Config)
+        config2, status = deserialize(xml_serialized_from_str, Config, options=DESERIALIZE_OPTIONS)
         
         self.assertEqual(status.contains_unknown_elements, False)
         self.assertEqual(status.contains_unknown_attributes, False)
