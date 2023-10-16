@@ -72,12 +72,16 @@ class SlicerMetadataConfig:
     filename: str = ad.dtfield(doc='Name of the metadata/settings.config file')
     content: str = ad.dtfield(doc='XML content of the metadata/settings.config file')
     xml_tree: etree.ElementBase = ad.dtfield(
-        self_default=lambda s: parse_xml(s.content),
+        init=False,
         doc='XML tree of the metadata/settings.config file')
-    condig: CONFIG_SPEC.xml_type = ad.dtfield(
-        self_default=lambda s: CONFIG_SPEC.deserialize(s.xml_tree),
-        doc='A Condif object representing the 3mf file')
+    config: CONFIG_SPEC.xml_type = ad.dtfield(
+        init=False, doc='A Condif object representing the 3mf file')
     
+    def deserialize(self, recover: bool=False, options: XmlParserOptions=None):
+        '''Deserialize the 3mf file into a Model object.'''
+        self.xml_tree = parse_xml(self.content, recover)
+        self.config = CONFIG_SPEC.deserialize(self.xml_tree, options=options)
+        
     def object_configs(self):
         '''Return the ids of the objects in this model file.'''
         ns = {'ns': self.xml_tree.nsmap[None]}
@@ -92,8 +96,8 @@ class SlicerProjectModel:
     metadata_config: SlicerMetadataConfig = ad.dtfield(None, doc='Name of the metadata/settings.config file')
 
     def add_model(self, filename, modelXml, options: Options):
-        with open('foo.xml', 'wb') as file:
-            file.write(modelXml)
+        # with open('foo.xml', 'wb') as file:
+        #     file.write(modelXml)
         model = SlicerModel(filename, modelXml)
         model.deserialize(recover=options.recover_xml_errors, options=options.xml_parser_options)
         if filename in self.model_files:
@@ -107,12 +111,15 @@ class SlicerProjectModel:
                 raise ValueError(f'Object id {objectid} already exists in the slicer project')
             self.models_ids[objectid] = model
             
-    def add_metadata_settings_config(self, filename, content):
+    def add_metadata_settings_config(self, filename, content, options: Options):
         '''Add a metadata/settings.config file to the slicer project.'''
         if self.metadata_config is not None:
             raise ValueError('The slicer project already has a metadata/settings.config file')
 
         self.metadata_config = SlicerMetadataConfig(filename, content)
+        
+        self.metadata_config.deserialize(
+            recover=options.recover_xml_errors, options=options.xml_parser_options)
 
     def write(self, output_file):
         '''Write the slicer project file to the output file.'''
@@ -157,12 +164,21 @@ class SlicerProjectFileEditor:
                         print(content.decode('utf-8'))
                         self.model.add_model(filename, content, self.options)
                         
+                    elif self.is_config_file(filename):
+                        self.model.add_metadata_settings_config(filename, content, self.options)
+                        
                     else:
                         self.model.metafiles[filename] = content
 
     def is_model_file(self, filename):
         _, suffix = os.path.splitext(filename)
         return suffix == '.model'
+    
+    
+    def is_config_file(self, filename):
+        return filename in (
+            'Metadata/model_settings.config',
+            'Metadata/Slic3r_PE_model.config')
     
     def write(self):
         '''Write the slicer project file to the output file.'''
