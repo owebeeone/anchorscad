@@ -10,7 +10,7 @@ from dataclasses import dataclass, field
 
 from dataclasses_json import dataclass_json, config
 
-from anchorscad import core, graph_model
+from anchorscad import core, graph_model, Shape
 from anchorscad import linear as l
 import pythonopenscad as posc
 
@@ -366,7 +366,7 @@ class Renderer():
 @dataclass(frozen=True)
 class RenderResult():
     '''A result of rendering.'''
-    shape: object  # The Ancohdra shape that was rendered.
+    shape: Shape  # The AnchorScad shape that was rendered.
     rendered_shape: object  # The resulting POSC shape.
     graph: graph_model.DirectedGraph  # The graph of the rendered shape.
     paths: dict  # A dictionary of Path to list of anchors in the graph.
