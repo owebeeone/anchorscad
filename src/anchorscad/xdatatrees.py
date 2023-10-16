@@ -228,6 +228,7 @@ class XmlObjectBuilder:
 class XmlParserOptions:
     '''Options for deserializing.'''
     respect_namespace: bool = field(default=True)
+    recover_undeclared_namespace: bool = field(default=True)
     assert_unused_elements: bool = field(default=False)
     assert_unused_attributes: bool = field(default=False)
     print_unused_elements: bool = field(default=False)
@@ -264,6 +265,13 @@ class XmlParserSpec:
                 f'field {current_spec.get_field_name()}.')
         specs[xml_name] = field_spec
         
+    def find_attr_by_base_name(self, attr_base_name):
+        for attr_name, attr_spec in self.xml_attribute_specs.items():
+            attr_qname = etree.QName(attr_name)
+            if attr_qname.localname == attr_base_name:
+                return attr_spec
+        return None
+        
     def deserialize_subelement(self, xml_element: etree.ElementBase, options: XmlParserOptions):
         '''Parse the xml element and return a dictionary of values.'''
         result = XmlObjectBuilder(xml_element)
@@ -272,7 +280,14 @@ class XmlParserSpec:
             field_spec = self.xml_attribute_specs.get(attr_name, None)
             
             if field_spec is None:
-                result.add_unknown_attribute(attr_name, attr_value)
+                if options.recover_undeclared_namespace:
+                    # It could be due to a recovered error.
+                    split_attr_name = attr_name.split(':')
+                    if len(split_attr_name) > 1:
+                        attr_base_name = split_attr_name[-1]
+                        field_spec = self.find_attr_by_base_name(attr_base_name)
+                if field_spec is None:
+                    result.add_unknown_attribute(attr_name, attr_value)
             else:
                 result.add_value(field_spec, attr_value)
                 

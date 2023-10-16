@@ -40,6 +40,7 @@ class Component:
     path: str = xfield(xmlns=NAMESPACES.p, doc='Path of the component')
     objectid: str = xfield(xmlns=None, doc='Object id of the component')
     transform: TransformConverter = xfield(xmlns=None, doc='Transform of the component')
+    uuid: str = xfield(xmlns=NAMESPACES.p, aname='UUID', doc='UUID of the component')
 
 @xdatatree
 class Components:

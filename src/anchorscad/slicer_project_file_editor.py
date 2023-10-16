@@ -29,13 +29,16 @@ class Options:
     print_xml_unused: bool = ad.dtfield(doc='Print unknown attributes and elements to stderr')
     assert_xml_unused: bool = ad.dtfield(doc='Assert on unknown attributes and elements')
     recover_xml_errors: bool = ad.dtfield(doc='Recover from XML errors')
+    recover_undeclared_namespace: bool = ad.dtfield(
+        doc='Recover from undeclared XML namespace errors')
     
     xml_parser_options: XmlParserOptions = ad.dtfield(self_default=
         lambda s: XmlParserOptions(
             assert_unused_elements=s.assert_xml_unused,
             assert_unused_attributes=s.assert_xml_unused,
             print_unused_elements=s.print_xml_unused,
-            print_unused_attributes=s.print_xml_unused
+            print_unused_attributes=s.print_xml_unused,
+            recover_undeclared_namespace=s.recover_undeclared_namespace
         ))
 
 
@@ -182,19 +185,24 @@ def arg_parser():
                         help='Don\'t print unknown attributes and elements')
     parser.set_defaults(print_xml_unused=True)
     
-    
     parser.add_argument('--assert-xml-unused', action='store_true', 
                         help='Assert on unknown attributes and elements')
     parser.add_argument('--noassert-xml-unused', action='store_false', dest='assert_xml_unused', 
                         help='Do not assert on unknown attributes and elements')
     parser.set_defaults(assert_xml_unused=True)
     
-    
     parser.add_argument('--recover-xml-errors', action='store_true', 
                         help='Recover from XML errors')
     parser.add_argument('--norecover-xml-errors', action='store_false', dest='recover_xml_errors', 
                         help='Fail on XML errors')
     parser.set_defaults(recover_xml_errors=True)
+    
+    parser.add_argument('--recover-undeclared-namespace', action='store_true', 
+                        help='Recover from XML errors')
+    parser.add_argument('--norecover-undeclared-namespace', action='store_false', 
+                        dest='recover_undeclared_namespace', 
+                        help='Fail on XML undeclared namespace errors')
+    parser.set_defaults(recover_undeclared_namespace=False)
     
     return parser
     
@@ -203,7 +211,11 @@ def main():
     
     args = arg_parser().parse_args()
     
-    options = Options(args.print_xml_unused, args.assert_xml_unused, args.recover_xml_errors)
+    options = Options(
+        args.print_xml_unused, 
+        args.assert_xml_unused, 
+        args.recover_xml_errors,
+        args.recover_undeclared_namespace)
     
     # Ensure the input file exists.
     if not os.path.exists(args.input_file):
