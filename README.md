@@ -34,7 +34,7 @@ AnchorSCAD provides tools to wrap your creations in its own Shape class but the 
 	# Render and print the OpenSCAD file for the shape.
 	print(ad.render(maker).rendered_shape)
 
-	![AnchorScad example1](quick_start_example1.png)
+![AnchorScad example1](quick_start_example1.png)
 
 
 This code above demonstrates how to compose models as holes and solids but AnchorSCAD also supports the other OpenSCAD compositions like intersection, unions, hull etc..
