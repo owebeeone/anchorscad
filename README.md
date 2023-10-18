@@ -34,6 +34,8 @@ AnchorSCAD provides tools to wrap your creations in its own Shape class but the 
 	# Render and print the OpenSCAD file for the shape.
 	print(ad.render(maker).rendered_shape)
 
+	![AnchorScad example1](quick_start_example1.png)
+
 
 This code above demonstrates how to compose models as holes and solids but AnchorSCAD also supports the other OpenSCAD compositions like intersection, unions, hull etc..
 
@@ -73,6 +75,8 @@ The following code snippet also generates a similar box tube shape as demonstrat
 	MAIN_DEFAULT=ad.ModuleDefault(True) # Set default for --write
 	if __name__ == '__main__':
 	    ad.anchorscad_main()
+
+	![AnchorScad example2](quick_start_example2.png)
 
 Note the build() function is called via the [dataclass](https://docs.python.org/3/library/dataclasses.html) generated __init__() constructor function. build() must return the final shape (maker) object representing the constructed shape.
 
@@ -116,6 +120,8 @@ AnchorSCAD supports multiple additional example shapes using the (unannotated) E
 
 # Shape Building
 AnchorSCAD has a primary “Shape” type. To use a shape in AnchorSCAD, a name for the shape is *required*. A name is usually a string literal (str object) but can be any immutable, hashable, [repr](https://docs.python.org/3/library/functions.html#repr)-izable object, commonly a tuple of str and int if not a simple str object. Providing a “name” and a Mode to a shape results in a “NamedShape” and other optional attributes can be applied, (like colour, debug or other inheritable attributes). Finally, an anchor can be applied to provide the orientation and position of the shape. A single instance of a shape could be used multiple times with a different name and at() location. Shapes are copied (if mutable) when added to a Maker. Below is an example of a simple Box shape being named and positioned.
+
+![AnchorScad example2](quick_start_maker.png)
 
 A Maker is also an anchorscad.Shape. A Maker in particular is a builder of a node in a shape hierarchy. Consider it a collection of other Maker objects. Shapes can have ‘anchors’ that are used to create frames of reference. i.e. Anchors have both position and orientation. The anchors in a Maker are found by looking up the name specified in the anchor with the named shapes in the Maker itself, and then applying the remaining anchor attributes to the resulting entry. There is a special case that if omitted, the first shape need not be named in the anchor, this can occasionally lead to naming ambiguity but is especially useful in preserving anchor validity when adding nodes to the shape hierarchy.
 
