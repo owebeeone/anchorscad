@@ -76,7 +76,7 @@ The following code snippet also generates a similar box tube shape as demonstrat
 	if __name__ == '__main__':
 	    ad.anchorscad_main()
 
-	![AnchorScad example2](https://github.com/owebeeone/anchorscad/blob/master/assets/quick_start_example2.png?raw=true)
+![AnchorScad example2](https://github.com/owebeeone/anchorscad/blob/master/assets/quick_start_example2.png?raw=true)
 
 Note the build() function is called via the [dataclass](https://docs.python.org/3/library/dataclasses.html) generated __init__() constructor function. build() must return the final shape (maker) object representing the constructed shape.
 
