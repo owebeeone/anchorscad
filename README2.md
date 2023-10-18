@@ -223,8 +223,4 @@ union() {
 }
 ```
 
-Below is an image of the resulting OpenSCAD render (including `EXAMPLE_ANCHORS`).
-
-![AnchorScad example3](assets/quick_start_example4.png?raw=true)
-
 [See how to keep holes when composing shapes.](https://docs.google.com/document/d/1dzWQPXcKU3TKnAUiqt6m0hTi0N4WW7o3GempQX9IVjQ/edit?usp=sharing)
