@@ -195,7 +195,7 @@ The `maker.add_at()` function is used to anchor a shape at an anchor point in th
 
 The result of running the SquarePipe module (with `EXAMPLE_ANCHORS` removed) is the following OpenSCAD file:
 
-```openscad
+```scad
 // 'None : _combine_solids_and_holes'
 union() {
   // '_combine_solids_and_holes'
