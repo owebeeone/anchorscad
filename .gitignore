@@ -141,4 +141,15 @@ cython_debug/
 
 # BAK files
 *.BAK
+
+# Test artifacts
 test*.scad
+test*.dot
+test*.svg
+test*.stl
+test*.png
+test*.3mf
+test*.txt
+test*.html
+test*.zip
+test*.csq

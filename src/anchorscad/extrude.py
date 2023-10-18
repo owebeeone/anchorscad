@@ -1872,7 +1872,8 @@ class LinearExtrude(ExtrudedShape):
                     .line([0, 0], 'linear4')
                     .build(),
                 h=50,
-                fn=80
+                fn=80,
+                use_polyhedrons=True
                 ),
             anchors=(
                 core.surface_args('linear1', 0, 0),
