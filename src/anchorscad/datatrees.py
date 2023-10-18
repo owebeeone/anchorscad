@@ -506,6 +506,8 @@ class InjectedFields:
     
     def _add(self, field_name: str, details: InjectedFieldInfo):
         '''Adds an instance of an injected field.'''
+        if not field_name:
+            return
         ifd = self.injections.get(field_name, None)
         if not ifd:
             ifd = InjectedFieldDetails(field_name)

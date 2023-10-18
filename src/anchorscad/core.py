@@ -6,7 +6,7 @@ Created on 5 Jan 2021
 
 import argparse
 import copy
-from dataclasses import dataclass, field
+from dataclasses import dataclass, field, replace
 import fnmatch
 import inspect
 import os
@@ -213,6 +213,12 @@ FN_FIELD=fn_field()
 FS_FIELD=fs_field()
 FA_FIELD=fa_field()
 
+
+@dataclass(frozen=True)
+class Material:
+    name: str = dtfield(doc='The name of the material')
+
+
 @dataclass(frozen=True)
 class ModelAttributes(object):
     colour: Colour = None
@@ -224,6 +230,7 @@ class ModelAttributes(object):
     debug: bool = None
     transparent: bool = None
     use_polyhedrons: bool = None
+    material: Material = None
     
     def _merge_of(self, attr, other):
         self_value = getattr(self, attr)
@@ -234,14 +241,14 @@ class ModelAttributes(object):
             return self_value
         return other_value
     
-    def _diff_of(self, attr, other):
+    def _diff_of(self, attr: str, other: 'ModelAttributes'):
         self_value = getattr(self, attr)
         other_value = getattr(other, attr)
         if self_value == other_value:
             return None
         return other_value
 
-    def merge(self, other):
+    def merge(self, other: 'ModelAttributes'):
         '''Returns a copy of self with entries from other replacing self's.'''
         if not other:
             return self
@@ -250,7 +257,7 @@ class ModelAttributes(object):
             (k, self._merge_of(k, other)) 
             for k in self.__annotations__.keys()))
     
-    def diff(self, other):
+    def diff(self, other: 'ModelAttributes'):
         '''Returns a new ModelAttributes with the diff of self and other.'''
         if not other:
             return self
@@ -263,38 +270,41 @@ class ModelAttributes(object):
         return dict((k, getattr(self, k)) 
                     for k in self.__annotations__.keys() if not getattr(self, k) is None)
     
-    def _with(self, fname, value):
-        d = self._as_non_defaults_dict()
-        d[fname] = value
-        return ModelAttributes(**d)
+    def _with(self, **kwds):
+        return replace(self, **kwds)  # dataclass replace
     
     def with_colour(self, *colour_args, **colour_kwds):
-        return self._with('colour', \
-            Colour(*colour_args, **colour_kwds) if colour_args or colour_kwds else None)
+        return self._with(colour=
+            Colour(*colour_args, **colour_kwds) 
+            if colour_args or colour_kwds 
+            else None)
     
-    def with_fa(self, fa):
-        return self._with('fa', fa)
+    def with_fa(self, fa: float):
+        return self._with(fa=fa)
     
-    def with_fs(self, fs):
-        return self._with('fs', fs)
+    def with_fs(self, fs: float):
+        return self._with(fs=fs)
     
-    def with_fn(self, fn):
-        return self._with('fn', fn)
+    def with_fn(self, fn: int):
+        return self._with(fn=fn)
     
-    def with_disable(self, disable):
-        return self._with('disable', disable)
+    def with_disable(self, disable: bool):
+        return self._with(disable=disable)
     
-    def with_show_only(self, show_only):
-        return self._with('show_only', show_only)
+    def with_show_only(self, show_only: bool):
+        return self._with(show_only=show_only)
     
-    def with_debug(self, debug):
-        return self._with('debug', debug)
+    def with_debug(self, debug: bool):
+        return self._with(debug=debug)
     
-    def with_transparent(self, transparent):
-        return self._with('transparent', transparent)
+    def with_transparent(self, transparent: bool):
+        return self._with(transparent=transparent)
     
-    def with_use_polyhedrons(self, as_polyhedrons):
-        return self._with('use_polyhedrons', as_polyhedrons)
+    def with_use_polyhedrons(self, as_polyhedrons: bool):
+        return self._with(use_polyhedrons=as_polyhedrons)
+    
+    def with_material(self, material: Material):
+        return self._with(material=material)
     
     def fill_dict(self, out_dict, field_names=('fn', 'fs', 'fa')):
         for field_name in field_names:
