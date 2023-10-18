@@ -45,7 +45,7 @@ Things to note from this example:
  * Once a shape is named it is also given a frame of reference and this becomes a builder object which can have more shapes added. Note that once a builder is added to another builder it is copied, hence subsequent changes to the added builder will not be reflected in the final composition.
 
 # Composite Shapes
-The following code snippet also generates a similar box tube shape as demonstrated in the previous example, but as an AnchorSCAD Shape class. This demonstrates AnchorSCAD’s “parametric” tools. Running this code below will generate a file named “**`examples_out/anchorcad_SquarePipe_default_example.scad`**“ but it can also be imported into other Python programs to provide the "[SquarePipe](http://docs.google.com/document/d/1uTWqF82tEMreAwSKY09njCfgS8xrEtputkNFxwWj_bs/edit)" class as a reusable shape.
+The following code snippet also generates a similar box tube shape as demonstrated in the previous example, but as an AnchorSCAD Shape class. This demonstrates AnchorSCAD’s “parametric” tools. Running this code below will generate a file named “**`examples_out/anchorcad_SquarePipe_default_example.scad`**“ but it can also be imported into other Python programs to as is shown in the "[SquarePipe](https://github.com/owebeeone/anchorscad/blob/master/src/anchorscad/models/basic/SquarePipe.py)" class as a reusable shape.
 
 [See the source document for images.](https://docs.google.com/document/d/1p-qAE5oR-BQ2jcotNhv5IGMNw_UzNxbYEiZat76aUy4/edit#heading=h.g10req9fn53z)
 
