@@ -26,6 +26,7 @@ from anchorscad.colours import Colour
 from anchorscad.svg_renderer import HtmlRenderer
 import numpy as np
 import pythonopenscad as posc
+from typing import Hashable
 
 
 class CoreEception(Exception):
@@ -336,8 +337,8 @@ class ShapeDescriptor:
 
 @dataclass(frozen=True)
 class ShapeFrame(object):
-    name: object  # Hashable
-    shape: object  # Shape or Maker
+    name: Hashable
+    shape: Hashable
     reference_frame: l.GMatrix
     attributes: ModelAttributes = None
 
@@ -408,20 +409,18 @@ def find_all_intersect(maker, plane_anchor, *line_anchors):
 @dataclass(frozen=True)
 class NamedShapeBase(object):
     shape: object  # Shape or Maker or LazyShape
-    shape_type: object  # Hashable
-    name: object  # Hashable
+    shape_type: Hashable
+    name: Hashable
     attributes: ModelAttributes = None
 
     def _as_non_defaults_dict(self):
         return dict((k, getattr(self, k)) 
                     for k in self.__annotations__.keys() if not getattr(self, k) is None)
     
-    def _with(self, fname, value):
-        d = self._as_non_defaults_dict()
-        d[fname] = value
-        return self.__class__(**d)
+    def _with(self, **kwds):
+        return replace(self, **kwds)  # dataclass replace
         
-    def with_attributes(self, attributes):
+    def with_attributes(self, attributes: ModelAttributes):
         return self.__class__(**self._with('attributes', attributes))
         
     def get_attributes_or_default(self) :
@@ -432,40 +431,44 @@ class NamedShapeBase(object):
         
     def colour(self, *colour_args, **colour_kwds):
         return self._with(
-            'attributes', 
+            attributes= 
             self.get_attributes_or_default().with_colour(*colour_args, **colour_kwds))
     
-    def fa(self, fa):
+    def fa(self, fa: float):
         return self._with(
-            'attributes', self.get_attributes_or_default().with_fa(fa))
+            attributes=self.get_attributes_or_default().with_fa(fa))
     
-    def fs(self, fs):
+    def fs(self, fs: float):
         return self._with(
-            'attributes', self.get_attributes_or_default().with_fs(fs))
+            attributes=self.get_attributes_or_default().with_fs(fs))
     
-    def fn(self, fn):
+    def fn(self, fn: int):
         return self._with(
-            'attributes', self.get_attributes_or_default().with_fn(fn))
+            attributes=self.get_attributes_or_default().with_fn(fn))
     
-    def disable(self, disable):
+    def disable(self, disable: bool):
         return self._with(
-            'attributes', self.get_attributes_or_default().with_disable(disable))
+            attributes=self.get_attributes_or_default().with_disable(disable))
     
-    def show_only(self, show_only):
+    def show_only(self, show_only: bool):
         return self._with(
             'attributes', self.get_attributes_or_default().with_show_only(show_only))
     
-    def debug(self, debug):
+    def debug(self, debug: bool):
         return self._with(
-            'attributes', self.get_attributes_or_default().with_debug(debug))
+            attributes=self.get_attributes_or_default().with_debug(debug))
     
-    def transparent(self, transparent):
+    def transparent(self, transparent: bool):
         return self._with(
-            'attributes', self.get_attributes_or_default().with_transparent(transparent))
+            attributes=self.get_attributes_or_default().with_transparent(transparent))
 
-    def use_polyhedrons(self, as_polyhedrons):
+    def use_polyhedrons(self, as_polyhedrons: bool):
         return self._with(
-            'attributes', self.get_attributes_or_default().with_use_polyhedrons(as_polyhedrons))
+            attributes=self.get_attributes_or_default().with_use_polyhedrons(as_polyhedrons))
+
+    def material(self, material: Material):
+        return self._with(
+            attributes=self.get_attributes_or_default().with_material(material))
 
 
 class NamedShape(NamedShapeBase):
