@@ -183,9 +183,7 @@ if __name__ == '__main__':
     ad.anchorscad_main()
 ```
 
-The `build()` function (called by the dataclass/datatree generated constructor) after the constructor has populated the instance fields is used to create the composite shape then return the Maker object. The returned
-
- shape will have its anchors exposed as the CompositeShape object’s anchors.
+The `build()` function (called by the dataclass/datatree generated constructor) after the constructor has populated the instance fields is used to create the composite shape then return the Maker object. The returned shape will have its anchors exposed as the CompositeShape object’s anchors.
 
 AnchorSCAD modules should call `ad.anchorscad_main()` as its main function call. (use the –write command line argument or add a `MAIN_DEFAULT=ad.ModuleDefault(True)` definition in the module to generate the .scad files in the "examples_out" directory.)  When the module is run as a main program, it will identify all shapes decorated with the `@ad.shape` function and execute and render the shapes with the configured example parameters. These shape python modules can still be imported by other shape python modules to allow for complex multi-python module hierarchical shapes.
 
