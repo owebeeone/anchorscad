@@ -10,9 +10,10 @@ from dataclasses import dataclass, field
 
 from dataclasses_json import dataclass_json, config
 
-from anchorscad import core, graph_model, Shape
+from anchorscad import core, graph_model
 from anchorscad import linear as l
 import pythonopenscad as posc
+from typing import Any, Hashable, Dict
 
 
 class EmptyRenderStack(core.CoreEception):
@@ -28,12 +29,12 @@ HEAD_CONTAINER=1
 SOLID_CONTAINER=2
 HOLE_CONTAINER=3
 
+@dataclass
 class Container():
-    def __init__(self, mode, model, shape_name):
-        self.mode = mode
-        self.model = model
-        self.shape_name = shape_name
-        self.containers = {}
+    mode: int
+    model: Any
+    shape_name: Hashable
+    containers: Dict[int, 'Container'] = field(default_factory=dict, init=False, repr=False)
         
     def _get_or_create_container(self, container_id):
         if container_id in self.containers:
@@ -228,7 +229,6 @@ class ShapePathDict:
 
 @dataclass(frozen=True)
 class ContextEntry():
-    
     container: Container
     mode: core.ModeShapeFrame
     reference_frame: l.GMatrix
@@ -366,7 +366,7 @@ class Renderer():
 @dataclass(frozen=True)
 class RenderResult():
     '''A result of rendering.'''
-    shape: Shape  # The AnchorScad shape that was rendered.
+    shape: core.Shape  # The AnchorScad shape that was rendered.
     rendered_shape: object  # The resulting POSC shape.
     graph: graph_model.DirectedGraph  # The graph of the rendered shape.
     paths: dict  # A dictionary of Path to list of anchors in the graph.
