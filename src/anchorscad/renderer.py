@@ -31,7 +31,7 @@ HOLE_CONTAINER=3
 
 @dataclass
 class Container():
-    mode: int
+    mode: core._Mode
     model: Any
     shape_name: Hashable
     containers: Dict[int, 'Container'] = field(default_factory=dict, init=False, repr=False)
