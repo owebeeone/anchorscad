@@ -328,7 +328,7 @@ class HookBarBendLineJigMultiple(ad.CompositeShape):
     
     single_jig_node: ad.Node=ad.dtfield(ad.ShapeNode(HookBarBendLineJig))
     
-    count: int=ad.dtfield(4, doc='The number of sidebyside jigs')
+    count: int=ad.dtfield(4, doc='The number of side by side bend line jigs')
     
     def build(self) -> Maker:
         shape = self.single_jig_node()

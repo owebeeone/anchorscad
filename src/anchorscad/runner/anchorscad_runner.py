@@ -23,7 +23,7 @@ import anchorscad.runner.runner_status as rs
 from typing import Dict
 import pickle
 
-from anchorscad.runner.opendscad_finder import openscad_exe_location
+from anchorscad.runner.opendscad_finder import openscad_exe_properties
 from anchorscad.runner.process_manager import ProcessManager, ProcessManagerEntry
 
 GENERATE_STL_DEFAULT = True
@@ -32,13 +32,14 @@ ENVIRON_NAME = '__ANCHORSCAD_RUNNER_KEY__'
 
 PATH_SEPARATOR = ';' if platform.system() == 'Windows' else ':'
 
-OPENSCAD_FILENAME_DEV=openscad_exe_location()
+OPENSCAD_PROPERTIES=openscad_exe_properties()
 
 def make_openscad_stl_command_line(stl_file, png_file, scad_file, imgsize):
     stl_options = ('-o', stl_file) if stl_file else ()
     png_options = ('-o', png_file) if png_file else ()
-    dev_options = ('--enable', 'manifold') if OPENSCAD_FILENAME_DEV[1] else ()
-    return (OPENSCAD_FILENAME_DEV[0],) + stl_options + dev_options + png_options + (
+    dev_options = ('--enable', 'manifold') if 'manifold' in OPENSCAD_PROPERTIES.features else ()
+    dev_options += ('--enable', 'lazy-union') if 'lazy-union' in OPENSCAD_PROPERTIES.features else ()
+    return (OPENSCAD_PROPERTIES.exe,) + stl_options + dev_options + png_options + (
         '--autocenter',
         '--view',
         'axes',
