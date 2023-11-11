@@ -24,6 +24,8 @@ class RunnerExampleResults(object):
     scad_file: Optional[str]=None
     stl_file: Optional[str]=None
     png_file: Optional[str]=None
+    openscad_err_file: Optional[str]=None
+    openscad_out_file: Optional[str]=None
     graph_file: Optional[str]=None
     graph_svg_dot_file: Optional[str]=None
     graph_svg_file: Optional[str]=None

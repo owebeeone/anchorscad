@@ -102,6 +102,8 @@ class OpenscadProperties:
             features)
             
     def is_exe_signature_matching(self, exe_file: str) -> bool:
+        '''Returns True if the signature of the given exe file matches the signature
+        in this OpenscadProperties.'''
         signature = OpenscadExeSignature.from_exe(exe_file)
         return self.signature == signature
     
@@ -117,7 +119,6 @@ class OpenscadProperties:
     def exe(self) -> str:
         return self.signature.exe
     
-
 
 @dataclass
 class CachedData:
@@ -145,8 +146,8 @@ def load_cache(filename=".anchorscad_cache", clazz=CachedData):
     return clazz()  # retirn an empty cache entry if not loaded.
     
 def get_features_from_exe(exe_file: str) -> set:
-    # run the exe with --help and check for the --enable flag.
-    
+    '''Runs the openscad executable with --help and returns the set of features
+    available via the --enable flag.'''
     popen = Popen(
         args=['openscad', '--help'], 
         executable=exe_file,
@@ -160,10 +161,12 @@ def get_features_from_exe(exe_file: str) -> set:
     
     match = HELP_ENABLE_REGEX_PATTERN.match(help_str)
     
-    if match:
-        features_str = match.group(1)
-        features_set = set(feature.strip() for feature in features_str.split('|'))
-        return features_set
+    if not match:
+        return set()
+    
+    features_str = match.group(1)
+    features_set = set(feature.strip() for feature in features_str.split('|'))
+    return features_set
 
 
 def get_openscad_exe_properties(exe_file: str) -> OpenscadProperties:
@@ -187,16 +190,17 @@ def get_openscad_exe_properties(exe_file: str) -> OpenscadProperties:
     
     return properties
 
-def openscad_exe_properties():
+def openscad_exe_properties(use_dev_openscad: bool=True):
     '''Returns the system command string for the openscad executable and
     True if it is a development version.
     '''
-    
     this_platform = platform.system()
     
     for platform_name, locators in OS_MAP_PLACES_TO_CHECK:
         if this_platform.startswith(platform_name):
             for locator in locators:
+                if locator.is_dev and not use_dev_openscad:
+                    continue
                 exe_file = locator.find()
                 if exe_file:
                     return get_openscad_exe_properties(exe_file)
@@ -204,4 +208,4 @@ def openscad_exe_properties():
 
 
 if __name__ == '__main__':
-    print(openscad_exe_properties())
+    print(openscad_exe_properties(False))

@@ -22,8 +22,9 @@ import pathlib
 import anchorscad.runner.runner_status as rs
 from typing import Dict
 import pickle
+import argparse
 
-from anchorscad.runner.opendscad_finder import openscad_exe_properties
+from anchorscad.runner.opendscad_finder import openscad_exe_properties, OpenscadProperties
 from anchorscad.runner.process_manager import ProcessManager, ProcessManagerEntry
 
 GENERATE_STL_DEFAULT = True
@@ -32,14 +33,14 @@ ENVIRON_NAME = '__ANCHORSCAD_RUNNER_KEY__'
 
 PATH_SEPARATOR = ';' if platform.system() == 'Windows' else ':'
 
-OPENSCAD_PROPERTIES=openscad_exe_properties()
 
-def make_openscad_stl_command_line(stl_file, png_file, scad_file, imgsize):
+def make_openscad_stl_command_line(
+    openscad_properties, stl_file, png_file, scad_file, imgsize):
     stl_options = ('-o', stl_file) if stl_file else ()
     png_options = ('-o', png_file) if png_file else ()
-    dev_options = ('--enable', 'manifold') if 'manifold' in OPENSCAD_PROPERTIES.features else ()
-    dev_options += ('--enable', 'lazy-union') if 'lazy-union' in OPENSCAD_PROPERTIES.features else ()
-    return (OPENSCAD_PROPERTIES.exe,) + stl_options + dev_options + png_options + (
+    dev_options = ('--enable', 'manifold') if 'manifold' in openscad_properties.features else ()
+    dev_options += ('--enable', 'lazy-union') if 'lazy-union' in openscad_properties.features else ()
+    return (openscad_properties.exe,) + stl_options + dev_options + png_options + (
         '--autocenter',
         '--view',
         'axes',
@@ -130,9 +131,11 @@ class ExampleRunner:
     cumulative_error_text: list=field(default_factory=list)
     old_stderr: object=None
     old_stdout: object=None
+    openscad_properties: OpenscadProperties=field(init=False)
     
     def __post_init__(self):
         self.module_dir = os.path.sep.join(self.module_name.split('.'))
+        self.openscad_properties = openscad_exe_properties(self.argp.use_dev_openscad)
         
     def get_example_record(self, clz, base_example_name):
         results = self.runner_results.get(clz.__name__, None)
@@ -202,6 +205,7 @@ class ExampleRunner:
         if not self.argp.gen_stl:
             stl_file = None
         cmd = make_openscad_stl_command_line(
+            self.openscad_properties,
             stl_file, png_file, scad_file, self.argp.imgsize)
         with open(out_file, 'w') as fout, open(err_file, 'w') as ferr:
             p = Popen(cmd, stdout=fout, stderr=ferr)
@@ -352,7 +356,19 @@ class AnchorScadRunnerStats:
     completed_with_error_status: int=0
     module_stats: list=field(default_factory=list)
     examples_with_error_output: list=field(default_factory=list)
-    
+
+
+def str2bool(v):
+    '''Converts a string to a boolean.'''
+    if isinstance(v, bool):
+       return v
+    if v.lower() in ('yes', 'true', 't', 'y', '1'):
+        return True
+    elif v.lower() in ('no', 'false', 'f', 'n', '0'):
+        return False
+    else:
+        raise argparse.ArgumentTypeError(f'boolean value expected but got: "{v}".')
+
 
 class AnchorScadRunner(core.ExampleCommandLineRenderer):
     
@@ -363,11 +379,10 @@ class AnchorScadRunner(core.ExampleCommandLineRenderer):
     
     EXAMPLE_USAGE='''\
 
-        
+        python anchorscad_runner ../models
     '''
     
     def __init__(self, *args, **kwargs):
-        
         core.ExampleCommandLineRenderer.__init__(self, *args, **kwargs)
         self.env = dict(os.environ)
         self.this_module_file = get_this_module_file()
@@ -437,6 +452,12 @@ class AnchorScadRunner(core.ExampleCommandLineRenderer):
             type=str,
             default='1280,1024',
             help='Size of generated image.')
+        
+        self.argq.add_argument(
+            '--use_dev_openscad', 
+            type=str2bool,
+            default=True,
+            help='Set to false for selecting the default installation of openscad.')
 
     def run_module(self):
         
