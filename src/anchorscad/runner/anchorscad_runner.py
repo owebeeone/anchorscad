@@ -181,17 +181,30 @@ class ExampleRunner:
                 clz, example_name, base_example_name, 'png')
         runner_example.png_file = png_rel_filename
         
-        if not self.run_openscad(stl_full_path, png_full_path, scad_full_path):
+        err_rel_filename, runner_example, err_full_path =\
+            self.gen_filenames_and_runner(
+                clz, example_name, base_example_name, 'openscad.err.txt')
+        runner_example.openscad_err_file = err_rel_filename
+        
+        out_rel_filename, runner_example, out_full_path =\
+            self.gen_filenames_and_runner(
+                clz, example_name, base_example_name, 'openscad.out.txt')
+        runner_example.openscad_out_file = out_rel_filename
+        
+        if not self.run_openscad(
+            stl_full_path, png_full_path, scad_full_path, 
+            out_full_path, err_full_path):
             # Command failed.
             runner_example.png_file = None
             runner_example.stl_file = None
-        
-    def run_openscad(self, stl_file, png_file, scad_file):
+  
+    def run_openscad(self, stl_file, png_file, scad_file, out_file, err_file):
         if not self.argp.gen_stl:
             stl_file = None
         cmd = make_openscad_stl_command_line(
             stl_file, png_file, scad_file, self.argp.imgsize)
-        p = Popen(cmd)
+        with open(out_file, 'w') as fout, open(err_file, 'w') as ferr:
+            p = Popen(cmd, stdout=fout, stderr=ferr)
         return p.wait() == 0
 
     def graph_file_writer(self, graph, clz, example_name, base_example_name):

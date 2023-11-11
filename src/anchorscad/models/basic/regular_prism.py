@@ -35,6 +35,7 @@ def regular_polygon(nsides: int=3, r: float=1.0, ellipse_radius: tuple=None):
     for i in range(1, nsides + 1):
         pos = (-xr * np.cos(angle * i), yr * np.sin(angle * i))
         builder.line(pos, ('side', i - 1))
+    builder.line((0, 0))
 
     return builder.build()
 
@@ -119,7 +120,7 @@ class RegularPrism(ad.CompositeShape):
 
 # Uncomment the line below to default to writing OpenSCAD files
 # when anchorscad_main is run with no --write or --no-write options.
-MAIN_DEFAULT=ad.ModuleDefault(True)
+MAIN_DEFAULT=ad.ModuleDefault(all=True)
 
 if __name__ == "__main__":
     ad.anchorscad_main()
