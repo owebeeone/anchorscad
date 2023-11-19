@@ -208,4 +208,4 @@ def openscad_exe_properties(use_dev_openscad: bool=True):
 
 
 if __name__ == '__main__':
-    print(openscad_exe_properties(False))
+    print(openscad_exe_properties(True))
