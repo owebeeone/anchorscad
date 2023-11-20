@@ -11,20 +11,21 @@ class CurtainEndCapPath:
     '''The 2D Path for the curtain end cap for rotate_extrude.'''
     r: float=ad.dtfield(25.6 / 2, doc='The radius of the curtain rod.')
     w: float=ad.dtfield(30, doc='The width of the end cap.')
-    br: float=ad.dtfield(1, doc='The radius of the bevel.')
+    br: float=ad.dtfield(1.5, doc='The radius of the bevel.')
     t: float=ad.dtfield(4, doc='The thickness of the end cap.')
-    ih: float=ad.dtfield(0.5, doc='Interference ridge height.')
+    tb: float=ad.dtfield(8, doc='The thickness of the base of the end cap.')
+    ih: float=ad.dtfield(0.4, doc='Interference ridge height.')
     iw: float=ad.dtfield(10, doc='Interference ridge width.')
-    io: float=ad.dtfield(15, doc='Interference offset from top of .')
+    io: float=ad.dtfield(10, doc='Interference offset from top of .')
     irel_len: float=ad.dtfield(0.4, doc='Interference ridge spline relative length.')
     
     def build(self) -> ad.Path:
         builder = ad.PathBuilder()
         
-        end_ridge = self.w - self.t - (self.iw + self.io)
-        assert end_ridge > 0, "Interference ridge too wide."
+        end_ridge = self.w - (self.iw + self.io)
+        assert end_ridge >= self.tb, f"Interference ridge too wide by {self.tb - end_ridge}."
         
-        mid_ridge = end_ridge + self.iw / 2 + self.t
+        mid_ridge = end_ridge + self.iw / 2
         
         
         (builder.move((0, 0))
@@ -42,11 +43,11 @@ class CurtainEndCapPath:
              name='upper_ridge')
          
          .spline(
-             ((-self.r, end_ridge + 1 + self.t), (-self.r, end_ridge + self.t)), 
+             ((-self.r, end_ridge + 1), (-self.r, end_ridge)), 
              cv_len=(1, 1), 
              rel_len=self.irel_len,
              name='lower_ridge')
-         .line((-self.r, self.t), 'lower_inner_side')
+         .line((-self.r, self.tb), 'lower_inner_side')
          .line((0, self.t), 'inner_base')
          .line((0, 0), 'centre_axis')
          )
