@@ -18,7 +18,7 @@ class CurtainEndCapPath:
     tb: float=ad.dtfield(8, doc='The thickness of the base of the end cap.')
     ih: float=ad.dtfield(0.4, doc='Interference ridge height.')
     iw: float=ad.dtfield(10, doc='Interference ridge width.')
-    io: float=ad.dtfield(10, doc='Interference offset from top of .')
+    io: float=ad.dtfield(10, doc='Interference offset from top of cap path.')
     irel_len: float=ad.dtfield(0.4, doc='Interference ridge spline relative length.')
     
     def build(self) -> ad.Path:
