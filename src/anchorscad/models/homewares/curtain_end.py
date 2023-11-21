@@ -1,7 +1,9 @@
 '''
-Created on ${date}
+Created on 19-Nov-2023
 
-@author: ${user}
+@author: gianni
+
+A simple curtain end cap with parameterized interference fit.
 '''
 
 import anchorscad as ad
@@ -61,18 +63,21 @@ class CurtainEndCap(ad.CompositeShape):
     A simple curtain end cap.
     '''
     
+    # All parameters are injected from CurtainEndCapPath.
     path_node: ad.Node=ad.dtfield(ad.ShapeNode(CurtainEndCapPath))
     path: ad.Path=ad.dtfield(self_default=lambda s: s.path_node().build())
     
+    # Injected parameter "path" from RotateExtrude will pick up the self_default path. 
     rotate_extrude_node: ad.Node=ad.ShapeNode(ad.RotateExtrude)
     
+    # Try a stupidly high number of facets to get a smoother curve.
     fn: int=ad.dtfield(256, doc='The number of facets for the rotate_extrude.')
 
     EXAMPLE_SHAPE_ARGS=ad.args()
     EXAMPLE_ANCHORS=()
 
     def build(self) -> ad.Maker:
-        # Add your shape building code here...
+        # Not much to do here, just build the rotate_extrude shape and name it.
         shape = self.rotate_extrude_node()
         maker = shape.solid('end_cap').at()
         return maker
