@@ -12,27 +12,36 @@ class StadiumOutline:
     
     r: float=10
     w: float=20
+    t: float=0
     offset: float=0
     square_left: bool=False
     square_right: bool=False
     
     def build(self) -> ad.Path:
         builder = (ad.PathBuilder()
-            .move([self.r, self.r])
-            .line([self.r + self.w, self.r], 'top'))
+            .move([self.r, self.r + self.t / 2])
+            .line([self.r + self.w, self.r + self.t / 2], 'top'))
         if self.square_right:
             builder.stroke(self.r, name='right_top')
-            builder.stroke(self.r * 2, degrees=-90, name='right')
+            builder.stroke(self.r, degrees=-90, name='right_upper')
+            builder.stroke(self.t, degrees=0, name='right')
+            builder.stroke(self.r, degrees=-0, name='right_lower')
             builder.stroke(self.r, degrees=-90, name='right_base')
         else:
-            builder.arc_tangent_point([self.r + self.w, -self.r], name='right')
+            builder.arc_tangent_point([self.r * 2 + self.w, self.t / 2], name='right_upper')
+            builder.stroke(self.t, degrees=0, name='right')
+            builder.arc_tangent_point([self.r + self.w, -self.r - self.t / 2], name='right_lower')
         builder.stroke(self.w, name='base')
         if self.square_left:
             builder.stroke(self.r, name='left_base')
-            builder.stroke(self.r * 2, degrees=-90, name='left')
+            builder.stroke(self.r, degrees=-90, name='left_lower')
+            builder.stroke(self.t, degrees=-0, name='left')
+            builder.stroke(self.r, degrees=-0, name='left_upper')
             builder.stroke(self.r, degrees=-90, name='left_top')
         else:
-            builder.arc_tangent_point([self.r, self.r], name='left')
+            builder.arc_tangent_point([0, -self.t / 2], name='left_lower')
+            builder.stroke(self.t, degrees=0, name='left')
+            builder.arc_tangent_point([self.r, self.r + self.t / 2], name='left_upper')
             
         path = builder.build()
         
@@ -64,7 +73,7 @@ class StadiumPrism(ad.CompositeShape):
     
     cage_node: ad.Node=ad.CageOfNode()
     
-    EXAMPLE_SHAPE_ARGS=ad.args(square_right=True)
+    EXAMPLE_SHAPE_ARGS=ad.args(square_right=False)
     EXAMPLE_ANCHORS=(
         ad.surface_args('top'),
         ad.surface_args('base'),
@@ -185,7 +194,7 @@ class StadiumSequence(ad.CompositeShape):
 
 # Uncomment the line below to default to writing OpenSCAD files
 # when anchorscad_main is run with no --write or --no-write options.
-MAIN_DEFAULT=ad.ModuleDefault(True)
+MAIN_DEFAULT=ad.ModuleDefault(all=True)
 
 if __name__ == "__main__":
     ad.anchorscad_main()

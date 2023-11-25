@@ -781,6 +781,7 @@ class PathBuilder():
             hash=False, 
             compare=False)
         name: str=None
+        direction_override: np.array=None
             
         def lastPosition(self):
             return self.point
@@ -790,13 +791,16 @@ class PathBuilder():
             map_builder.append(self, self.point, 1, 1.0)
             
         def direction(self, t):
+            if not self.direction_override is None:
+                return self.direction_override
             return self.point - self.prev_op.lastPosition()
         
         def direction_normalized(self, t):
             return _normalize(self.direction(t))
         
         def normal2d(self, t, dims=[0, 1]):
-            return _normal_of_2d(self.prev_op.lastPosition(), self.point, dims)
+            last_point = self.prev_op.lastPosition()
+            return _normal_of_2d(last_point, self.direction(1) + last_point, dims)
         
         def extremes(self):
             p0 = self.prev_op.lastPosition()
@@ -1254,7 +1258,9 @@ class PathBuilder():
             
         point = d_vector * length + to_gvector(self.last_op().lastPosition())
         return self.add_op(self._LineTo(point.A[:2], 
-                                        prev_op=self.last_op(), name=name))
+                                        prev_op=self.last_op(),
+                                        name=name,
+                                        direction_override=d_vector.A[:2]))
             
     def relative_line(self,
                relative_pos,
