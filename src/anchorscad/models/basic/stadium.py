@@ -66,7 +66,7 @@ class StadiumPrism(ad.CompositeShape):
     lin_extrude_path: ad.Path= ad.dtfield(self_default=lambda s: s.outline.build())
     
     cage_size: tuple=ad.dtfield(self_default=lambda s: 
-        (s.r * 2 + s.w, s.r * 2, s.h))
+        (s.r * 2 + s.w, s.r * 2 + s.t, s.h))
    
     hide_cage: bool=False
     cage_box_node: ad.Node=ad.ShapeNode(ad.Box, prefix='cage_')
@@ -87,7 +87,8 @@ class StadiumPrism(ad.CompositeShape):
         shape = self.linear_extrude_node()
         
         maker.add_at(shape.solid('stadium').at('top', 0.5),
-                     'face_edge', 'front', 2, post=ad.ROTX_180 * ad.tranY(-self.h))
+                     'face_edge', 'front', 2,
+                     post=ad.ROTX_180 * ad.translate((0, -self.h, 0)))
         
         return maker
     
@@ -118,7 +119,7 @@ class StadiumRevolution(ad.CompositeShape):
     rot_extrude_path: ad.Path= ad.dtfield(self_default=lambda s: s.outline.build())
     
     
-    EXAMPLE_SHAPE_ARGS=ad.args(square_right=True)
+    EXAMPLE_SHAPE_ARGS=ad.args(square_right=True, t=5)
     EXAMPLE_ANCHORS=(
         ad.surface_args('top'),
         ad.surface_args('base'),
@@ -134,11 +135,11 @@ class StadiumRevolution(ad.CompositeShape):
     @ad.anchor('The "top" side of the stadium revolution.')
     def top(self) -> ad.GMatrix:
         return self.maker.at('stadium', 'top', 0.5, degrees=self.sweep_degrees
-            ) * ad.tranZ(self.r) * ad.ROTX_90 * ad.ROTY_270 * ad.ROTX_180
+            ) * ad.tranZ(self.r + self.t / 2) * ad.ROTX_90 * ad.ROTY_270 * ad.ROTX_180
     
     @ad.anchor('The "base" side of the stadium revolution.')    
     def base(self) -> ad.GMatrix:
-        return self.maker.at('stadium', 'top', 0.5) * ad.tranZ(self.r) * ad.ROTX_90 * ad.ROTY_270
+        return self.maker.at('stadium', 'top', 0.5) * ad.tranZ(self.r + self.t / 2) * ad.ROTX_90 * ad.ROTY_270
     
 
 # A shape consisting of a sequence of stadium prisms and revolutions.
@@ -147,7 +148,7 @@ class StadiumRevolution(ad.CompositeShape):
 class StadiumSequence(ad.CompositeShape):
     '''Assembles a sequence of stadium prisms and revolutions base-to-top.'''
     
-    prism_node: ad.Node=ad.ShapeNode(StadiumPrism, 'h', expose_all=True)
+    prism_node: ad.Node=ad.ShapeNode(StadiumPrism, expose_all=True)
     revolution_node: ad.Node=ad.ShapeNode(StadiumRevolution, expose_all=True)
     
     sequence: tuple=(
@@ -168,22 +169,29 @@ class StadiumSequence(ad.CompositeShape):
     
     def build(self) -> ad.Maker:
         
-        shape_1 = self.make_shape(self.sequence[0])
+        shape_1, transform = self.make_shape(self.sequence[0])
         
         maker = shape_1.solid(('element-0')).at('base')
         
         for i, args in enumerate(self.sequence[1:]):
-            shape = self.make_shape(args)
+            shape, transform = self.make_shape(args)
             maker.add_at(shape.solid(f'element-{i + 1}').at('base'), 
-                         f'element-{i}', 'top', post=ad.ROTX_180)
+                         f'element-{i}', 'top', post=transform)
         return maker
     
     def make_shape(self, adargs: tuple) -> ad.Shape:
         args, kwds = adargs[1]
+        user_transform = kwds.pop('transform', ad.IDENTITY)
         if adargs[0] == 'P':
-            return self.prism_node(*args, **kwds)
+            return self.prism_node(*args, **kwds), ad.ROTX_180 * user_transform
         elif adargs[0] == 'R':
-            return self.revolution_node(*args, **kwds)
+            transform = ad.ROTX_180
+            if 'sweep_degrees' in kwds and kwds['sweep_degrees'] < 0:
+                transform = ad.ROTX_180 * ad.ROTZ_180
+                kwds['sweep_degrees'] = -kwds['sweep_degrees']
+                
+            shape = self.revolution_node(*args, **kwds)
+            return shape, transform * user_transform
         else:
             raise ValueError(f'Unknown shape type: {args[0]}')
         

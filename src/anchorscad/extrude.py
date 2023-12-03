@@ -1256,7 +1256,13 @@ class PathBuilder():
         if xform:
             d_vector = xform * d_vector
             
-        point = d_vector * length + to_gvector(self.last_op().lastPosition())
+        if length > 0:
+            d_vector = d_vector * length
+            point = d_vector + to_gvector(self.last_op().lastPosition())
+        else:
+            d_vector = d_vector * 0.001
+            point = self.last_op().lastPosition()
+            
         return self.add_op(self._LineTo(point.A[:2], 
                                         prev_op=self.last_op(),
                                         name=name,

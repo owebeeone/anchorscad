@@ -11,17 +11,9 @@ from dataclasses import dataclass
 class ShaftDimensions(object):
     '''Contains diameter dimensions for a screw type.
     '''
-
     actual: float
     thru_d: float
     tapping_d: float
-    
-SHAFT_MAP = {
-    'M2' : ShaftDimensions(2.0, 2.4, 2.0),
-    'M2.6' : ShaftDimensions(2.6, 2.8, 2.61),
-    'M4' : ShaftDimensions(4.0, 4.06, 3.75),
-    'M6' : ShaftDimensions(6.0, 6.14, 6.05),
-    }
 
 
 @dataclass(frozen=True)
@@ -37,6 +29,26 @@ class HeadDimensions(object):
     
     def overall_screw_head_height(self):
         return self.head_countersink_depth + self.head_mid_depth; 
+
+
+SHAFT_MAP = {
+    'M2' : ShaftDimensions(2.0, 2.4, 2.0),
+    'M2.6' : ShaftDimensions(2.6, 2.8, 2.61),
+    'M4' : ShaftDimensions(4.0, 4.06, 3.75),
+    'M6' : ShaftDimensions(6.0, 6.14, 6.05),
+    'BUGLE_14g-10' : ShaftDimensions(6.3, 6.7, 6.4),
+    }
+
+
+HEAD_MAP = {
+    'BUGLE_14g-10' : HeadDimensions(
+                head_top_d=14.2,
+                head_bot_d=6.5,
+                head_protrusion_height=1,
+                head_mid_depth=0.7,
+                head_countersink_depth=4.5)
+    }
+
 
 
 @dataclass(frozen=True)

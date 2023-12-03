@@ -156,7 +156,6 @@ class PipeCrossBracket(ad.CompositeShape):
                 shaft_thru_length=self.thickness / 5,
                 size_name=self.screw1_size_name,
                 include_thru_shaft=False,
-                include_tap_shaft=False,
                 as_solid=False,
                 fn=self.fn)
             
@@ -221,7 +220,6 @@ class PipeCrossBracket(ad.CompositeShape):
             shaft_thru_length=screw1_tap_len,
             size_name=self.screw1_size_name,
             include_thru_shaft=False,
-            include_tap_shaft=False,
             as_solid=False,
             fn=self.fn)
         
@@ -266,7 +264,6 @@ class PipeCrossBracket(ad.CompositeShape):
             size_name=self.screw1_size_name,
             head_sink_factor=0.5,
             include_thru_shaft=False,
-            include_tap_shaft=False,
             as_solid=False,
             fn=self.fn)
 
@@ -295,7 +292,6 @@ class PipeCrossBracket(ad.CompositeShape):
                 shaft_thru_length=self.thickness / 5,
                 size_name=self.screw1_size_name,
                 include_thru_shaft=False,
-                include_tap_shaft=False,
                 as_solid=False,
                 fn=self.fn)
             

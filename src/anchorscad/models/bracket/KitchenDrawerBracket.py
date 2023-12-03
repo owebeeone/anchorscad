@@ -628,7 +628,6 @@ class KitchenDrawerBracket(ad.CompositeShape):
                 tap_shaft_dia_delta=0,
                 size_name="M4",
                 head_depth_factor=0.1,
-                include_tap_shaft=False,
                 include_thru_shaft=False,
                 as_solid=False,
                 fn=self.fn)
@@ -651,7 +650,6 @@ class KitchenDrawerBracket(ad.CompositeShape):
                 tap_shaft_dia_delta=0,
                 size_name="M6",
                 head_depth_factor=1.1,
-                include_tap_shaft=False,
                 include_thru_shaft=False,
                 as_solid=False,
                 fn=self.fn)
@@ -663,7 +661,6 @@ class KitchenDrawerBracket(ad.CompositeShape):
                 tap_shaft_dia_delta=0,
                 size_name="M2.6",
                 head_depth_factor=0.8,
-                include_tap_shaft=False,
                 include_thru_shaft=False,
                 as_solid=False,
                 fn=self.fn)

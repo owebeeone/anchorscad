@@ -356,7 +356,6 @@ class V2PipeCrossBracket(ad.CompositeShape):
             shaft_thru_length=self.radius1 * 0.1,
             size_name=self.screw1_size_name,
             include_thru_shaft=False,
-            include_tap_shaft=False,
             head_depth_factor=0.5,
             as_solid=False,
             fn=self.fn)

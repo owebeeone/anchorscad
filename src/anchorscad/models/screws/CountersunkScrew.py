@@ -6,7 +6,7 @@ Created on 22 Aug 2021
 
 
 import anchorscad as ad
-from anchorscad.models.screws.dims import SHAFT_MAP, ShaftDimensions, \
+from anchorscad.models.screws.dims import HEAD_MAP, SHAFT_MAP, ShaftDimensions, \
   HeadDimensions
 
 
@@ -38,7 +38,6 @@ class CountersunkScrew(ad.CompositeShape):
     shaft_thru_length: float
     size_name: str
     include_thru_shaft: bool=False
-    include_tap_shaft: bool=False
     tap_shaft_dia_delta: float=None
     access_hole_depth: float=10
     shaft_taper_length: float=0
@@ -49,21 +48,43 @@ class CountersunkScrew(ad.CompositeShape):
     as_solid: bool=False
     cone_node: ad.Node=ad.ShapeNode(ad.Cone, {})
     rotate_extrude_node: ad.Node=ad.ShapeNode(ad.RotateExtrude, {})
+    cage_of_node: ad.Node=ad.CageOfNode()
+    shaft_cage_of_node: ad.Node=ad.CageOfNode(prefix='shaft_')
 
     
     EXAMPLE_SHAPE_ARGS=ad.args(
         shaft_overall_length=20, 
         shaft_thru_length=14, 
-        size_name="M6",
-        include_tap_shaft=False,
+        size_name="BUGLE_14g-10",
         include_thru_shaft=True,
         tap_shaft_dia_delta=6 - 2.6,
+        as_solid=False,
+        hide_cage=False,
         fn=36)
     
     EXAMPLE_ANCHORS=(
                 ad.surface_args('screw_cage', 'base'),
                 ad.surface_args('access_hole', 'top'),
                 ad.surface_args('screw_hole', 'head_mid', 0.5),)
+    
+    EXAMPLES_EXTENDED={
+        'show_cage': ad.ExampleParams(
+            shape_args=ad.args(shaft_overall_length=25, 
+                                shaft_thru_length=14, 
+                                size_name="BUGLE_14g-10",
+                                include_thru_shaft=True,
+                                shaft_hide_cage=True,
+                                as_solid=False,
+                                hide_cage=True,
+                                fn=64),
+            anchors=())
+        }
+    
+    def diameter(self) -> float:
+        return self.shaft_dims.actual
+    
+    def head_diameter(self) -> float:
+        return self.head_dims.head_top_d
     
     def build(self) -> ad.Maker:
         if not self.shaft_dims:
@@ -73,11 +94,12 @@ class CountersunkScrew(ad.CompositeShape):
             self.head_dims = self.createHeadDims(self.shaft_dims)
         
         shaft_dims = self.shaft_dims
-        maker = self.cone_node(
+        cage_shape = self.cone_node(
             h=self.shaft_overall_length,
             r_base=shaft_dims.thru_d / 2,
             r_top=shaft_dims.thru_d / 2,
-            ).cage('screw_cage').at('base')
+            )
+        maker = self.cage_of_node(cage_shape, cage_name='screw_cage').at('base')
             
         head_dims = self.head_dims
         if not self.tap_shaft_dia_delta:
@@ -93,11 +115,10 @@ class CountersunkScrew(ad.CompositeShape):
             h=taper_y,
             r_base=tap_shaft_dia / 2,
             r_top=tap_shaft_dia / 2)
-        tap_shaft_func = (tap_shaft_shape.solid 
-                          if self.include_tap_shaft
-                          else tap_shaft_shape.cage)
+        
+        tap_shaft_shape = self.shaft_cage_of_node(tap_shaft_shape, cage_name='tap_shaft')
 
-        maker.add_at(tap_shaft_func('tap_shaft').at('base'), 'base')
+        maker.add_at(tap_shaft_shape.at('base'), 'base')
         
         thru_shaft_shape = self.cone_node(
             h=self.shaft_overall_length - taper_y,
@@ -155,6 +176,9 @@ class CountersunkScrew(ad.CompositeShape):
     def createHeadDims(self, shaft_dims):
         '''Creates a default set of countersunk screw set of head dimensions.'''
         
+        if self.size_name in HEAD_MAP:
+            return HEAD_MAP[self.size_name]
+        
         return HeadDimensions(
             head_top_d=(self.head_depth_factor + 1) * shaft_dims.tapping_d,
             head_bot_d=shaft_dims.tapping_d,
@@ -176,7 +200,73 @@ class FlatSunkScrew(CountersunkScrew):
             head_protrusion_height=0.0,
             head_mid_depth=self.head_sink_factor * shaft_dims.tapping_d,
             head_countersink_depth=self.head_depth_factor * shaft_dims.tapping_d / 2)
+        
+        
+        
+@ad.shape
+@ad.datatree(chain_post_init=True)
+class TestCountersunkScrew(ad.CompositeShape):
+    screw_node: ad.Node = ad.ShapeNode(CountersunkScrew)
+    
+    screw_shape: ad.Shape = ad.dtfield(self_default=lambda s: s.screw_node())
+    
+    test_margin: float = ad.dtfield(5, 'The margin around the screw hole.')
+    
+    test_size: tuple = ad.dtfield(
+        self_default=lambda s: (
+            s.screw_shape.head_diameter() + s.test_margin * 2,
+            s.screw_shape.head_diameter() + s.test_margin * 2,
+            s.screw_shape.shaft_overall_length),
+        doc='The size of the test box.')
+    
+    box_node: ad.Node = ad.ShapeNode(ad.Box, prefix='test_')
+    
+    
+    test_cut_size: tuple = ad.dtfield(
+        self_default=lambda s: (
+            s.test_size[0] / 2 + s.epsilon,
+            s.test_size[1] / 2 + s.epsilon,
+            s.test_size[2] + s.epsilon),
+        doc='The size of the test box.')
+    cut_box_node: ad.Node = ad.ShapeNode(ad.Box, prefix='test_cut_')
 
+    epsilon: float = ad.dtfield(0.01, 'The epsilon value for cutting the test box.')    
+    
+    EXAMPLE_SHAPE_ARGS=ad.args(
+        shaft_overall_length=25,
+        shaft_thru_length=25,
+        size_name='BUGLE_14g-10',
+        include_thru_shaft=False,
+        shaft_hide_cage=False,
+        as_solid=False,
+        hide_cage=False,
+        # head_dims=HeadDimensions(
+        #         head_top_d=14.2,
+        #         head_bot_d=6.5,
+        #         head_protrusion_height=1,
+        #         head_mid_depth=0.7,
+        #         head_countersink_depth=4.5),
+        fn=128)
+
+    def build(self) -> ad.Maker:
+        
+        maker = self.box_node().solid('test_box').at('centre')
+        
+        cut_box = self.cut_box_node().hole('test_cut_box').colour('green')\
+            .at('face_edge', 'front', 3, post=ad.ROTY_90)
+        
+        maker.add_at(cut_box, 'centre')
+        
+        maker.add_at(self.screw_shape.composite('screw').at('top'),
+                        'face_centre', 'top')
+
+        # Add any additional testing or modifications here
+
+        return maker
+
+# Uncomment the line below to default to writing OpenSCAD files
+# when anchorscad_main is run with no --write or --no-write options.
+MAIN_DEFAULT=ad.ModuleDefault(all=True)
 
 if __name__ == "__main__":
     ad.anchorscad_main(False)
