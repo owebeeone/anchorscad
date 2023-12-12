@@ -56,7 +56,7 @@ class TactileSwitchTL1105Lead(ad.CompositeShape):
         
         path = (ad.PathBuilder()
                 .move((0, 0), direction=(1, 0))
-                .stroke(-self.lx_bend1, name='b0')
+                .stroke(self.lx_bend1, degrees=180, name='b0')
                 .arc_tangent_radius_sweep(
                     self.thickness, 
                     sweep_sinr_cosr=norm_bend,
