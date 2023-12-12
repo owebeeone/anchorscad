@@ -103,7 +103,7 @@ class PullHandle(ad.CompositeShape):
     
     EXAMPLE_SHAPE_ARGS=ad.args()
     EXAMPLE_ANCHORS=(
-        #ad.surface_args('scaffold', 'handle', 'element-0', 'stadium', 'left', 0.5),
+        ad.surface_args('scaffold', 'handle', 'element-0', 'stadium', 'left', 0.5),
     )
 
     def build(self) -> ad.Maker:

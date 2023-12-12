@@ -37,6 +37,7 @@ SHAFT_MAP = {
     'M4' : ShaftDimensions(4.0, 4.06, 3.75),
     'M6' : ShaftDimensions(6.0, 6.14, 6.05),
     'BUGLE_14g-10' : ShaftDimensions(6.3, 6.7, 6.4),
+    'DECK_10g-10' : ShaftDimensions(4.8, 5.1, 4.9),
     }
 
 
@@ -46,7 +47,14 @@ HEAD_MAP = {
                 head_bot_d=6.5,
                 head_protrusion_height=1,
                 head_mid_depth=0.7,
-                head_countersink_depth=4.5)
+                head_countersink_depth=4.5),
+    
+    'DECK_10g-10' : HeadDimensions(
+                head_top_d=9.15,
+                head_bot_d=4.9,
+                head_protrusion_height=1,
+                head_mid_depth=0.7,
+                head_countersink_depth=3.2)
     }
 
 

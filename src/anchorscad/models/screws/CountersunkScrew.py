@@ -235,17 +235,11 @@ class TestCountersunkScrew(ad.CompositeShape):
     EXAMPLE_SHAPE_ARGS=ad.args(
         shaft_overall_length=25,
         shaft_thru_length=25,
-        size_name='BUGLE_14g-10',
+        size_name='DECK_10g-10',
         include_thru_shaft=False,
         shaft_hide_cage=False,
         as_solid=False,
         hide_cage=False,
-        # head_dims=HeadDimensions(
-        #         head_top_d=14.2,
-        #         head_bot_d=6.5,
-        #         head_protrusion_height=1,
-        #         head_mid_depth=0.7,
-        #         head_countersink_depth=4.5),
         fn=128)
 
     def build(self) -> ad.Maker:

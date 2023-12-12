@@ -7,7 +7,7 @@ Created on 7 Jan 2021
 from collections.abc import Iterable
 from dataclasses import dataclass, field
 from types import FunctionType
-from typing import List, Tuple
+from typing import Dict, List, Tuple
 
 from frozendict import frozendict
 
@@ -17,6 +17,7 @@ from anchorscad.path_utils import remove_colinear_points
 import numpy as np
 import pyclipper as pc
 import traceback as tb
+import numbers
 
 
 class DuplicateNameException(Exception):
@@ -42,6 +43,9 @@ class TooFewPointsInPath(Exception):
     
 class MultiplePathPolygonBuilderNotImplemented(Exception):
     '''Paths with multiple polygons are not implemented yet.'''
+    
+class PathElelementNotFound(Exception):
+    '''The requested path element was not found.'''
 
 
 EPSILON=1e-6
@@ -251,6 +255,10 @@ class OpBase:
     def render_as_svg(self, svg_model):
         raise NotImplemented('Derived class must implement this.')
     
+    def get_centre(self):
+        '''Returns the centre of the operation, if the operation has a centre.'''
+        return None
+    
 
 @dataclass
 class OpMetaData():
@@ -429,14 +437,20 @@ class Path():
     Each move op indicates a separate path. This can be a hole (anticlockwise) or a
     polygon (clockwise).
     A Path can generate a polygon with a differing number of facets or extents 
-    (bounding box) or can be transformed into another path using an l.GMatrix.
+    (bounding box) or can be transformed into another path using a [ad.GMatrix].
     
     '''
-    ops: tuple
-    name_map: frozendict
+    ops: Tuple[OpBase, ...]
+    name_map: Dict[str, OpBase]  # frozendict
 
     def get_node(self, name):
         return self.name_map.get(name, None)
+    
+    def get_centre_of(self, name):
+        node = self.get_node(name)
+        if not node:
+            raise PathElelementNotFound(f'Unable to find path element: {name}')
+        return node.get_centre()
     
     def extents(self):
         itr = iter(self.ops)
@@ -1026,6 +1040,9 @@ class PathBuilder():
             object.__setattr__(self, 'arcto', CircularArc(
                 start_angle, end_delta, radius_start, self.centre))
             
+        def get_centre(self):
+            return self.centre
+            
         def lastPosition(self):
             return self.end_point
             
@@ -1247,6 +1264,7 @@ class PathBuilder():
         '''A line from the current point to a length away given
         by following the tangent from the previous op transformed by rotating
         by angle or a GMatrix transform.'''
+        assert length >= 0, f"Cannot stroke with a negative length of {length}"
         assert len(self.ops) > 0, "Cannot line to without starting point"
         d_vector = to_gvector(self.last_op().direction_normalized(1.0))
         if degrees or radians or sinr_cosr:
@@ -1259,11 +1277,12 @@ class PathBuilder():
         if length > 0:
             d_vector = d_vector * length
             point = d_vector + to_gvector(self.last_op().lastPosition())
+            point = point.A[:2]
         else:
             d_vector = d_vector * 0.001
             point = self.last_op().lastPosition()
             
-        return self.add_op(self._LineTo(point.A[:2], 
+        return self.add_op(self._LineTo(point, 
                                         prev_op=self.last_op(),
                                         name=name,
                                         direction_override=d_vector.A[:2]))
@@ -1276,7 +1295,109 @@ class PathBuilder():
                  + self.last_op().lastPosition())
         return self.add_op(self._LineTo(point[:2], 
                                         prev_op=self.last_op(), name=name))
+        
+    def _rotate(self, direction: l.GVector, degrees: float, radians: float, sinr_cosr:float, 
+                xform: l.GMatrix) -> l.GVector:
+        
+        if xform:
+            d_vector = xform * direction
+            
+        elif degrees or radians or sinr_cosr:
+            d_vector = l.rotZ(degrees=degrees, 
+                          radians=radians, 
+                          sinr_cosr=sinr_cosr) * direction
+        else:
+            d_vector = direction
+        return d_vector
+    
+    def _rotate_n(self, direction: l.GVector, degrees: Tuple[float],
+                  radians: Tuple[float], sinr_cosr: Tuple[float], xform: Tuple[l.GMatrix],
+                  size: int, ) -> List[l.GVector]:
+        l = size if size else max(len(degrees), len(radians), len(sinr_cosr), len(xform))
+        directions = []
+        for i in range(l):
+            v_degress = degrees[i] if len(degrees) > i else None
+            v_radians = radians[i] if len(radians) > i else None
+            v_sinr_cosr = sinr_cosr[i] if len(sinr_cosr) > i else None
+            v_xform = xform[i] if len(xform) > i else None
+            directions.append(self._rotate(direction, v_degress, v_radians, v_sinr_cosr, v_xform))
+        return directions
 
+    
+    def rspline(self, length_or_rpoint, cv_len=(1, 1), degrees=(0, 0, 0),
+                radians=(None, None, None), sinr_cosr=(None, None, None), 
+                xform=(None, None, None), name=None, metadata=None, rel_len=None):
+        '''Like [spline] but the control points are relative to the last point and direction.
+        In a similar vein to [stroke], it will determine the end point by following the previous
+        direction rotated by the given angle. The control point 1 and 2 angle is provided by
+        degrees or radians.
+        Args:
+            length_or_rpoint: The length of the new control point (direct line length 
+                    from the last position to control point 3) or a relative position
+                    to the final point (control point 3).
+            cv_len: If provided will force the length of the control point (1 an 2)
+                    to be the given length. (length parameter is for control point 3)
+                    Default is (1, 1)
+            name: The name of this node. Naming a node will make it an anchor.
+            metadata: Provides parameters for rendering that override the renderer metadata.
+            degrees: A 3 tuple that contains a rotation angle for control points 1, 2 and 3
+                    respectively from the previous direction.
+            radians: like degrees but in radians. If radians are provided they override any
+                    degrees values provided.
+            sinr_cosr: like degrees but in sin/cos of angle. If sinr_cosr are provided 
+                    they override any degrees or radians values provided.
+            xform: like degrees but in a GMatrix transform, if provided it overrides any
+                    degrees, radians or sinr_cosr values provided.
+            rel_len: Forces control points to have relatively the same length as the
+                    distance from the end points. If cv_len is set it is used as a multiplier.
+        '''
+        
+        if isinstance(length_or_rpoint, numbers.Number):
+            length = length_or_rpoint
+            assert length > 0, f"Cannot rspline with zero or negative length: {length}"
+            rpoint = None
+        else:
+            length = None
+            rpoint = l.GVector(LIST_3_FLOAT(length_or_rpoint))
+
+        assert len(self.ops) > 0, "Cannot rspline to without starting point"
+        if radians is None:
+            radians = (None, None, None)
+        if sinr_cosr is None:
+            sinr_cosr = (None, None, None)
+        if degrees is None:
+            degrees = (None, None, None)
+        if xform is None:
+            xform = (None, None, None)
+        
+        direction = to_gvector(self.last_op().direction_normalized(1.0))
+        directions = self._rotate_n(direction, degrees, radians, sinr_cosr, xform, 3)
+        
+        last_pos = to_gvector(self.last_op().lastPosition())
+        points = [None, None, None]
+        if rpoint:
+            points[2] = rpoint + last_pos
+        else:
+            if length > 0:
+                d_vector = directions[2] * length
+            else:
+                d_vector = directions[2] * 0.001
+            points[2] = d_vector + last_pos
+            
+        for i in range(2):
+            assert cv_len[i], f"Cannot rspline with zero cv_len[{i}]: {cv_len[i]}"
+            
+            d_vector = directions[i] * cv_len[i]
+            if i == 1:
+                points[i] = points[2] - d_vector
+            else:
+                # Control point 1 goes in the opposite direction to the previous direction.
+                points[i] = last_pos + d_vector
+        
+        points_2d = list(p.A[:2] for p in points)
+
+        return self.spline(points_2d, name, metadata, rel_len)
+    
     def spline(self, points, name=None, metadata=None, 
                cv_len=(None, None), degrees=(0, 0), radians=(0, 0), rel_len=None):
         '''Adds a spline node to the path.
@@ -2019,6 +2140,18 @@ class LinearExtrude(ExtrudedShape):
         # Descaling the matrix so the co-ordinates don't skew.
         result = result.descale()
         return result
+    
+    @core.anchor('Centre of segment.')
+    def centre_of(self, segment_name, rh=0) -> l.GMatrix:
+        '''Returns a transformation to the centre of the given segment (arc) with the
+        direction aligned to the coordinate system. The rh parameter is the 
+        relative height (0-1) of the arc centre.'''
+
+        centre_2d = self.path.get_centre_of(segment_name)
+        if centre_2d is None:
+            raise ValueError(f'Segment has no "centre" property: {segment_name}')
+        
+        return l.translate((centre_2d[0], centre_2d[1], rh * self.h)) * l.ROTY_180
 
 
 @core.shape
@@ -2072,6 +2205,7 @@ class RotateExtrude(ExtrudedShape):
                 core.surface_args('linear2', 0.1, 0.9),
                 core.surface_args('linear2', 0.5, 0.9),
                 core.surface_args('linear2', 1.0, 0.9),
+                core.surface_args('centre_of', 'curve', 0),
                 )
     
     EXAMPLES_EXTENDED={
@@ -2191,7 +2325,11 @@ class RotateExtrude(ExtrudedShape):
                range will depart the path linearly.
             degrees or radians: The angle along the rotated extrusion.
         '''
+        if path_node_name not in self.path.name_map:
+            raise PathElelementNotFound(f'Could not find {path_node_name}')
         op = self.path.name_map.get(path_node_name)
+        if op is None:
+            raise PathElelementNotFound(f'Could not find {path_node_name}')
         normal = op.normal2d(t)
         pos = op.position(t)
 
@@ -2201,10 +2339,30 @@ class RotateExtrude(ExtrudedShape):
                      * l.ROTY_90  
                      * l.rotXSinCos(normal[1], -normal[0]))
 
-    
     @core.anchor('Centre of the extrusion arc.')
     def centre(self):
         return l.IDENTITY
+    
+    @core.anchor('Centre of segment.')
+    def centre_of(self, segment_name, t=0, degrees=0, radians=None) -> l.GMatrix:
+        '''Returns a transformation to the centre of the given segment (arc) with the
+        direction aligned to the coordinate system.'''
+
+        centre_2d = self.path.get_centre_of(segment_name)
+        if centre_2d is None:
+            raise ValueError(f'Segment has no "centre" property: {segment_name}')
+        
+        op = self.path.name_map.get(segment_name)
+        normal = op.normal2d(t)
+        
+        return (l.rotZ(degrees=degrees, radians=radians)
+                * l.ROTX_90  # Projection from 2D Path to 3D space
+                * l.translate([centre_2d[0], centre_2d[1], 0])
+                * l.rotZSinCos(-normal[1], -normal[0]))
+
+# Uncomment the line below to default to writing OpenSCAD files
+# when anchorscad_main is run with no --write or --no-write options.
+MAIN_DEFAULT=core.ModuleDefault(all=True)
 
 if __name__ == "__main__":
     #test()

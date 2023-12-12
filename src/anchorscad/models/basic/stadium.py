@@ -73,10 +73,15 @@ class StadiumPrism(ad.CompositeShape):
     
     cage_node: ad.Node=ad.CageOfNode()
     
+    SIDE_HORIZ_NAMES={'left': 'left', 'right': 'right', 0: 'left', 1: 'right'}
+    SIDE_VERT_NAMES={'upper': 'upper', 'lower': 'lower', 0: 'upper', 1: 'lower'}
+    
     EXAMPLE_SHAPE_ARGS=ad.args(square_right=False)
     EXAMPLE_ANCHORS=(
         ad.surface_args('top'),
         ad.surface_args('base'),
+        ad.surface_args('arc_centre', 'right', 'lower', rh=0),
+        ad.surface_args('stadium', 'right_lower', 0.5),
     )
 
     def build(self) -> ad.Maker:
@@ -100,6 +105,24 @@ class StadiumPrism(ad.CompositeShape):
     def base(self) -> ad.GMatrix:
         return self.maker.at('face_centre', 'base')
     
+    @ad.anchor('Arc centres.')
+    def arc_centre(self, side_horiz: str='left', side_vert: str='upper', rh=0) -> ad.GMatrix:
+        '''Anchor for the arc centres of the stadium prism. If the anchors are flattened, there
+        are no arc centres and it will raise an exception.
+        Acceptable names are 'left'/'right' and 'upper'/'lower' or 0/1 for each respectively.
+        '''
+        horiz = self.SIDE_HORIZ_NAMES.get(side_horiz, None)
+        if not horiz:
+            raise ValueError(f'Unknown horizontal side name: {side_horiz}')
+        
+        vert = self.SIDE_VERT_NAMES.get(side_vert, None)
+        if not vert:
+            raise ValueError(f'Unknown vertical side name: {side_vert}')
+        
+        segment_name = f'{horiz}_{vert}'
+        
+        return self.maker.at('stadium', 'centre_of', segment_name, rh=rh)
+
 
 @ad.shape
 @ad.datatree
