@@ -1,7 +1,18 @@
 '''
-Created on ${date}
+Created on 12-Dec-2023
 
-@author: ${user}
+@author: gianni
+
+Auto door holder. Consists of a ring, a hook and a hook-mount. Ring is usually attached
+to the door and the hook-mount against the wall. The hook is fasted to the hook-mount
+by inserting a rod. The hook and ring are aligned so that when the door is opened, it 
+raises the hook which then falls into the ring keeping the hook in place.
+
+https://photos.app.goo.gl/qKShjvXtq7jKiSBWA - video of operation.
+https://photos.app.goo.gl/MVbkSCrLY2QVoaD69 - photo of installed door holder.
+
+These were printed with black PETG and 3 perimiters at 25% infill. PETG seems to have 
+good UV resistance so should be a reasonable choice for outdoor use.
 '''
 
 import anchorscad as ad
@@ -200,8 +211,12 @@ class DoorHolderHook(ad.CompositeShape):
     axis_pin_location: ad.GMatrix=ad.dtfield(
         self_default=lambda s: ad.translate((0, 0, s.ring_thickness)),
         doc='The pin location.')
-    
-    pin_hole_r: float=ad.dtfield((10.3 + 0.5) /2, doc='The radius of the pin.')
+
+    axle_r: float=ad.dtfield(
+        (10.2 + 0.1) / 2, 
+        doc='The radius of the axle hole. Note the 0.1 increase for printer tolerance.')
+    pin_hole_r: float=ad.dtfield(
+        self_default=lambda s: s.axle_r + 0.25, doc='The radius of the pin.')
     pin_node: ad.Node=ad.ShapeNode(ad.Cylinder, {'r': 'pin_hole_r', 'h': 'hook_width'})
     
     # Apart from the standard ShapeNode fields, none of the fields are injected.
@@ -275,9 +290,7 @@ class DoorHolderHookMount(ad.CompositeShape):
     
     mount_node: ad.Node=ad.ShapeNode(ad.Box, prefix='mount_')
     
-    axle_r: float=ad.dtfield(
-        self_default=lambda s: s.hook_shape.pin_hole_r - s.slack / 2, 
-        doc='The radius of the axle.')
+    # axle_r - injected by hook_node
     axle_h: float=ad.dtfield(
         self_default=lambda s: s.mount_size[0] - s.margin / 4, 
         doc='The height of the axle.')
@@ -361,7 +374,7 @@ class DoorHolderHookMount(ad.CompositeShape):
         maker.add_at(drain_hole_shape.hole('drain_hole').at('face_centre', 'top'),
                      'mount', 'face_centre', 'right',
                      post=post_transform * ad.ROTZ_90 * ad.ROTY_90)
-
+        
         return maker
 
 # Uncomment the line below to default to writing OpenSCAD files
