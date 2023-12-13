@@ -350,6 +350,17 @@ class DoorHolderHookMount(ad.CompositeShape):
             maker.add_at(screw_hole_shape.composite(('mount_screw_hole', i))
                          .at('top', post=screw_offset_xform),
                          'mount', 'face_corner', 'back', i)
+            
+        # Add a drain hole, otherwise the mount will fill with water for external settings.
+        drain_hole_size = (hook_cut_shape.hook_width,
+                           hook_cut_shape.ring_thickness,
+                           self.mount_size[2] / 2)
+       
+        drain_hole_shape = ad.Box(size=drain_hole_size)
+        
+        maker.add_at(drain_hole_shape.hole('drain_hole').at('face_centre', 'top'),
+                     'mount', 'face_centre', 'right',
+                     post=post_transform * ad.ROTZ_90 * ad.ROTY_90)
 
         return maker
 
