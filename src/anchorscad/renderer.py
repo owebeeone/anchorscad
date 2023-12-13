@@ -13,7 +13,7 @@ from dataclasses_json import dataclass_json, config
 from anchorscad import core, graph_model
 from anchorscad import linear as l
 import pythonopenscad as posc
-from typing import Any, Hashable, Dict
+from typing import Any, Hashable, Dict, List
 
 
 class EmptyRenderStack(core.CoreEception):
@@ -26,7 +26,6 @@ class PopCalledTooManyTimes(core.CoreEception):
     '''The render stack ran out of elements to pop..'''
 
 # Heads contain trnasformations and modifiers that apply to the entire shape.
-HEAD_CONTAINER=1
 SOLID_CONTAINER=2
 HOLE_CONTAINER=3
 
@@ -35,7 +34,8 @@ class Container():
     mode: core._Mode
     model: Any
     shape_name: Hashable
-    containers: Dict[int, 'Container'] = field(default_factory=dict, init=False, repr=False)
+    containers: Dict[int, List[Any]] = field(default_factory=dict, init=False, repr=False)
+    heads: List[Any] = field(default_factory=list, init=False, repr=False)
         
     def _get_or_create_container(self, container_id):
         if container_id in self.containers:
@@ -67,7 +67,7 @@ class Container():
         container.extend(obj)
         
     def add_head(self, *obj):
-        container = self._get_or_create_container(HEAD_CONTAINER)
+        container = self.heads
         self._apply_name(obj)
         container.extend(obj)
         
@@ -102,10 +102,8 @@ class Container():
     
     def _combine_heads(self, make_copy: bool=False):
         '''Combines heads into a single head.'''
-        
-        heads = self._get_container(HEAD_CONTAINER)
-        if make_copy:
-            heads = copy.deepcopy(heads)
+
+        heads = copy.deepcopy(self.heads) if make_copy else self.heads
         
         top_head = None
         last_head = None
@@ -135,7 +133,7 @@ class Container():
         
         head_copies = [None, None]
         
-        heads = self._get_container(HEAD_CONTAINER)
+        heads = self.heads
         if heads:
             if holes and solids:
                 head_copies[0] = self._combine_heads(make_copy=True)
@@ -172,7 +170,7 @@ class Container():
         return result
     
     def get_or_create_first_head(self):
-        heads = self._get_or_create_container(HEAD_CONTAINER)
+        heads = self.heads
         if not heads:
             head = self.createNamedUnion('get_or_create_first_head')
             self.add_head(head)
