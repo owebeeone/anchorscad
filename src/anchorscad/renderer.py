@@ -27,7 +27,6 @@ class PopCalledTooManyTimes(core.CoreEception):
 
 # Heads contain trnasformations and modifiers that apply to the entire shape.
 SOLID_CONTAINER=2
-HOLE_CONTAINER=3
 
 @dataclass
 class Container():
@@ -36,6 +35,8 @@ class Container():
     shape_name: Hashable
     containers: Dict[int, List[Any]] = field(default_factory=dict, init=False, repr=False)
     heads: List[Any] = field(default_factory=list, init=False, repr=False)
+    holes: List[Any] = field(default_factory=list, init=False, repr=False)
+    
         
     def _get_or_create_container(self, container_id):
         if container_id in self.containers:
@@ -62,7 +63,7 @@ class Container():
         container.extend(obj)
         
     def add_hole(self, *obj):
-        container = self._get_or_create_container(HOLE_CONTAINER)
+        container = self.holes
         self._apply_name(obj)
         container.extend(obj)
         
@@ -72,7 +73,7 @@ class Container():
         container.extend(obj)
         
     def _combine_solids_and_holes(self):
-        holes = self._get_container(HOLE_CONTAINER)
+        holes = self.holes
         solids = self._get_container(SOLID_CONTAINER)
         
         force_container = self.mode.has_operator_container or True
@@ -128,7 +129,7 @@ class Container():
     def build_composite(self):
         '''Returns a list of solids and holes.'''
         
-        holes = self._get_or_create_container(HOLE_CONTAINER)
+        holes = self.holes
         solids = self._get_or_create_container(SOLID_CONTAINER)    
         
         head_copies = [None, None]
