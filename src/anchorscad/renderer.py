@@ -25,6 +25,7 @@ class UnpoppedItemsOnRenderStack(core.CoreEception):
 class PopCalledTooManyTimes(core.CoreEception):
     '''The render stack ran out of elements to pop..'''
 
+# Heads contain trnasformations and modifiers that apply to the entire shape.
 HEAD_CONTAINER=1
 SOLID_CONTAINER=2
 HOLE_CONTAINER=3
@@ -99,7 +100,12 @@ class Container():
                 return solids
         return []
     
-    def _combine_heads(self, heads):
+    def _combine_heads(self, make_copy: bool=False):
+        '''Combines heads into a single head.'''
+        
+        heads = self._get_container(HEAD_CONTAINER)
+        if make_copy:
+            heads = copy.deepcopy(heads)
         
         top_head = None
         last_head = None
@@ -113,7 +119,7 @@ class Container():
     
     def build_combine(self):
         '''Combines solids and holes if any and returns the representative list of objects.'''
-        top_head, last_head = self._combine_heads(heads=self._get_container(HEAD_CONTAINER))
+        top_head, last_head = self._combine_heads()
 
         if not top_head:
             return self._combine_solids_and_holes()
@@ -132,15 +138,15 @@ class Container():
         heads = self._get_container(HEAD_CONTAINER)
         if heads:
             if holes and solids:
-                head_copies[0] = self._combine_heads(copy.deepcopy(heads))
+                head_copies[0] = self._combine_heads(make_copy=True)
                 head_copies[0][1].append(*solids)
-                head_copies[1] = self._combine_heads(heads)
+                head_copies[1] = self._combine_heads()
                 head_copies[1][1].append(*holes)
             elif holes:
-                head_copies[1] = self._combine_heads(heads)
+                head_copies[1] = self._combine_heads()
                 head_copies[1][1].append(*holes)
             elif solids:
-                head_copies[0] = self._combine_heads(heads)
+                head_copies[0] = self._combine_heads()
                 head_copies[0][1].append(*solids)
             else:
                 return [], []
@@ -235,13 +241,15 @@ class ContextEntry():
     attributes: core.ModelAttributes = None
     graph_node: object = None
 
+@dataclass
 class Context():
+    renderer: 'Renderer' = field(repr=False)
+    stack: list = field(default_factory=list, init=False)
+    model: Any = field(init=False)
+    
+    def __post_init__(self):
+        self.model = self.renderer.model
 
-    def __init__(self, renderer):
-        self.stack = [] # A stack of ContextEntry
-        self.renderer = renderer
-        self.model = renderer.model
-        
     def push(self, 
              mode: core.ModeShapeFrame, 
              reference_frame: l.GMatrix, 
@@ -318,7 +326,8 @@ class Context():
         if not self.stack:
             raise EmptyRenderStack('renderer stack is empty.')
         return self.stack[-1].container
-        
+
+
 class Renderer():
     '''Provides renderer machinery for anchorscad. Renders to PythonOpenScad models.'''
     model = posc
