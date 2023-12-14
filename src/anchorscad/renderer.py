@@ -240,10 +240,11 @@ class ContextEntry():
     attributes: core.ModelAttributes = None
     graph_node: object = None
 
+
 @dataclass
 class Context():
     renderer: 'Renderer' = field(repr=False)
-    stack: list = field(default_factory=list, init=False)
+    stack: List[ContextEntry] = field(default_factory=list, init=False)
     model: Any = field(init=False)
     
     def __post_init__(self):
@@ -255,11 +256,11 @@ class Context():
              attributes: core.ModelAttributes,
              shape_name: str=None,
              graph_node: object=None):
-        container = Container(
-            mode, model=self.model, shape_name=shape_name)
         last_attrs = self.get_last_attributes()
         merged_attrs = last_attrs.merge(attributes)
         diff_attrs = last_attrs.diff(merged_attrs)
+        
+        container = Container(mode, model=self.model, shape_name=shape_name)
         
         entry = ContextEntry(container, mode, reference_frame, merged_attrs, graph_node)
 
@@ -308,9 +309,10 @@ class Context():
     def get_current_graph_path(self):
         return ShapePath(tuple([entry.graph_node for entry in self.stack]))
         
-    def createNamedUnion(self, mode, name):
+    def createNamedUnion(self, mode: core.ModeShapeFrame, name: str):
         result = self.model.Union()
-        result.setMetadataName(name)
+        mode_str = f':{mode.mode}' if mode.mode else ''
+        result.setMetadataName(f'{name}{mode_str}')
         return result
     
     def get_last_attributes(self):
@@ -380,7 +382,7 @@ class RenderResult():
     paths: dict  # A dictionary of Path to list of anchors in the graph.
     
     
-def render(shape, initial_frame=None, initial_attrs=None):
+def render(shape, initial_frame=None, initial_attrs=None) -> RenderResult:
     '''Renders a shape and returns a RenderResult.'''
     renderer = Renderer(initial_frame, initial_attrs)
     shape.render(renderer)
