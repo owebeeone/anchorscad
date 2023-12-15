@@ -26,7 +26,7 @@ from anchorscad.colours import Colour
 from anchorscad.svg_renderer import HtmlRenderer
 import numpy as np
 import pythonopenscad as posc
-from typing import Hashable
+from typing import Hashable, Dict, Tuple
 
 
 class CoreEception(Exception):
@@ -218,7 +218,56 @@ FA_FIELD=fa_field()
 @dataclass(frozen=True)
 class Material:
     name: str = dtfield(doc='The name of the material')
+    
+    
+@dataclass(frozen=True)
+class MaterialMap:
+    '''A map for materials to other materials.
+    This can be used to map materials to other materials when rendering.
+    '''
+    
+    def map(self, material: Material, attributes:'ModelAttributes') -> Material:
+        '''Returns the mapped material for the given material.'''
+        return material  # Default is no mapping.
+    
+@dataclass(frozen=True)
+class MaterialMapBasic(MaterialMap):
+    '''Provides a set of basic mappings for materials.'''
+    
+    map_dict: Dict[str, str]
+    
+    def map(self, material: Material, attributes: 'ModelAttributes') -> Material:
+        '''Returns the mapped material for the given material. If a mapping
+        does not exist, the original material is returned.'''
+        return self.map_dict.get(material, material)
+    
 
+def create_material_map(*args):
+    '''Creates a material map from the arguments provided.'''
+    if not args:
+        raise ValueError('No arguments provided.')
+    
+    if len(args) % 2 != 0:
+        raise ValueError('Arguments must be in pairs.')
+    # Combine pairs of args into tuples.
+    entries = tuple(zip(args[0::2], args[1::2]))
+    return MaterialMapBasic(frozendict(entries))
+
+
+@dataclass(frozen=True)
+class MaterialMapStack(MaterialMap):
+    '''Combines a collection of material mappings.'''
+    
+    map_stack: Tuple[MaterialMap]
+    
+    def map(self, material: Material, attributes: 'ModelAttributes') -> Material:
+        '''Maps a material via a stack of material maps.'''
+        
+        for mmap in self.map_stack:
+            material = mmap.map(material, attributes)
+            
+        return material
+    
 
 @dataclass(frozen=True)
 class ModelAttributes(object):
@@ -232,6 +281,7 @@ class ModelAttributes(object):
     transparent: bool = None
     use_polyhedrons: bool = None
     material: Material = None
+    material_map: MaterialMap = None
     
     def _merge_of(self, attr, other):
         self_value = getattr(self, attr)
@@ -306,6 +356,11 @@ class ModelAttributes(object):
     
     def with_material(self, material: Material):
         return self._with(material=material)
+    
+    def with_material_map(self, material_map: MaterialMap):
+        if self.material_map:
+            material_map = MaterialMapStack((self.material_map, material_map))
+        return self._with(material_map=material_map)
     
     def fill_dict(self, out_dict, field_names=('fn', 'fs', 'fa')):
         for field_name in field_names:
@@ -469,6 +524,10 @@ class NamedShapeBase(object):
     def material(self, material: Material):
         return self._with(
             attributes=self.get_attributes_or_default().with_material(material))
+        
+    def material_map(self, material_map: MaterialMap):
+        return self._with(
+            attributes=self.get_attributes_or_default().with_material_map(material_map))
 
 
 class NamedShape(NamedShapeBase):
@@ -1127,7 +1186,7 @@ class Maker(Shape):
     frames (anchors) associated with Shapes already added.
     '''
     reference_shape: ModeShapeFrame
-    entries: dict
+    entries: Dict[Hashable, ModeShapeFrame]
     
     def __init__(self, mode=None, shape_frame=None, *, copy_of=None, attributes=None):
         if copy_of is None:
@@ -1143,10 +1202,10 @@ class Maker(Shape):
                     f'\'shape_frame\' parameters must not be provided but '
                     f'attributes={attributes!r}, mode={mode!r} and shape_frame={shape_frame!r}')
         
-    def copy_if_mutable(self):
+    def copy_if_mutable(self) -> 'Maker':
         return Maker(copy_of=self)
         
-    def _add_mode_shape_frame(self, mode_shape_frame):
+    def _add_mode_shape_frame(self, mode_shape_frame: ModeShapeFrame) -> 'Maker':
         # Check for name collision.
         name = mode_shape_frame.shapeframe.name
         previous = self.entries.get(name, None)

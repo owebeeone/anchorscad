@@ -77,7 +77,7 @@ class DirectedGraph:
     nodes: list=field(default_factory=lambda:list())
     edges: list=field(default_factory=lambda:list())
     
-    def new_node(self, label, clazz_name=None):
+    def new_node(self, label, clazz_name=None) -> Node:
         node = Node(label, clazz_name)
         self.nodes.append(node)
         return node

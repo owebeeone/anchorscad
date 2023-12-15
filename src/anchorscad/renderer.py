@@ -254,8 +254,8 @@ class Context():
              mode: core.ModeShapeFrame, 
              reference_frame: l.GMatrix, 
              attributes: core.ModelAttributes,
-             shape_name: str=None,
-             graph_node: object=None):
+             shape_name: Hashable=None,
+             graph_node: graph_model.Node=None):
         last_attrs = self.get_last_attributes()
         merged_attrs = last_attrs.merge(attributes)
         diff_attrs = last_attrs.diff(merged_attrs)
@@ -322,18 +322,22 @@ class Context():
                 return attrs
         return core.EMPTY_ATTRS
         
-    
     def get_last_container(self):
         if not self.stack:
             raise EmptyRenderStack('renderer stack is empty.')
         return self.stack[-1].container
 
 
+@dataclass
 class Renderer():
     '''Provides renderer machinery for anchorscad. Renders to PythonOpenScad models.'''
     model = posc
+    context: Context
+    result: 'RenderResult' 
+    graph: graph_model.DirectedGraph
+    paths: ShapePathDict
     
-    def __init__(self, initial_frame=None, initial_attrs=None):
+    def __init__(self, initial_frame: l.GMatrix=None, initial_attrs: core.ModelAttributes=None):
         self.context = Context(self)
         self.result = None
         self.graph = graph_model.DirectedGraph()
@@ -351,7 +355,12 @@ class Renderer():
         self.context = Context(self) # Prepare for the next object just in case.
         return self.result
 
-    def push(self, mode, reference_frame, attributes, shape_name, clazz_name=None):
+    def push(self, 
+             mode: core._Mode, 
+             reference_frame: l.GMatrix, 
+             attributes: core.ModelAttributes, 
+             shape_name: Hashable, 
+             clazz_name: str=None):
         graph_node = self.graph.new_node(shape_name, clazz_name)
         self.graph.add_edge(self.context.get_current_graph_node(), graph_node)
         self.context.push(mode, reference_frame, attributes, shape_name, graph_node)
@@ -382,8 +391,16 @@ class RenderResult():
     paths: dict  # A dictionary of Path to list of anchors in the graph.
     
     
-def render(shape, initial_frame=None, initial_attrs=None) -> RenderResult:
-    '''Renders a shape and returns a RenderResult.'''
+def render(shape, 
+           initial_frame: l.GMatrix=None, 
+           initial_attrs: core.ModelAttributes=None) -> RenderResult:
+    '''Renders a shape and returns a RenderResult.
+    args:
+        shape: The shape to render.
+        initial_frame: The initial reference frame.
+        initial_attrs: The initial attributes.
+    '''
     renderer = Renderer(initial_frame, initial_attrs)
     shape.render(renderer)
     return RenderResult(shape, renderer.close(), renderer.graph, renderer.paths)
+
