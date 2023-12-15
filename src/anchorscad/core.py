@@ -219,6 +219,9 @@ FA_FIELD=fa_field()
 class Material:
     name: str = dtfield(doc='The name of the material')
     
+# MaterialMaps are used to map materials to other materials in order to provide
+# a mechanism to reuse models with different materials and have materials mapped
+# for different purposes.
     
 @dataclass(frozen=True)
 class MaterialMap:
