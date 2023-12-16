@@ -232,7 +232,19 @@ class MaterialMap:
     def map(self, material: Material, attributes:'ModelAttributes') -> Material:
         '''Returns the mapped material for the given material.'''
         return material  # Default is no mapping.
+
+@dataclass(frozen=True)
+class MaterialMapDefault(MaterialMap):
+    '''Sets the default material if unset.'''
     
+    material: Material
+    
+    def map(self, material: Material, attributes: 'ModelAttributes') -> Material:
+        '''Applies the default material if otherwise not provided.'''
+        return material if material else self.material
+    
+
+
 @dataclass(frozen=True)
 class MaterialMapBasic(MaterialMap):
     '''Provides a set of basic mappings for materials.'''
