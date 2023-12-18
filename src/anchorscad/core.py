@@ -391,6 +391,12 @@ class ModelAttributes(object):
         '''Generates a repr with just the non default values.'''
         return self.__class__.__name__ + '(' + ', '.join(
             f'{k}={v!r}' for k, v in self._as_non_defaults_dict().items()) + ')'
+        
+    def get_material(self):
+        '''Returns the material to use for this model level.'''
+        if self.material_map:
+            return self.material_map.map(self.material, self)
+        return self.material 
             
     def __str__(self):
         return self.to_str()
