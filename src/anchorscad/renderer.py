@@ -24,12 +24,11 @@ class UnpoppedItemsOnRenderStack(core.CoreEception):
     
 class PopCalledTooManyTimes(core.CoreEception):
     '''The render stack ran out of elements to pop..'''
-
-SOLID_CONTAINER=2
+    
 
 @dataclass
 class CombiningState:
-    '''A state object that is used to combine solids and holes.'''
+    '''An intermediate state object sontaining material specific solids and holes.'''
     holes: List[Any] = field(default_factory=list)
     material_solid: List[Tuple[core.Material, List[Any]]] = field(default_factory=list)
 
@@ -37,56 +36,68 @@ class CombiningState:
         self.holes = holes
         
     def add_material_solid(self, material, solid):
+        '''Adds a material and solid to the list of material solids.'''
         self.material_solid.append((material, solid))
+        
+    def flatten_solids(self):
+        '''Returns a list of solids by remving all the material specifiers and returning the 
+        flattened set of objects.'''
+        if self.holes:
+            raise Exception('Cannot convert to holes when there are holes.')
+        
+        # Flastten all the material_solid solids into a single list.
+        solids = [solid for _, solids in self.material_solid for solid in solids]
+        return solids
+    
+    def has_one_or_no_materials(self):
+        '''Returns True if there is only one material or none.'''
+        return len(self.material_solid) <= 1
             
 
 @dataclass
 class Container():
+    '''A container for solids, holes and heads as the model is being redered.'''
     mode: core._Mode
     model: Any
     shape_name: Hashable
-    containers: Dict[core.Material, List[Any]] = field(default_factory=dict, init=False, repr=False)
+    material_solids: Dict[core.Material, List[Any]] = field(default_factory=dict, init=False, repr=False)
     heads: List[Any] = field(default_factory=list, init=False, repr=False)
     holes: List[Any] = field(default_factory=list, init=False, repr=False)
     
         
-    def _get_or_create_container(self, material):
-        if material in self.containers:
-            return self.containers[material]
+    def _get_or_create_material_solid_container(self, material):
+        '''Returns the container for the given material, creating it if necessary.'''
+        if material in self.material_solids:
+            return self.material_solids[material]
         result = []
-        self.containers[material] = result
+        self.material_solids[material] = result
         return result    
         
     def _container_extend(self, material: core.Material, solids: List[Any]):
         '''Extends a material container with the given solids.'''
-        if material in self.containers:
-            self.containers[material].extend(solids)
+        if material in self.material_solids:
+            self.material_solids[material].extend(solids)
         else:
-            self.containers[material] = solids
+            self.material_solids[material] = solids
         
     def _extend_material_solids(self, material_solids: List[Tuple[core.Material, List[Any]]]):
         '''Extends the current material solids with the given material solids.'''
         for material, solids in material_solids:
             self._container_extend(material, solids)
-        
-        
-    def _get_container(self, container_id):
-        return self.containers.get(container_id, None)
     
-    def _apply_name(self, obj):
+    def _apply_name(self, obj: List[Any]):
+        '''Applies the shape name to the given objects.'''
         if self.shape_name:
             for o in obj:
-                try:
-                    o.setMetadataName(self.shape_name)
-                except:
-                    print(o)
+                o.setMetadataName(self.shape_name)
                     
     def _apply_combining_state(self, combining_state: CombiningState):
+        '''Applies the combining state to this container.'''
         self._extend_material_solids(combining_state.material_solid)
         self.holes.extend(combining_state.holes)
 
     def add_solid(self, *obj, material=None):
-        container = self._get_or_create_container(material)
+        container = self._get_or_create_material_solid_container(material)
         self._apply_name(obj)
         container.extend(obj)
         
@@ -101,8 +112,11 @@ class Container():
         container.extend(obj)
         
     def _combine_solids_and_holes(self) -> CombiningState:
+        '''Combines solids and holes into a single list of solids.
+        Heads and holes (if any) are applied to each solid and the new list of solids is
+        provided as the [CombiningState] result.'''
         holes = self.holes
-        material_solid = list(self.containers.items()) 
+        material_solid = list(self.material_solids.items()) 
         
         force_container = self.mode.has_operator_container or True
         
@@ -134,7 +148,8 @@ class Container():
         return result
     
     def _combine_heads(self, make_copy: bool=False) -> Tuple[Any, Any]:
-        '''Combines heads into a single head.'''
+        '''Combines heads into a single head chain but also provides the tail
+        object so that solids or holes can be apppended.'''
 
         heads = copy.deepcopy(self.heads) if make_copy else self.heads
         
@@ -180,10 +195,11 @@ class Container():
         return result
     
     def build_composite(self) -> CombiningState:
-        '''Returns a list of material_solids and holes.'''
+        '''Heads (if any) are applied to holes and solids as separate objects. 
+        The result is a list of solids and holes that are not combined. (holes are preserved))'''
         
         # A List[Tuple[core.Material, List[Any]]] is a list of material solids pairs.
-        material_solid = list(self.containers.items()) 
+        material_solid = list(self.material_solids.items()) 
         
         if not self.heads:
             return CombiningState(holes=self.holes, material_solid=material_solid)
@@ -243,7 +259,7 @@ class Container():
         elif mode.mode == core.ModeShapeFrame.HOLE.mode:
             combining_state = self.build_combine()
             # All solids of all materials become holes.
-            holes = combining_state.to_holes()
+            holes = combining_state.flatten_solids()
             parent_container.add_hole(*holes)
         elif mode.mode == core.ModeShapeFrame.COMPOSITE.mode:
             combining_state = self.build_composite()
@@ -359,12 +375,24 @@ class Context():
             last.container.close(last.mode, self.stack[-1].container)
             return None
         else:
-            objs = last.container.build_combine()
-            if not objs:
-                return self.createNamedUnion(last.mode, 'pop')
-            if len(objs) > 1:
-                return self.createNamedUnion(last.mode, 'pop').append(*objs)
-            return objs[0]
+            combining_state = last.container.build_combine()
+            # If we have only one material then we can keep legacy mode, one object models.
+            if combining_state.has_one_or_no_materials():
+                objs = combining_state.flatten_solids()
+                if not objs:
+                    return self.createNamedUnion(last.mode, 'pop')
+                if len(objs) > 1:
+                    return self.createNamedUnion(last.mode, 'pop').append(*objs)
+                return objs[0]
+            else:
+                # Create a LazyUnion to combine the material solids.
+                lazy_union = self.model.LazyUnion()
+                material_solids = combining_state.material_solid
+                for material, solids in material_solids:
+                    mat_container = self.createNamedUnion(last.mode, f'pop - {material}').append(*solids)
+                    lazy_union.append(mat_container)
+                    
+                return lazy_union
             
     def get_current_graph_node(self):
         if self.stack:
@@ -411,7 +439,7 @@ class Renderer():
     '''Provides renderer machinery for anchorscad. Renders to PythonOpenScad models.'''
     model = posc
     context: Context
-    result: 'RenderResult' 
+    result: CombiningState = None 
     graph: graph_model.DirectedGraph
     paths: ShapePathDict
     
@@ -429,7 +457,8 @@ class Renderer():
         if count != 1:
             raise UnpoppedItemsOnRenderStack(
                 f'{count - 1} items remain on the render stack.')
-        self.result = self.context.pop()
+        combining_state = self.context.pop()
+        self.result = combining_state
         self.context = Context(self) # Prepare for the next object just in case.
         return self.result
 
