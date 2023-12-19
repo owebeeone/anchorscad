@@ -99,10 +99,45 @@ class RendererTest(unittest.TestCase):
             MATERIAL_GG)
         
     def testRenderMaterial(self):
-        result = render(BOX_SHAPE)
+        result = render(BOX_MAKER)
         
         
-        
+        self.maxDiff = None
+        self.assertEqual(
+            str(result.rendered_shape),
+            '''// Start: lazy_union
+// "pop - Material(name='red_HIPS'):solid"
+union() {
+  // 'None : _combine_solids_and_holes'
+  union() {
+    // 'box2'
+    multmatrix(m=[[1.0, 0.0, 0.0, -5.0], [0.0, 0.0, -1.0, 5.0], [0.0, 1.0, 0.0, -10.0], [0.0, 0.0, 0.0, 1.0]]) {
+      // 'box2 : _combine_solids_and_holes'
+      union() {
+        // 'box2'
+        cube(size=[10.0, 20.0, 30.0]);
+      }
+    }
+  }
+}
+// "pop - Material(name='blue_PETG'):solid"
+union() {
+  // 'None : _combine_solids_and_holes'
+  union() {
+    // 'box'
+    multmatrix(m=[[1.0, 0.0, 0.0, -5.0], [0.0, 1.0, 0.0, -10.0], [0.0, 0.0, 1.0, -15.0], [0.0, 0.0, 0.0, 1.0]]) {
+      // 'box : _combine_solids_and_holes'
+      union() {
+        // 'box'
+        cube(size=[10.0, 20.0, 30.0]);
+      }
+    }
+  }
+}
+// End: lazy_union
+''')
+
+
 if __name__ == "__main__":
     # import sys;sys.argv = ['', 'RendererTest.testBasic']
     unittest.main()
