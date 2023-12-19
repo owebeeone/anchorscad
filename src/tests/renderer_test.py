@@ -101,7 +101,6 @@ class RendererTest(unittest.TestCase):
     def testRenderMaterial(self):
         result = render(BOX_MAKER)
         
-        
         self.maxDiff = None
         self.assertEqual(
             str(result.rendered_shape),
