@@ -588,12 +588,15 @@ class Renderer():
     def add_path(self, path):
         '''Adds a Path to the set of paths used to render the model.'''
         self.paths.add(path, self.context.get_current_graph_path())
+        
+    def make_result(self, shape: core.Shape, result_object: Any) -> 'RenderResult':
+        return RenderResult(shape, result_object, self.graph, self.paths, self.material_stats)
 
 
 @dataclass(frozen=True)
 class RenderResult():
     '''A result of rendering.'''
-    shape: core.Shape  # The AnchorScad shape that was rendered.
+    shape: core.Shape  # The AnchorScad Shape that was rendered.
     rendered_shape: object  # The resulting POSC shape.
     graph: graph_model.DirectedGraph  # The graph of the rendered shape.
     paths: dict  # A dictionary of Path to list of anchors in the graph.
@@ -611,5 +614,5 @@ def render(shape,
     '''
     renderer = Renderer(initial_frame, initial_attrs)
     shape.render(renderer)
-    return RenderResult(shape, renderer.close(), renderer.graph, renderer.paths, renderer.material_stats)
+    return renderer.make_result(shape, renderer.close())
 
