@@ -38,17 +38,17 @@ class CombiningState:
             assert solids is not None, 'Solids cannot be None.'
             assert isinstance(solids, list), 'Solids must be a list.'
 
-    def set_holes(self, holes):
+    def set_holes(self, holes: List[Any]) -> None:
         self.holes = holes
         
-    def has_holes(self):
+    def has_holes(self) -> bool:
         return bool(self.holes)
         
-    def add_material_solid(self, material, *solids):
+    def add_material_solid(self, material: core.Material, *solids: Tuple[Any]) -> None:
         '''Adds a material and solid to the list of material solids.'''
         self.material_solid.append((material, list(solids)))
         
-    def flatten_solids(self):
+    def flatten_solids(self) -> List[Any]:
         '''Returns a list of solids by remving all the material specifiers and returning the 
         flattened set of objects.'''
         if self.holes:
@@ -58,10 +58,45 @@ class CombiningState:
         solids = [solid for _, solids in self.material_solid for solid in solids]
         return solids
     
-    def has_one_or_no_materials(self):
+    def has_one_or_no_materials(self) -> bool:
         '''Returns True if there is only one material or none.'''
         return len(self.material_solid) <= 1
+    
+    def priority_ordered(self) -> List[Tuple[core.Material, List[Any]]]:
+        '''Returns the material with the highest priority.'''
+        mat_dict = defaultdict(list)
+        
+        for material, solids in self.material_solid:
+            mat_dict[material].extend(solids)
             
+        mat_solids_list = list(mat_dict.items())
+        list.sort(mat_solids_list, reverse=True, key=lambda mat_solids: mat_solids[0].priority)
+        
+        return mat_solids_list
+    
+    def priority_cured(self, model) -> List[Tuple[core.Material, List[Any]]]:
+        '''Returns a list of material_solids with the higher priority shapes removed from the
+        lower priority shapes.'''
+        mat_solids_list = self.priority_ordered()
+        removal_list = []
+        result = [mat_solids_list[0]]
+        removal_next = list(result[0][1])
+        removal_priority = result[0][0].priority
+        for material, solids in mat_solids_list[1:]:
+            if material.priority != removal_priority:
+                removal_list = list(removal_next)
+                
+            removal_next.extend(solids)
+            
+            if removal_list:
+                if len(solids) > 1:
+                    solids = [model.Union()(*solids)]
+                solids = [model.Difference()(*solids, *removal_list)]
+                solids[0].setMetadataName(f'priority_cured_{material}')
+                
+            result.append((material, solids))
+                
+        return result
 
 @dataclass
 class Container():
@@ -74,7 +109,7 @@ class Container():
     holes: List[Any] = field(default_factory=list, init=False, repr=False)
     
         
-    def _get_or_create_material_solid_container(self, material):
+    def _get_or_create_material_solid_container(self, material: core.Material):
         '''Returns the container for the given material, creating it if necessary.'''
         if material in self.material_solids:
             return self.material_solids[material]
@@ -404,7 +439,7 @@ class Context():
             else:
                 # Create a LazyUnion to combine the material solids.
                 lazy_union = self.model.LazyUnion()
-                material_solids = combining_state.material_solid
+                material_solids = combining_state.priority_cured(self.model)
                 for material, solids in material_solids:
                     mat_container = self.createNamedUnion(last.mode, f'pop - {material}').append(*solids)
                     lazy_union.append(mat_container)

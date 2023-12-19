@@ -218,6 +218,13 @@ FA_FIELD=fa_field()
 @dataclass(frozen=True)
 class Material:
     name: str = dtfield(doc='The name of the material')
+    # A material of higher priority is removed from materials of lower priority.
+    # Materials of the same priority will overlap if they are not mutually exclusive.
+    priority: float = dtfield(
+        5,
+        hash=False,
+        compare=False,    
+        doc='The priority of the material. Higher priority materials are rendered first.')
     
 # MaterialMaps are used to map materials to other materials in order to provide
 # a mechanism to reuse models with different materials and have materials mapped

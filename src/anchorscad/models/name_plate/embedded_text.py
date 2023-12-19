@@ -33,6 +33,7 @@ class RoundedSquarePlateWithText(ad.CompositeShape):
     label_anchor_point: str = ad.dtfield("front", doc='The anchor point of the label')
     label_horiz_fixer_size: float = ad.dtfield((0.1, 0.1, 0.1), doc='The size of the horizontal fixer')
     label_node: ad.Node = ad.dtfield(ad.ShapeNode(ad.Text, prefix="label_"))
+    label_material: ad.Material = ad.dtfield(None, doc='The material of the label')
     
     cage_size: tuple = ad.dtfield(self_default=lambda s: (
         s.plate_size[0], 
@@ -99,7 +100,8 @@ class RoundedSquarePlateWithText(ad.CompositeShape):
         label_shape = self.label_node()
         
         maker.add_at(label_shape.solid_hole('label', not self.label_render)
-                     .colour([1, 0, 0])
+                     .colour('blue')
+                     .material(self.label_material)
                      .at('default', self.label_anchor_point), 
                         'plate', 'face_centre', 'top',
                         post=ad.tranZ(self.label_depth - self.label_plate_overlap))
@@ -107,7 +109,8 @@ class RoundedSquarePlateWithText(ad.CompositeShape):
         # If we're rendering just the label, then add a box to anchor to Z=0
         if self.label_render and not self.plate_render and not self.label_horiz_fixer_size is None:
             maker.add_at(ad.Box(size=self.label_horiz_fixer_size)
-                                .solid('label-z-fixer').at('face_centre', 'base'), 
+                                .solid('label-z-fixer')
+                                .at('face_centre', 'base'), 
                          'cage', 'face_edge', 'base', 0, post=ad.tranY(-10))
 
         return maker
