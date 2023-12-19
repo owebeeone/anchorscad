@@ -13,7 +13,7 @@ from dataclasses_json import dataclass_json, config
 from anchorscad import core, graph_model
 from anchorscad import linear as l
 import pythonopenscad as posc
-from typing import Any, Hashable, Dict, List, Tuple
+from typing import Any, Hashable, Dict, List, Tuple, Set
 
 
 class EmptyRenderStack(core.CoreEception):
@@ -24,7 +24,35 @@ class UnpoppedItemsOnRenderStack(core.CoreEception):
     
 class PopCalledTooManyTimes(core.CoreEception):
     '''The render stack ran out of elements to pop..'''
+
+
+@dataclass
+class MaterialMapInstance:
+    path: 'ShapePath'
+    from_material: core.Material
+    to_material: core.Material
+    material_map: core.MaterialMap
     
+
+@dataclass
+class MaterialStats:
+    '''A class that keeps track of the materials used and where.'''
+    material_map_list: List[MaterialMapInstance] = field(default_factory=list)
+    
+    # The final list of materials actually used in the model.
+    model_materials: Set[core.Material] = field(default_factory=set)
+    
+    def add(self, path, from_material: core.Material, to_material: core.Material, material_map: core.MaterialMap):
+        self.material_map_list.append(MaterialMapInstance(path, from_material, to_material, material_map))
+    
+    def has_material(self):
+        '''Returns True if there is one ore more non None material in the model.'''
+        if len(self.model_materials) > 1:
+            return True
+        if not self.model_materials:
+            return False
+        return None not in self.model_materials
+        
 
 @dataclass
 class CombiningState:
@@ -57,6 +85,12 @@ class CombiningState:
         # Flastten all the material_solid solids into a single list.
         solids = [solid for _, solids in self.material_solid for solid in solids]
         return solids
+    
+    def get_first_material(self) -> core.Material:
+        '''Returns the first material in the material_solid list.'''
+        if not self.material_solid:
+            return None
+        return self.material_solid[0][0]
     
     def has_one_or_no_materials(self) -> bool:
         '''Returns True if there is only one material or none.'''
@@ -432,7 +466,10 @@ class Context():
             if combining_state.has_one_or_no_materials():
                 objs = combining_state.flatten_solids()
                 if not objs:
+                    self.renderer.material_stats.model_materials.add(None)
                     return self.createNamedUnion(last.mode, 'pop')
+                
+                self.renderer.material_stats.model_materials.add(combining_state.get_first_material())
                 if len(objs) > 1:
                     return self.createNamedUnion(last.mode, 'pop').append(*objs)
                 return objs[0]
@@ -441,6 +478,7 @@ class Context():
                 lazy_union = self.model.LazyUnion()
                 material_solids = combining_state.priority_cured(self.model)
                 for material, solids in material_solids:
+                    self.renderer.material_stats.model_materials.add(material)
                     mat_container = self.createNamedUnion(last.mode, f'pop - {material}').append(*solids)
                     lazy_union.append(mat_container)
                     
@@ -451,8 +489,8 @@ class Context():
             return self.stack[-1].graph_node
         return None
     
-    def get_current_graph_path(self):
-        return ShapePath(tuple([entry.graph_node for entry in self.stack]))
+    def get_current_graph_path(self) -> ShapePath:
+        return ShapePath(tuple((entry.graph_node for entry in self.stack)))
         
     def createNamedUnion(self, mode: core.ModeShapeFrame, name: str):
         result = self.model.Union()
@@ -481,9 +519,18 @@ class Context():
         last_context = self.stack[-1]
         
         material = last_context.get_material()
+        mapped_material = material
+        material_map = None
         
-        last_context.container.add_solid(*obj, material=material)
+        attributes = self.get_last_attributes()
+        if attributes:
+            material_map = attributes.material_map
+            if material_map:
+                mapped_material = material_map.map(material, attributes)
+                
+        self.renderer.material_stats.add(self.get_current_graph_path(), material, mapped_material, material_map)
         
+        last_context.container.add_solid(*obj, material=mapped_material)
 
 
 @dataclass
@@ -494,12 +541,14 @@ class Renderer():
     result: CombiningState 
     graph: graph_model.DirectedGraph
     paths: ShapePathDict
+    material_stats: MaterialStats
     
     def __init__(self, initial_frame: l.GMatrix=None, initial_attrs: core.ModelAttributes=None):
         self.context = Context(self)
         self.result = None
         self.graph = graph_model.DirectedGraph()
         self.paths = ShapePathDict()
+        self.material_stats = MaterialStats()
         root_node = self.graph.new_node('root') 
         # Push an item on the stack that will collect the final objects.
         self.context.push(core.ModeShapeFrame.SOLID, initial_frame, initial_attrs, None, root_node)
@@ -548,6 +597,7 @@ class RenderResult():
     rendered_shape: object  # The resulting POSC shape.
     graph: graph_model.DirectedGraph  # The graph of the rendered shape.
     paths: dict  # A dictionary of Path to list of anchors in the graph.
+    material_stats: MaterialStats  # Mapped material stats.
     
     
 def render(shape, 
@@ -561,5 +611,5 @@ def render(shape,
     '''
     renderer = Renderer(initial_frame, initial_attrs)
     shape.render(renderer)
-    return RenderResult(shape, renderer.close(), renderer.graph, renderer.paths)
+    return RenderResult(shape, renderer.close(), renderer.graph, renderer.paths, renderer.material_stats)
 
