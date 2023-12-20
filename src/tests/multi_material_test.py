@@ -1,7 +1,7 @@
 '''
-Created on ${date}
+Created on 20-Dec-2023
 
-@author: ${user}
+@author: gianni
 '''
 
 import anchorscad as ad
@@ -11,7 +11,8 @@ import anchorscad as ad
 @ad.datatree
 class MultiMaterialTest(ad.CompositeShape):
     '''
-    <description>
+    A basic test of multi-material support. Basically a box with a sphere on top.
+    The box and sphere are different materials.
     '''
     xy: float=30
     z: float=10
@@ -34,12 +35,16 @@ class MultiMaterialTest(ad.CompositeShape):
         ad.surface_args('face_centre', 'top'),)
 
     def build(self) -> ad.Maker:
-        # Add your shape building code here...
+        
         box_shape = self.box_node()
-        maker = box_shape.solid('box').material(ad.Material('box', priority=10))\
+        maker = box_shape.solid('box') \
+                .material(ad.Material('box', priority=10)) \
                 .at('face_centre', 'base', post=ad.ROTX_180)
         maker.add_at(
-            self.shpere_node().solid('sphere').material(ad.Material('sphere', priority=9)).at('top', rh=1.4),
+            self.shpere_node()
+                    .solid('sphere')
+                    .material(ad.Material('sphere', priority=9))
+                    .at('top', rh=1.4),
             'face_centre', 'top')
 
         return maker
