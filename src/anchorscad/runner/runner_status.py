@@ -23,6 +23,7 @@ class RunnerExampleResults(object):
     error_file_size: Optional[int]=None
     scad_file: Optional[str]=None
     stl_file: Optional[str]=None
+    f3mf_file: Optional[str]=None
     png_file: Optional[str]=None
     openscad_err_file: Optional[str]=None
     openscad_out_file: Optional[str]=None
@@ -32,6 +33,7 @@ class RunnerExampleResults(object):
     path_html_file: Optional[str]=None
     shape_pickle_file: Optional[str]=None
     stl_file: Optional[str]=None
+    f3mf_file: Optional[str]=None
     injected_fields_html_file: Optional[str]=None
 
 

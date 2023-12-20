@@ -28,6 +28,7 @@ from anchorscad.runner.opendscad_finder import openscad_exe_properties, Openscad
 from anchorscad.runner.process_manager import ProcessManager, ProcessManagerEntry
 
 GENERATE_STL_DEFAULT = True
+GENERATE_3MF_DEFAULT = True
 
 ENVIRON_NAME = '__ANCHORSCAD_RUNNER_KEY__'
 
@@ -35,12 +36,13 @@ PATH_SEPARATOR = ';' if platform.system() == 'Windows' else ':'
 
 
 def make_openscad_stl_command_line(
-    openscad_properties, stl_file, png_file, scad_file, imgsize):
+    openscad_properties, stl_file, f3mf_file, png_file, scad_file, imgsize):
     stl_options = ('-o', stl_file) if stl_file else ()
+    f3mf_options = ('-o', f3mf_file) if f3mf_file else ()
     png_options = ('-o', png_file) if png_file else ()
     dev_options = ('--enable', 'manifold') if 'manifold' in openscad_properties.features else ()
     dev_options += ('--enable', 'lazy-union') if 'lazy-union' in openscad_properties.features else ()
-    return (openscad_properties.exe,) + stl_options + dev_options + png_options + (
+    return (openscad_properties.exe,) + stl_options + f3mf_options + dev_options + png_options + (
         '--autocenter',
         '--view',
         'axes',
@@ -179,6 +181,11 @@ class ExampleRunner:
                 clz, example_name, base_example_name, 'stl')
         runner_example.stl_file = stl_rel_filename
         
+        f3mf_rel_filename, runner_example, f3mf_full_path =\
+            self.gen_filenames_and_runner(
+                clz, example_name, base_example_name, '3mf')
+        runner_example.f3mf_file = f3mf_rel_filename
+        
         png_rel_filename, runner_example, png_full_path =\
             self.gen_filenames_and_runner(
                 clz, example_name, base_example_name, 'png')
@@ -195,18 +202,21 @@ class ExampleRunner:
         runner_example.openscad_out_file = out_rel_filename
         
         if not self.run_openscad(
-            stl_full_path, png_full_path, scad_full_path, 
+            stl_full_path, f3mf_full_path, png_full_path, scad_full_path, 
             out_full_path, err_full_path):
             # Command failed.
             runner_example.png_file = None
             runner_example.stl_file = None
+            runner_example.f3mf_file = None
   
-    def run_openscad(self, stl_file, png_file, scad_file, out_file, err_file):
+    def run_openscad(self, stl_file, f3mf_file, png_file, scad_file, out_file, err_file):
         if not self.argp.gen_stl:
             stl_file = None
+        if not self.argp.gen_3mf:
+            f3mf_file = None
         cmd = make_openscad_stl_command_line(
             self.openscad_properties,
-            stl_file, png_file, scad_file, self.argp.imgsize)
+            stl_file, f3mf_file, png_file, scad_file, self.argp.imgsize)
         with open(out_file, 'w') as fout, open(err_file, 'w') as ferr:
             p = Popen(cmd, stdout=fout, stderr=ferr)
         return p.wait() == 0
@@ -425,6 +435,19 @@ class AnchorScadRunner(core.ExampleCommandLineRenderer):
             action='store_true',
             help='Requests OpenSCAD to generate stl.')
         self.argq.set_defaults(gen_stl=GENERATE_STL_DEFAULT)
+        
+        self.argq.add_argument(
+            '--no-gen-3mf', 
+            dest='gen_3mf',
+            action='store_false',
+            help='Does not request OpenSCAD to generate 3mf.')
+        
+        self.argq.add_argument(
+            '--gen-3mf', 
+            dest='gen_3mf',
+            action='store_true',
+            help='Requests OpenSCAD to generate 3mf.')
+        self.argq.set_defaults(gen_stl=GENERATE_3MF_DEFAULT)
                 
         self.argq.add_argument(
             '--out_file_format', 
