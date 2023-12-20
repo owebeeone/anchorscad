@@ -63,6 +63,7 @@ class CombiningState:
     def __post_init__(self):
         assert isinstance(self.holes, list), 'Holes must be a list.'
         for material, solids in self.material_solid:
+            # assert material is not None, 'Material cannot be None.' ### None Check ###
             assert solids is not None, 'Solids cannot be None.'
             assert isinstance(solids, list), 'Solids must be a list.'
 
@@ -74,6 +75,8 @@ class CombiningState:
         
     def add_material_solid(self, material: core.Material, *solids: Tuple[Any]) -> None:
         '''Adds a material and solid to the list of material solids.'''
+        # if material is None:
+        #     raise Exception('Material cannot be None.') ### None check ###
         self.material_solid.append((material, list(solids)))
         
     def flatten_solids(self) -> List[Any]:
@@ -104,18 +107,25 @@ class CombiningState:
             mat_dict[material].extend(solids)
             
         mat_solids_list = list(mat_dict.items())
-        list.sort(mat_solids_list, reverse=True, key=lambda mat_solids: mat_solids[0].priority)
+        list.sort(mat_solids_list, 
+                  reverse=True, 
+                  key=lambda mat_solids: 
+                        mat_solids[0].priority 
+                        if mat_solids[0] 
+                        else core.DEFAULT_MATERIAL_PRIORITY)
         
         return mat_solids_list
     
     def priority_cured(self, model) -> List[Tuple[core.Material, List[Any]]]:
         '''Returns a list of material_solids with the higher priority shapes removed from the
         lower priority shapes.'''
+        # if not self.material_solid[0][0]:
+        #     raise Exception('Material cannot be None.') ### None check ###
         mat_solids_list = self.priority_ordered()
         removal_list = []
         result = [mat_solids_list[0]]
         removal_next = list(result[0][1])
-        removal_priority = result[0][0].priority
+        removal_priority = result[0][0].priority if result[0][0] else core.DEFAULT_MATERIAL_PRIORITY
         for material, solids in mat_solids_list[1:]:
             if material.priority != removal_priority:
                 removal_list = list(removal_next)
@@ -145,6 +155,8 @@ class Container():
         
     def _get_or_create_material_solid_container(self, material: core.Material):
         '''Returns the container for the given material, creating it if necessary.'''
+        # if material is None:
+        #     raise Exception('Material cannot be None.') ### None check ###
         if material in self.material_solids:
             return self.material_solids[material]
         result = []
@@ -476,6 +488,8 @@ class Context():
             else:
                 # Create a LazyUnion to combine the material solids.
                 lazy_union = self.model.LazyUnion()
+                # assert None not in combining_state.material_solid, \
+                #     'None material in material_solid.' ### None check ###
                 material_solids = combining_state.priority_cured(self.model)
                 for material, solids in material_solids:
                     self.renderer.material_stats.model_materials.add(material)

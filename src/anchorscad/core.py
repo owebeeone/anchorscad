@@ -133,13 +133,16 @@ def surface_anchor_renderer(maker, anchor_args):
                 ac_kwds['label'] = label
     maker.add_at(
         AnnotatedCoordinates(*ac_args, **ac_kwds)
-            .solid(label).at('origin'), post=xform)
+            .solid(label).material(COORDINATES_MATERIAL).at('origin'), post=xform)
 
 def inner_anchor_renderer(maker, anchor_args):
     '''Helper to crate example anchor coordinates inside an object.'''
     xform = anchor_args.apply(maker)
     maker.add_at(
-        AnnotatedCoordinates().solid(args_to_str(anchor_args.args)).at('origin'),
+        AnnotatedCoordinates()
+            .solid(args_to_str(anchor_args.args))
+            .material(COORDINATES_MATERIAL)
+            .at('origin'),
                  post=xform)
 
 
@@ -214,6 +217,7 @@ FN_FIELD=fn_field()
 FS_FIELD=fs_field()
 FA_FIELD=fa_field()
 
+DEFAULT_MATERIAL_PRIORITY = 5.0
 
 @dataclass(frozen=True)
 class Material:
@@ -221,10 +225,16 @@ class Material:
     # A material of higher priority is removed from materials of lower priority.
     # Materials of the same priority will overlap if they are not mutually exclusive.
     priority: float = dtfield(
-        5,
+        DEFAULT_MATERIAL_PRIORITY,
         hash=False,
         compare=False,    
         doc='The priority of the material. Higher priority materials are rendered first.')
+    
+# Matrial applied to example renders.
+DEFAULT_EXAMPLE_MATERIAL=Material('default')
+
+# Material applied to coordinates in example renders.
+COORDINATES_MATERIAL=Material('coordinates')
     
 # MaterialMaps are used to map materials to other materials in order to provide
 # a mechanism to reuse models with different materials and have materials mapped
@@ -937,7 +947,7 @@ class Shape(ShapeNamer, ShapeMaker):
                 **example_params.shape_args[1]
                 )
             projection = example_params.base_anchor.apply(shape)
-            maker = shape.solid(name).projection(projection)            
+            maker = shape.solid(name).material(DEFAULT_EXAMPLE_MATERIAL).projection(projection)            
             
             for entry in example_params.anchors:
                 entry.func(maker, entry)
@@ -1806,12 +1816,16 @@ class Sphere(Shape):
         return renderer
     
     @anchor('The base of the shpere')
-    def base(self):
-        return l.ROTX_180 * l.translate([0, 0, self.r])
+    def base(self, h=0, rh=None):
+        if rh:
+            h = h + rh * self.r
+        return l.ROTX_180 * l.translate([0, 0, h + self.r])
     
     @anchor('The top of the shpere')
-    def top(self):
-        return l.translate([0, 0, self.r])
+    def top(self, h=0, rh=None):
+        if rh:
+            h = h + rh * self.r
+        return l.translate([0, 0, self.r - h])
     
     @anchor('The centre of the shpere')
     def centre(self, h=0, rh=None):
@@ -2585,8 +2599,9 @@ class ExampleCommandLineRenderer():
             self.status = 1
             raise InvalidParametersException(
                 f'Parameters provided were not parsed: {str(argv)}')
+        default_attributes = ModelAttributes(material=DEFAULT_EXAMPLE_MATERIAL)
         self.options = RenderOptions(
-            render_attributes=ModelAttributes(),
+            render_attributes=default_attributes,
             level=self.argp.level,
             class_name=self.argp.class_name)
         self.set_mkdir = set()
@@ -2760,7 +2775,7 @@ def anchorscad_main(do_exit_on_completion=None):
 
 # Uncomment the line below to default to writing OpenSCAD files
 # when anchorscad_main is run with no --write or --no-write options.
-MAIN_DEFAULT=ModuleDefault(True)
+MAIN_DEFAULT=ModuleDefault(all=True)
 
 if __name__ == "__main__":
     anchorscad_main()
