@@ -164,7 +164,7 @@ Also, Orca's method for selecting a part is somewhat unintuitive compared to Pru
 
 Here is a screenshot of Orca showing the sliced test model.
 
-![AnchorScad example1](assets/multu-material-examp.png?raw=true)
+![Multi Material](assets/multu-material-examp.png?raw=true)
 
 ## Future
 
