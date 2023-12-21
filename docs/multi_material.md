@@ -22,9 +22,6 @@ multiple materials but the material assignments need to be adjusted for the cont
 All example shapes are generated with the material named `"default"` and priority 5. Example
 anchors are rendered with the material named `"anchor"`. This will allow the separation of the model proper and the anchors. By using a different material and "priority", all models with materials of a lower priorty will be made to not overlap in space by using the OpenSCAD difference operator where higher priority models being removed from lower priority models.
 
-## Integrating Materials into Models
-Provide step-by-step instructions on how to integrate different materials into a single model. Use the `MultiMaterialTest` class as an example.
-
 ## Rendering Multi-Material Models
 Material can be assigned to a model using the "material" attribute function. The model below
 is a simple "sphere on box" where the material is being selected. Notably, the box is given
