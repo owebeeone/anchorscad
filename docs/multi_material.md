@@ -151,9 +151,11 @@ union() {
 
 Both Prusa and Orca slicers will import geometry from an OpenSCAD generated 3mf file, however to ensure the Z axis is not broken when loading the file you must respond "Yes" to the dialog that says: 
 
-```This file contains several objects positioned at multiple heights.
+```
+This file contains several objects positioned at multiple heights.
 Instead of considering them as multiple objects, should 
-the file be loaded as a single object having multiple parts?```
+the file be loaded as a single object having multiple parts?
+```
 
 Sadly, this limits the ability to turn off and on various parts of the model. For example, example-anchors should in theory not be sliced as they're just for a visual cues however the
 "part type" setting can be used to cause it not to be rendered in the final gcode.
