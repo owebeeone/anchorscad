@@ -108,6 +108,12 @@ MAIN_DEFAULT = ad.ModuleDefault(True)
 MAIN_DEFAULT = ad.ModuleDefault(True, True, True)
 ```
 
+or, to generate all example resources use:
+
+```python
+MAIN_DEFAULT = ad.ModuleDefault(all=True)
+```
+
 ## CompositeShape
 The `anchorscad.CompositeShape` class is the most commonly used base class, as it provides all the properties of an `anchorscad.Shape` class while also providing a scaffold for creating easy-to-use parameterized shapes with a complex shape hierarchy. In general, it's best to keep the complexity of a single `CompositeShape` class to a minimum and build a deeper hierarchy of simple `CompositeShapes` shapes.
 
