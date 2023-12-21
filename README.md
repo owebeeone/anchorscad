@@ -83,6 +83,7 @@ Note that the `build()` function is called via the [dataclass](https://docs.pyth
 
 While it is possible to use AnchorSCAD without the [dataclass](https://docs.python.org/3/library/dataclasses.html) decorator, it greatly simplifies the code when it’s used and it’s highly recommended to use it. AnchorSCAD also extends the functionality of [dataclass](https://docs.python.org/3/library/dataclasses.html) with the `anchorscad.datatree` decorator. `Datatree` is a wrapper over `dataclass` that provides automated parameter injection and binding, allowing for the composition of many shapes without requiring manual duplication of all the parameters, defaults, and documentation. More information about `datatree` can be found [here](https://docs.google.com/document/d/1uTWqF82tEMreAwSKY09njCfgS8xrEtputkNFxwWj_bs/edit?usp=sharing).
 
+
 # Use `template.py` to Create New Shapes
 The file in the AnchorSCAD package named "[template.py](https://github.com/owebeeone/anchorscad/blob/master/src/anchorscad/template.py)" should be used as your base template when creating a new AnchorSCAD shape Python module. This file contains a simple `CompositeShape` class. The name of the class, the docstring, fields, and implementation of the `build()` function should all be specialized for the shape being coded. It makes sense to have exclusively related shapes within the same module. The template make use of [datatree](https://github.com/owebeeone/anchorscad/blob/master/src/anchorscad/datatree.py) "Node" and "self_default" features.
 
@@ -227,4 +228,12 @@ union() {
 }
 ```
 
+# Multi-Material Models
+AnchorSCAD now supports [Multi-Material models](/owebeeone/anchorscad/blob/master/docs/multi_material.md) using OpenScad's experimental lazy-union feature when exporting 3mf files.
+All example created models will use materials "default" and "anchor". The anchor part of the
+model may be excluded from slicing if the part is configured appropriately. See the 
+[Multi-Material docs](/owebeeone/anchorscad/blob/master/docs/multi_material.md) for more 
+information.
+
 [See how to keep holes when composing shapes.](https://docs.google.com/document/d/1dzWQPXcKU3TKnAUiqt6m0hTi0N4WW7o3GempQX9IVjQ/edit?usp=sharing)
+
