@@ -234,7 +234,7 @@ class Material:
 DEFAULT_EXAMPLE_MATERIAL=Material('default')
 
 # Material applied to coordinates in example renders.
-COORDINATES_MATERIAL=Material('coordinates')
+COORDINATES_MATERIAL=Material('anchor')
     
 # MaterialMaps are used to map materials to other materials in order to provide
 # a mechanism to reuse models with different materials and have materials mapped
