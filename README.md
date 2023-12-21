@@ -229,9 +229,9 @@ union() {
 ```
 
 # Multi-Material Models
-AnchorSCAD now supports [Multi-Material models](/owebeeone/anchorscad/blob/master/docs/multi_material.md) using OpenScad's experimental lazy-union feature when exporting 3mf files.
-All example created models will use materials "default" and "anchor". The anchor part of the
-model may be excluded from slicing if the part is configured appropriately. See the 
+AnchorSCAD now supports [Multi-Material models](https://github.com/owebeeone/anchorscad/blob/master/docs/multi_material.md) using OpenScad's experimental lazy-union feature when exporting 
+3mf files. All example created models will use materials "default" and "anchor". The anchor 
+part of the model may be excluded from slicing if the part is configured appropriately. See the 
 [Multi-Material docs](https://github.com/owebeeone/anchorscad/blob/master/docs/multi_material.md) for more information.
 
 [See how to keep holes when composing shapes.](https://docs.google.com/document/d/1dzWQPXcKU3TKnAUiqt6m0hTi0N4WW7o3GempQX9IVjQ/edit?usp=sharing)
