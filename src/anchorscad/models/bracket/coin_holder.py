@@ -2,6 +2,17 @@
 Created on 22-Dec-2023
 
 @author: gianni
+
+The "BOSS" asked me to make a coin holder for a 5 Swiss Franc coin so it can be
+used as a Christmas tree decoration. This is the result.
+
+I should use TPU to print this. PLA was a bit too difficult to insert the coin, I could
+have printed half way and inseted the coin and then continued printing. PETG might work
+since it is a bit more flexible than PLA. Excuse to buy a roll of white and red TPU.
+
+The StadiumSequence shape seems to have become a little more useful than I originally
+thought. I have used it in a few places now. It's a bit cumbersome as an API so I might
+rethink it in the future.
 '''
 import anchorscad as ad
 
@@ -28,7 +39,6 @@ class SwissEyeletBase(ad.CompositeShape):
     swiss_eyelet_t: float=0.9
     swiss_eyelet_bend_degrees: float=90
     swiss_eyelet_sequence: tuple=ad.dtfield(self_default=lambda s:
-
         (
          ('P', ad.args(h=s.depth)),
          ('R', ad.args(sweep_degrees=-s.swiss_eyelet_bend_degrees)),
@@ -52,8 +62,6 @@ class SwissEyeletBase(ad.CompositeShape):
         swiss_eyelet_shape = self.swiss_eyelet_node()
         
         maker = swiss_eyelet_shape.solid('eyelet').at('base')
-        
-        
 
         return maker
 
@@ -103,7 +111,7 @@ class CoinHolderRing(ad.CompositeShape):
     
     swiss_eyelet_node: ad.Node=ad.ShapeNode(SwissEyeletBase, expose_all=True)
 
-    fn: int=64
+    fn: int=128
 
     EXAMPLE_SHAPE_ARGS=ad.args()
     xEXAMPLE_ANCHORS=(
