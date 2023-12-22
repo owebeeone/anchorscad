@@ -204,7 +204,7 @@ class StadiumSequence(ad.CompositeShape):
     
     def make_shape(self, adargs: tuple) -> ad.Shape:
         args, kwds = adargs[1]
-        kwds = dict(kwds)
+        kwds = dict(kwds)  # This code mutates kwds so we need to copy it.
         user_transform = kwds.pop('transform', ad.IDENTITY)
         if adargs[0] == 'P':
             return self.prism_node(*args, **kwds), ad.ROTX_180 * user_transform

@@ -594,7 +594,7 @@ class NamedShape(NamedShapeBase):
             args = anchor.args
         if args:
             pargs = args[0]
-            kwds = args[1]
+            kwds = dict(args[1]) # Copy the kwds since we're not allowed to mutate them.
             alter_pre = kwds.pop('pre', None)
             alter_post = kwds.pop('post', None)
         
@@ -710,6 +710,23 @@ class LazyNamedShape(NamedShapeBase):
         values = self._as_non_defaults_dict()
         values['shape'] = shape
         return NamedShape(**values)
+    
+    
+def mutable_copy(args):
+    '''Returns a copy of args that is mutable. In particular, instances of frozendict
+    are converted to dict.'''
+    result = list(args)
+    for i in range(len(result)):
+        if isinstance(result[i], dict):
+            t = {}
+            for k, v in result[i].items():
+                t[k] = copy.deepcopy(v)
+            result[i] = t
+        else:
+            result[i] = copy.deepcopy(result[i])
+            
+    return result
+        
 
 @dataclass(frozen=True)
 class LazyShape(ShapeNamer):
@@ -722,7 +739,7 @@ class LazyShape(ShapeNamer):
             raise InvalidNumberOfParametersException(
                 f'Received {len(params)} but expected {len(self.field_specifiers)}')
 
-        args = copy.deepcopy(self.other_args)
+        args = mutable_copy(self.other_args)
         for field_specifier, value in zip(self.field_specifiers, params):
             if isinstance(field_specifier, str):
                 args[1][field_specifier] = value
