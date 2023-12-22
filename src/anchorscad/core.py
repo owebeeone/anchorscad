@@ -85,7 +85,7 @@ class ShapeNode(Node):
 
 def args(*args, **kwds):
     '''Returns a tuple or args and kwds passed to this function.'''
-    return (args, kwds)
+    return (args, frozendict(kwds))
 
 def apply_args(other_args, *args, **kwds):
     '''Returns a tuple of args and kwds that is the combination of the

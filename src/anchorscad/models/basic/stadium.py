@@ -204,11 +204,13 @@ class StadiumSequence(ad.CompositeShape):
     
     def make_shape(self, adargs: tuple) -> ad.Shape:
         args, kwds = adargs[1]
+        kwds = dict(kwds)
         user_transform = kwds.pop('transform', ad.IDENTITY)
         if adargs[0] == 'P':
             return self.prism_node(*args, **kwds), ad.ROTX_180 * user_transform
         elif adargs[0] == 'R':
             transform = ad.ROTX_180
+            
             if 'sweep_degrees' in kwds and kwds['sweep_degrees'] < 0:
                 transform = ad.ROTX_180 * ad.ROTZ_180
                 kwds['sweep_degrees'] = -kwds['sweep_degrees']
