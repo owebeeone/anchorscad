@@ -37,7 +37,7 @@ On Linux (Debian, Ubuntu, Raspberry Pi etc based distros), the following command
 Download and install the latest versions of:
 
 - [Python](https://www.python.org/) 3.9 or higher
-- [OpenSCAD](https://openscad.org/) 2021.01 or higher
+- [OpenSCAD](https://openscad.org/) 2021.01 or higher - Use the 2023.12.22 Development Snapshot for better performance.
 - [Graphviz](https://graphviz.org/) 2.30.2 or higher (likely works with earlier versions)
 
 After installing those packages, start a new “cmd” shell terminal and run the following:
