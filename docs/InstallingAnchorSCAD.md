@@ -9,7 +9,7 @@ All the required PIP packages are provided in the [requirements.txt](https://git
 Non [PyPi PIP](https://pypi.org/project/pip/) packages required are:
 
 - [Python](https://www.python.org/) 3.9 or higher
-- [OpenSCAD](https://openscad.org/) 2021.01 or higher
+- [OpenSCAD](https://openscad.org/) 2021.01 or higher - Use the 2023.12.22 Development Snapshot for better performance.
 - [Graphviz](https://graphviz.org/) 2.30.2 or higher (likely works with earlier versions)
 
 [Git](https://git-scm.com/) is also required for downloading the [AnchorSCAD](https://github.com/owebeeone/anchorscad.git) and [PythonOpenScad](https://github.com/owebeeone/pythonopenscad.git) repositories and also for contributing any models to [AnchorSCAD](https://github.com/owebeeone/anchorscad.git)‘s .models package or bug fixes or improvements.
