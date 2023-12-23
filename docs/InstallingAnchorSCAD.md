@@ -17,7 +17,7 @@ Non [PyPi PIP](https://pypi.org/project/pip/) packages required are:
 It is highly recommended that a Python IDE be used. While not endorsing any IDE in particular, I have found LiClipse (or Eclipse + Pydev) and VS Code work sufficiently well. An old fashioned simple editor and command line execution of shape modules may be used if that is a preference.
 ## Linux (Debian, Ubuntu, Raspberry Pi OS)
 
-On Linux (Debian, Ubuntu, Raspberry Pi etc based distros), the following commands pasted  into a terminal running bash should result in a working environment.
+On Linux (Debian, Ubuntu, Raspberry Pi etc based distros), the following commands pasted into a terminal running bash should result in a working environment.
 
 
 	sudo apt install openscad graphviz python3 git
@@ -27,6 +27,11 @@ On Linux (Debian, Ubuntu, Raspberry Pi etc based distros), the following command
 	cd anchorscad
 	git clone https://github.com/owebeeone/pythonopenscad.git
  	pip3 install -r src/anchorscad/requirements.txt
+
+	### If you want the "stable" branch, use this after running the above.
+	git fetch origin stable:stable
+	git checkout stable
+
 
 ## Windows
 Download and install the latest versions of:
@@ -44,6 +49,11 @@ After installing those packages, start a new “cmd” shell terminal and run th
 	cd anchorscad
 	git clone https://github.com/owebeeone/pythonopenscad.git
 	pip3 install -r src/anchorscad/requirements.txt
+
+	REM ### If you want the "stable" branch, use this after running the above.
+	git fetch origin stable:stable
+	git checkout stable
+
  
 ## Testing The Installation
 To verify that it is installed you can run a module like so:
