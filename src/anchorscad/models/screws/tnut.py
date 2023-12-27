@@ -47,7 +47,7 @@ class Tnut(ad.CompositeShape):
         maker.add_at(bevel_shape.solid('bevel').at('base'),
                      'flat', 'base', rh=1, h=-epsilon)
         
-        h_shaft = self.h_shaft - self.bevel_shaft - self.h_t
+        h_shaft = self.h_shaft - self.bevel_shaft - self.h_t 
         
         shaft_cage_shape = self.cyliner_node(
             h=h_shaft, r=self.r_shaft)
@@ -56,7 +56,7 @@ class Tnut(ad.CompositeShape):
                      'bevel', 'base', rh=1, h=-epsilon)
         
         shaft_extension = self.cyliner_node(
-            h=h_shaft, r=self.r_shaft)
+            h=self.h_shaft_extension, r=self.r_shaft)
         
         maker.add_at(shaft_extension.solid('shaft_extension')
                      .colour((1, 0, 0))
@@ -86,16 +86,57 @@ class Tnut(ad.CompositeShape):
 
 @ad.shape
 @ad.datatree
-class TnutExample(ad.CompositeShape):
-    offs: float=4
-    fn: int=128
-    fa: float=None
-    fs: float=None
-    tnut_node: ad.Node=ad.ShapeNode(Tnut, {})
-    bsb_node: ad.Node=ad.ShapeNode(bsb.BoxSideBevels, {})
+class TnutM8(ad.CompositeShape):
+    r_t: float=22.5 / 2
+    h_t: float=1.85
+    r_shaft: float=9.93 / 2
+    h_shaft: float=17.1
+    bevel_shaft: float=15 - 13.65 + 0.3
+    h_shaft_extension: float=30
+    wing_size: tuple=(4.8, 2.1, 7.9)
+    wing_angle: float=85
+    left_handed: bool=True
+    tnut_node: ad.Node=ad.ShapeNode(Tnut)
+    
+    
+    EXAMPLE_SHAPE_ARGS=ad.args(fn=64)
     
     def build(self) -> ad.Maker:
         tnut = self.tnut_node()
+        
+        maker = tnut.solid('tnut').at('origin')
+        
+        return maker
+
+@ad.datatree
+class TnutMaker:
+    
+    tnut_node: ad.Node=ad.ShapeNode(Tnut, {})
+    tnutM8_node: ad.Node=ad.ShapeNode(TnutM8, {})
+    m8: bool=False
+    
+    def build(self) -> ad.Shape:
+        return self.tnutM8_node() if self.m8 else self.tnut_node()
+
+@ad.shape
+@ad.datatree
+class TnutExample(ad.CompositeShape):
+    offs: float=4
+    tnut_maker: ad.Node=ad.ShapeNode(TnutMaker)
+    bsb_node: ad.Node=ad.ShapeNode(bsb.BoxSideBevels, {})
+    m8: bool=False
+    
+    
+    EXAMPLE_SHAPE_ARGS=ad.args(fn=128)
+    
+    EXAMPLES_EXTENDED={
+        'M8' : ad.ExampleParams(
+            shape_args=ad.args(m8=True)
+        )
+    }
+    
+    def build(self) -> ad.Maker:
+        tnut = self.tnut_maker().build()
         
         sizexy = tnut.r_t * 2 + self.offs
 
