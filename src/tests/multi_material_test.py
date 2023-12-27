@@ -46,6 +46,16 @@ class MultiMaterialTest(ad.CompositeShape):
                     .material(ad.Material('sphere', priority=9))
                     .at('top', rh=1.4),
             'face_centre', 'top')
+        
+        non_physical_mat = ad.Material('non_physical', priority=20, kind=ad.NON_PHYSICAL_MATERIAL_KIND)
+        
+        maker.add_at(
+            self.shpere_node()
+                    .solid('sphere_non_physical')
+                    .material(non_physical_mat)
+                    .at('top', rh=1.9),
+            'face_centre', 'top')
+        
 
         return maker
 

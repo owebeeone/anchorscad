@@ -220,6 +220,17 @@ FA_FIELD=fa_field()
 DEFAULT_MATERIAL_PRIORITY = 5.0
 
 @dataclass(frozen=True)
+class MaterialKind:
+    '''The type of material. This is used to determine how to render the material.
+    If the material is not for physical rendering but is used for support or region
+    selection, then it is not physical.'''
+    physical: bool = dtfield(True, doc='Whether this intended to be a physical part of the model.')
+    
+PHYSICAL_MATERIAL_KIND=MaterialKind(physical=True)
+NON_PHYSICAL_MATERIAL_KIND=MaterialKind(physical=False)
+
+
+@dataclass(frozen=True)
 class Material:
     name: str = dtfield(doc='The name of the material')
     # A material of higher priority is removed from materials of lower priority.
@@ -229,6 +240,19 @@ class Material:
         hash=False,
         compare=False,    
         doc='The priority of the material. Higher priority materials are rendered first.')
+    
+    kind: MaterialKind = dtfield(PHYSICAL_MATERIAL_KIND, doc='The type of material.')
+    
+    def priority_sort_key(self):
+        return (self.kind.physical, self.priority)
+    
+    @classmethod
+    def default_priority_sort_key(cls):
+        return (PHYSICAL_MATERIAL_KIND.physical, DEFAULT_MATERIAL_PRIORITY)
+    
+def compare_material_priority(materials):
+    '''Returns a tuple of materials sorted by priority.'''
+    return tuple(sorted(materials, key=lambda m: m.priority, reverse=True))
     
 # Matrial applied to example renders.
 DEFAULT_EXAMPLE_MATERIAL=Material('default')

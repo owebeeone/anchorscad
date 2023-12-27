@@ -110,9 +110,9 @@ class CombiningState:
         list.sort(mat_solids_list, 
                   reverse=True, 
                   key=lambda mat_solids: 
-                        mat_solids[0].priority 
+                        mat_solids[0].priority_sort_key() 
                         if mat_solids[0] 
-                        else core.DEFAULT_MATERIAL_PRIORITY)
+                        else core.Material.default_priority_sort_key())
         
         return mat_solids_list
     
@@ -129,10 +129,11 @@ class CombiningState:
         for material, solids in mat_solids_list[1:]:
             if material.priority != removal_priority:
                 removal_list = list(removal_next)
-                
-            removal_next.extend(solids)
             
-            if removal_list:
+            if material.kind.physical:
+                removal_next.extend(solids)
+            
+            if removal_list and material.kind.physical:
                 if len(solids) > 1:
                     solids = [model.Union()(*solids)]
                 solids = [model.Difference()(*solids, *removal_list)]
