@@ -13,7 +13,7 @@ the '--enable lazy-union' CLI option.)
 
 ## Material and MaterialMap Classes
 The new `anchorscad.Material` class provides for a name, priority and material kind (type). 
-Shapes assigned Materials of a higher priority and a "physical" kind are "subracted" from shapes 
+Shapes assigned Materials of a higher priority and a "physical" kind are "subtracted" from shapes 
 of materials with a physical kind and lower priority. This gives rudimentary support for removing 
 overlapping areas in the design but also supports "meta" models that may be used in the slicer
 to provide support controls or regions for special settings. A `Material` is only selected by name
