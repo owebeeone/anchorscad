@@ -13,6 +13,9 @@ from typing import Tuple
 
 @ad.datatree
 class DivingKnifeHolderPathBuilder(ad.CompositeShape):
+    '''OBSOLETE - superceeded by SpringHandleHolder.
+    The path builder for the diving knife holder. This outline is the base and ring.
+    '''
     
     base_w: float = 18
     base_t: float = 4.4
@@ -46,6 +49,7 @@ class DivingKnifeHolderPathBuilder(ad.CompositeShape):
 @ad.datatree
 class DivingKnifeHolder(ad.CompositeShape):
     '''
+    OBSOLETE - superceeded by SpringHandleHolder.
     Replacement for elastic dive knife holder. This inserts into the scabbard
     and holds the knife handle in place.
     '''
@@ -84,6 +88,10 @@ class DivingKnifeHolder(ad.CompositeShape):
 
 @ad.datatree
 class ScabbardMountHoleInnerPath:
+    '''The scabbard's mounting hole for the knife holder.
+    This is basically a rectangle with arcs at 2 opposing sides. This path is the
+    same the the actual hole as well as the recess where the original rubber holder used to sit.
+    '''
     
     base_w: float = 8.4
     centre_w: float = 11.8
@@ -110,31 +118,13 @@ class ScabbardMountHoleInnerPath:
         return builder.build()
 
 @ad.datatree
-class ScabbardMountHoleOuterPath:
+class ScabbardMountHoleRecessPath(ScabbardMountHoleInnerPath):
+    '''The scabbard's mounting hole recess for the knife holder.'''
     
     base_w: float = 17.9
     centre_w: float = 22.1
     base_h: float = 21.1
-    
-    def build(self):
-        
-        builder = (ad.PathBuilder()
-                   .move((0, 0))
-                   .line((self.base_w / 2, 0), name='base_right')
-                   .arc_points(
-                       (self.centre_w / 2, self.base_h / 2), 
-                       (self.base_w / 2, self.base_h), 
-                       name='right')
-                   .line((0, self.base_h), name='top_right')
-                   .stroke(self.base_w / 2, name='top_left')
-                   .arc_points(
-                       (-self.centre_w / 2, self.base_h / 2), 
-                       (-self.base_w / 2, 0), 
-                       name='left',
-                       direction=True)
-                )
 
-        return builder.build()
 
 @ad.shape
 @ad.datatree
@@ -148,13 +138,12 @@ class ScabbardMountHole(ad.CompositeShape):
     inner_h: float = 2.8
     inner_extrude_node: ad.Node=ad.dtfield(ad.ShapeNode(ad.LinearExtrude, prefix='inner_'))
     
-    top_scale: Tuple[float, float]=(1.2, 1)
+    top_scale: Tuple[float, float]=ad.dtfield((1.2, 1), "Scale factor (x, y) to create a wedge to hold the base.")
     
-    
-    outer_path_node: ad.Node=ad.dtfield(ad.ShapeNode(ScabbardMountHoleOuterPath, prefix='outer_'))
-    outer_path: ad.Path=ad.dtfield(self_default=lambda s: s.outer_path_node().build())
-    outer_h: float = 4.45
-    outer_extrude_node: ad.Node=ad.dtfield(ad.ShapeNode(ad.LinearExtrude, prefix='outer_'))
+    recess_path_node: ad.Node=ad.dtfield(ad.ShapeNode(ScabbardMountHoleRecessPath, prefix='recess_'))
+    recess_path: ad.Path=ad.dtfield(self_default=lambda s: s.recess_path_node().build())
+    recess_h: float = 4.45
+    recess_extrude_node: ad.Node=ad.dtfield(ad.ShapeNode(ad.LinearExtrude, prefix='recess_'))
     
     
     EXAMPLE_SHAPE_ARGS=ad.args(fn=64)
@@ -169,23 +158,23 @@ class ScabbardMountHole(ad.CompositeShape):
         maker = shape.solid('inner_hole').at()
         maker.add_at(top_shape.solid('inner_top').at('base_right', rh=1), 'base_right', rh=1, post=ad.ROTZ_180)
         
-        outer_shape = self.outer_extrude_node()
+        recess_shape = self.recess_extrude_node()
         
         # Make a box that when intersected, will cut the outer shape so that it is flush with one side
-        # of the inner shape.
-        outer_extents = self.outer_path.extents()
-        cut_box_size = (outer_extents[1][0] - outer_extents[0][0], 
-                        outer_extents[1][1] - outer_extents[0][1] - (self.outer_base_h - self.inner_base_h) / 2, 
-                        self.outer_h)
+        # of the inner shape. This is so we can print it flat on the print bed.
+        recess_extents = self.recess_path.extents()
+        cut_box_size = (recess_extents[1][0] - recess_extents[0][0], 
+                        recess_extents[1][1] - recess_extents[0][1] - (self.recess_base_h - self.inner_base_h) / 2, 
+                        self.recess_h)
         cut_box_shape = ad.Box(cut_box_size)
         
-        outer_maker = outer_shape.solid('outer_hole').at()
-        outer_maker.add_at(
+        recess_maker = recess_shape.solid('recess_hole').at()
+        recess_maker.add_at(
             cut_box_shape.solid('cut_box').colour('pink').at('face_edge', 'front', 0), 'base_right')
         
         
-        maker.add_at(outer_maker.intersect('cut_outer_hole').at(), 
-                     post=ad.ROTY_180 * ad.tranY((self.inner_base_h - self.outer_base_h) / 2))
+        maker.add_at(recess_maker.intersect('cut_recess_hole').at(), 
+                     post=ad.ROTY_180 * ad.tranY((self.inner_base_h - self.recess_base_h) / 2))
         
         return maker
 
@@ -193,7 +182,7 @@ class ScabbardMountHole(ad.CompositeShape):
 @ad.shape
 @ad.datatree
 class SpringBase(ad.CompositeShape):
-    '''The main shape of the handle attachment.'''
+    '''The main shape of the handle attachment with adjustable number of spring loops.'''
     d: float=10
     base_w: float=45
     depth: float=0.1
@@ -270,19 +259,13 @@ class SpringBase(ad.CompositeShape):
 @ad.shape
 @ad.datatree
 class SpringHandleHolder(ad.CompositeShape):
-    '''A springy version of the handle holder.'''
+    '''The whole knife holder assembly.
+    This is intended to be printed in an elastic material like a flexible TPU/TPE 
+    '''
     
     spring_base_node: ad.Node=ad.ShapeNode(SpringBase)
     spring_base: SpringBase=ad.dtfield(self_default=lambda s: s.spring_base_node())
-    
-    base_w: float = 18
-    base_d: float = 4.4
-    base_box_size: tuple=ad.dtfield(
-        self_default=lambda s: (
-            s.base_w, 
-            s.base_d,
-            s.spring_base.scaffold_r * 2 + s.spring_base.scaffold_t))
-    
+
     
     mount_node: ad.Node=ad.ShapeNode(ScabbardMountHole, prefix='mount_')
 
