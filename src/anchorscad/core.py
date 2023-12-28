@@ -240,8 +240,13 @@ class Material:
         hash=False,
         compare=False,    
         doc='The priority of the material. Higher priority materials are rendered first.')
-    
-    kind: MaterialKind = dtfield(PHYSICAL_MATERIAL_KIND, doc='The type of material.')
+
+    # The kind of material. This is used to determine how to render the material.    
+    kind: MaterialKind = dtfield(
+        PHYSICAL_MATERIAL_KIND, 
+        hash=False,
+        compare=False,
+        doc='The type of material.')
     
     def priority_sort_key(self):
         return (self.kind.physical, self.priority)
