@@ -5,6 +5,8 @@ Created on 7 Jul 2022
 
 import anchorscad as ad
 from anchorscad.models.basic.sleeve import Sleeve, SleeveAndKeyway
+from typing import Tuple
+
 
 @ad.datatree
 class HingeHolePath:
@@ -423,8 +425,7 @@ class Hinge(ad.CompositeShape):
     A completed hinge 
     '''
     bar_node: ad.Node=ad.ShapeNode(HingeBar,  
-                                           {'hide_cage': 'bar_cage_hide_cage'},
-                                           expose_all=True)
+        {'hide_cage': 'bar_cage_hide_cage'}, expose_all=True)
     hinge_bar_shape: ad.Shape=ad.dtfield(
             self_default=lambda s: s.bar_node(), init=False)
     sleeves_node: ad.Node=ad.ShapeNode(
@@ -521,6 +522,92 @@ class HingeTestPrint(ad.CompositeShape):
         maker.add_at(self.hinge_shape.composite('bar').at('centre'), 
                      'locator_cage', 'centre', post=ad.ROTY_90)
         return maker
+    
+
+@ad.shape
+@ad.datatree
+class HingeChain(ad.CompositeShape):
+    '''
+    A chain of hinges.
+    '''
+    
+    bar_margin: float=ad.dtfield(3, doc='Margin between bar and edge of plate')
+    bar_h: float=ad.dtfield(45, doc='Height of hinge bar')
+    sep: float=ad.dtfield(0.2, doc='Separation between hinge sides')
+    seg_count: int=ad.dtfield(11, 'Number of segments in hinge bar')
+    
+    chain_width_seq: Tuple[float, ...]=ad.dtfield((30, 63, 57), doc='Sequence of widths of chain links')
+    
+    overall_width: float=ad.dtfield(
+            self_default=lambda s: sum(s.chain_width_seq) + (len(s.chain_width_seq) - 1) * s.sep,
+            doc='Overall width of chain')
+    
+    bar_node: ad.Node=ad.ShapeNode(Hinge)
+    hinge_shape: ad.Shape=ad.dtfield(
+            self_default=lambda s: s.bar_node(), init=False)
+    
+    cage_size: tuple=ad.dtfield(
+            self_default=lambda s: (s.bar_h,
+                       s.overall_width,
+                       s.hinge_shape.hinge_bar_shape.bar_r * 2,), 
+            doc='Size of cage')
+    cage_node: ad.Node=ad.ShapeNode(ad.Box, prefix='cage_')
+    cage_of_node: ad.Node=ad.CageOfNode()
+    
+    plate_size: tuple=ad.dtfield(
+            self_default=lambda s: (s.bar_h + s.bar_margin * 2,
+                       s.sep,
+                       s.hinge_shape.hinge_bar_shape.bar_r,), 
+            doc='Size of plate')
+    
+    plate_node: ad.Node=ad.ShapeNode(ad.Box, prefix='plate_')
+
+    
+    EXAMPLE_SHAPE_ARGS=ad.args(hide_cage=True,
+                               fn=64)
+    xEXAMPLE_ANCHORS=tuple((
+        ad.surface_args('chain', ('plate', 0), 'face_centre', 'base'),
+        ad.surface_args('chain', ('sep_cage', 0), 'face_centre', 'base'),
+    ))
+    
+    def compute_plate_size(self, index: int) -> Tuple[float, float, float]:
+        '''
+        Size of plate at index.
+        '''
+        return (self.bar_h + self.bar_margin * 2,
+                self.chain_width_seq[index],
+                self.hinge_shape.hinge_bar_shape.bar_r,)
+    
+    def build(self) -> ad.Maker:
+        cage_shape = self.cage_node()
+        maker = self.cage_of_node(cage_shape).at('face_centre', 'base')
+        
+        sep_cage = self.plate_node()
+        plate0_shape = self.plate_node(size=self.compute_plate_size(0))
+
+        chain_maker = plate0_shape.solid(('plate', 0)).at('face_edge', 'base', 0)
+        
+        for i in range(1, len(self.chain_width_seq)):
+            chain_maker.add_at(
+                sep_cage.cage(('sep_cage', i - 1)).colour('purple').at('face_edge', 'base', 0),
+                ('plate', i - 1), 'face_edge', 'base', 2,
+                post=ad.ROTZ_180)
+            plate_shape = self.plate_node(size=self.compute_plate_size(i))
+            plate_maker = plate_shape.solid(('plate', i)).colour('cyan', 1).transparent(False).at('face_edge', 'base', 0)
+            chain_maker.add_at(
+                plate_maker, 
+                ('sep_cage', i - 1), 'face_edge', 'base', 2,
+                post=ad.ROTZ_180)
+            
+            # Align the centre of the locator_cage and the hinge.
+            chain_maker.add_at(self.hinge_shape.composite(('bar', i - 1)).at('centre'), 
+                        ('sep_cage', i - 1), 'face_centre', 'top', post=ad.ROTY_90)
+
+
+        maker.add_at(chain_maker.solid('chain').at('face_edge', 'base', 0), 'face_edge', 'base', 0)
+        
+        return maker
+    
     
     
 # Uncomment the line below to default to writing OpenSCAD files
