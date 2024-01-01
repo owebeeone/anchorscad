@@ -155,8 +155,8 @@ class TerminalKF301(ad.CompositeShape):
     terminal: ad.Node=ad.ShapeNode(TerminalKF301Terminal)
     
     EXAMPLE_SHAPE_ARGS=ad.args(hide_cage=True, 
-                               block_access_as_hole=True,
-                               screw_access_as_hole=True)
+                               block_access_as_hole=False,
+                               screw_access_as_hole=False)
     EXAMPLE_ANCHORS=(ad.surface_args('face_edge', 1, 0),)
     
     def build(self) -> ad.Maker:
@@ -170,6 +170,6 @@ class TerminalKF301(ad.CompositeShape):
         return maker
 
 
-MAIN_DEFAULT=ad.ModuleDefault(True, write_path_files=True)
+MAIN_DEFAULT=ad.ModuleDefault(all=True)
 if __name__ == '__main__':
     ad.anchorscad_main(False)

@@ -2,6 +2,8 @@
 Created on 4 Oct 2021
 
 @author: gianni
+
+A funnel for a paper filter.
 '''
 
 import anchorscad as ad
@@ -113,76 +115,60 @@ def ffs(n):
     '''Returns the bit position of the first (lsb) set bit.'''
     return (n & -n).bit_length() - 1
 
-def radians(degs):
-    '''Degrees to radians helper.'''
-    return np.pi * degs / 180
 
 @ad.shape
 @ad.datatree
 class FilterFunnel(ad.CompositeShape):
     '''Generates a paper filter (classic coffee paper filter) funnel with
     ribs on the inner surface to allow for efficient use of paper filters.
-    Args:
-        h: Overall paper filter height.
-        w: The width of the non cureved section of the paper filter.
-        r_base: The outer radius of the round section of the filter.
-        r_top: The radius of the small side of the filter.
-        t: Wall thickness of the filter shell.
-        t_top: Thickness at the small end of the funnel.
-        h_rim: Height of the rim on the upper end of the funnel.
-        w_rim: The extra width of the funnel rim. (t + w_rim is actual width)
-        h_adapter: Overall height of the funnel to tail adapter.
-        r_adapter: Radius of the adapter.
-        t_adapter: Thickness of the adapter component.
-        offs_adapter: The depth the adapter is embedded into the funnel.
-        conic_rib_level: Exponent of the number of ribs on the conic sections minus 1.
-        rib_factory: A "lazy shape" for rib shapes.
-        r_tail: Radius of the lower spout.
-        l_tail: Overall length of the tail.
-        tail_rib_factory: Factory for ribs on tail.
-        n_tail_ribs: Number of tail ribs.
-        show_cutaway: Flag for applying a cut section for showing section.
-        epsilon: A small value used to overlapping shapes to avoid aliasing
-            tears in the final model.
     '''
-    h: float=108
-    w: float=50
-    r_base: float=78 * 2 / np.pi
-    r_top: float=1
-    t: float=1.5
-    t_top: float=t * 2
+    
+    h: float=ad.dtfield(108, doc='Overall paper filter height.')
+    w: float=ad.dtfield(50, doc='The width of the non cureved section of the paper filter.')
+    r_base: float=ad.dtfield(78 * 2 / np.pi, 
+                             doc='The outer radius of the round section of the filter.')
+    r_top: float=ad.dtfield(1, doc='The radius of the small side of the filter.')
+    t: float=ad.dtfield(1.5, doc='Wall thickness of the filter shell.')
+    t_top: float=ad.dtfield(1.5 * 2, doc='Thickness at the small end of the funnel.')
     # Rim parameters.
-    h_rim: float=t
-    w_rim: float=5
+    h_rim: float=ad.dtfield(1.5, doc='Height of the rim on the upper end of the funnel.')
+    w_rim: float=ad.dtfield(5, 
+        doc='The extra width of the funnel rim. (t + w_rim is actual width)')
     
     # Funnel adapter.
-    h_adapter: float=25
-    r_adapter: float=11.3
-    t_adapter: float=2
-    offs_adapter: float=10
+    h_adapter: float=ad.dtfield(25, doc='Overall height of the funnel to tail adapter.')
+    r_adapter: float=ad.dtfield(11.3, doc='Radius of the adapter.')
+    t_adapter: float=ad.dtfield(2, doc='Thickness of the adapter component.')
+    offs_adapter: float=ad.dtfield(10, doc='The depth the adapter is embedded into the funnel.')
     
-    # Inner ribs.
-    conic_rib_level: int=4  # n**2-1 == 15 ribs
-    rib_factory: object=ad.lazy_shape(
+    # Inner ribs. n**2-1 == 15 ribs
+    conic_rib_level: int=ad.dtfield(4, 
+        doc='Exponent of the number of ribs on the conic sections minus 1.')
+
+    rib_factory: ad.LazyShape=ad.dtfield(ad.lazy_shape(
         ad.Cone, 'h', 
-        other_args=ad.args(r_base=1.5 * 1.3, r_top=1.5, fn=3))
-    rib_overlap_factor: float=0.016
+        other_args=ad.args(r_base=1.5 * 1.3, r_top=1.5, fn=3)),
+        doc='A "lazy shape" for rib shapes.')
+    rib_overlap_factor: float=ad.dtfield(0.016, doc='Amount of overlap between ribs.')
     
     # Tail pipe
-    r_tail: float=8.0
-    l_tail: float=40 
-    tail_rib_factory: object=ad.lazy_shape(
+    r_tail: float=ad.dtfield(8.0, doc='Radius of the lower spout.')
+    l_tail: float=ad.dtfield(40, doc='Overall length of the tail.')
+    tail_rib_factory: object=ad.dtfield(ad.lazy_shape(
         lambda x, y, z : ad.Box((x, y, z)), 'y', 
-        other_args=ad.args(x=1.5, z=1.5))
-    tail_rib_h: float=0.75
+        other_args=ad.args(x=1.5, z=1.5)),
+        doc='Factory for ribs on tail.')
+    tail_rib_h: float=ad.dtfield(0.75, doc='Height of tail ribs.')
     
-    n_tail_ribs: int= 6
+    n_tail_ribs: int=ad.dtfield(6, doc='Number of tail ribs.')
     
-    show_cutaway: bool=False
-    epsilon: float=0.001
+    show_cutaway: bool=ad.dtfield(False, 
+        doc='Flag for applying a cut section for showing section.')
+    epsilon: float=ad.dtfield(0.01, 
+        doc='A small value used to overlapping shapes to avoid aliasing tears in preview.')
     fn: int=128
     
-    EXAMPLE_SHAPE_ARGS=ad.args()
+    EXAMPLE_SHAPE_ARGS=ad.args(show_cutaway=False)
     NOEXAMPLE_ANCHORS=(
         
         ad.surface_args('tail', 'tail_outer', 'surface', rh=0, degrees=60),
@@ -256,7 +242,7 @@ class FilterFunnel(ad.CompositeShape):
                     align_plane=ad.Z_AXIS
                     )
         
-        d = self.r_base * np.sin(radians(degs_per_rib))
+        d = self.r_base * np.sin(ad.to_radians(degs_per_rib))
         count_flat_side = int(round(0.5 + self.w / d))
         rs = 1 / (count_flat_side - 1)
         h = 0.000001
@@ -335,12 +321,14 @@ class FilterFunnel(ad.CompositeShape):
                             (self.r_base * 2 + self.w) / 2, 
                             self.h + 2 * self.epsilon])
             
-            self.maker.add_at(cut.hole('cut').at(), 'top', 
+            maker.add_at(cut.hole('cut').at(), 'top', 
                         post=ad.ROTX_180 * ad.tranZ(-self.epsilon))
    
 
         return maker
 
+
+MAIN_DEFAULT=ad.ModuleDefault(all=True)
 
 if __name__ == '__main__':
     ad.anchorscad_main(False)

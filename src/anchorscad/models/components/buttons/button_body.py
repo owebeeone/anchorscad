@@ -229,7 +229,7 @@ class ButtonAssemblyTest(CompositeShape):
 
     EXAMPLE_SHAPE_ARGS=args(switch_type='TL1105',
                             body_hide_cage=True,
-                            body_plate_cage_hide_cage=False, 
+                            body_plate_cage_hide_cage=True, 
                             body_degrees=270, 
                             body_ex_degrees=270,
                             fn=64)
@@ -254,6 +254,6 @@ class ButtonAssemblyTest(CompositeShape):
         return maker
 
 
-MAIN_DEFAULT=ModuleDefault(True)
+MAIN_DEFAULT=ModuleDefault(all=True)
 if __name__ == '__main__':
     anchorscad_main(False)
