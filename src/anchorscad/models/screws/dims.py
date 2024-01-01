@@ -34,7 +34,7 @@ class HeadDimensions(object):
 SHAFT_MAP = {
     'M2' : ShaftDimensions(2.0, 2.4, 2.0),
     'M2.6' : ShaftDimensions(2.6, 2.8, 2.61),
-    'M3' : ShaftDimensions(3.0, 3.06, 2.75),
+    'M3' : ShaftDimensions(3.0, 3.25, 2.75),
     'M4' : ShaftDimensions(4.0, 4.06, 3.75),
     'M6' : ShaftDimensions(6.0, 6.14, 6.05),
     'BUGLE_14g-10' : ShaftDimensions(6.3, 6.7, 6.4),
@@ -43,6 +43,14 @@ SHAFT_MAP = {
 
 
 HEAD_MAP = {
+    
+    'M3' : HeadDimensions(
+                head_top_d=6.2,
+                head_bot_d=3.25,
+                head_protrusion_height=1.5,
+                head_mid_depth=0.1,
+                head_countersink_depth=1.96),
+    
     'BUGLE_14g-10' : HeadDimensions(
                 head_top_d=14.2,
                 head_bot_d=6.5,
