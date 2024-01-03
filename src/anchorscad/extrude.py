@@ -12,6 +12,7 @@ from typing import Dict, List, Tuple
 from frozendict import frozendict
 
 import anchorscad.core as core
+from anchorscad.datatrees import datatree, dtfield
 import anchorscad.linear as l
 from anchorscad.path_utils import remove_colinear_points
 import numpy as np
@@ -1922,30 +1923,30 @@ def test():
     md = core.EMPTY_ATTRS.with_fn(10)
     p2bc = Polyhedron2BuilderContext(pg, md)
     for r, points, paths in p2bc.get_paths():
-        print(f'r={r}, points={points}, paths={paths}')
-    
+        print(f'r={r}, points={points}, paths={paths}') 
+
 
 @core.shape
-@dataclass
+@datatree
 class LinearExtrude(ExtrudedShape):
     '''Generates a linear extrusion of a given Path.'''
-    path: Path
-    h: float=100
-    twist: float=0.0
-    slices: int=4
-    scale: float=(1.0, 1.0)  # (x, y)
-    fn: int=None
-    use_polyhedrons: bool=None
+    path: Path=dtfield(doc='The path to extrude.')
+    h: float=dtfield(100, doc='The height of the extrusion.')
+    twist: float=dtfield(0.0, doc='The twist of the extrusion in degrees.')
+    slices: int=dtfield(4, doc='The number of slices to use for the extrusion if twist is applied.')
+    scale: float=dtfield((1.0, 1.0), doc='The scale of the extrusion in X and Y.')
+    fn: int=dtfield(None, doc='The number of facets to use for the extrusion.')
+    use_polyhedrons: bool=dtfield(None, doc='If true will use polyhedrons to generate the extrusion.')
     
-    SCALE=2
+    _SCALE=2
     
     EXAMPLE_SHAPE_ARGS=core.args(
         PathBuilder()
             .move([0, 0])
-            .line([100 * SCALE, 0], 'linear')
-            .spline([[150 * SCALE, 100 * SCALE], [20 * SCALE, 100 * SCALE]],
+            .line([100 * _SCALE, 0], 'linear')
+            .spline([[150 * _SCALE, 100 * _SCALE], [20 * _SCALE, 100 * _SCALE]],
                      name='curve', cv_len=(0.5,0.4), degrees=(90,), rel_len=0.8)
-            .line([0, 100 * SCALE], 'linear2')
+            .line([0, 100 * _SCALE], 'linear2')
             .line([0, 0], 'linear3')
             .build(),
         h=80,
@@ -1983,16 +1984,16 @@ class LinearExtrude(ExtrudedShape):
             shape_args=core.args(
                 PathBuilder()
                     .move([0, 0])
-                    .line([50 * SCALE, 0], 'linear1')
-                    .line([50 * SCALE, 50 * SCALE], 'linear2')
-                    .line([0, 50 * SCALE], 'linear3')
+                    .line([50 * _SCALE, 0], 'linear1')
+                    .line([50 * _SCALE, 50 * _SCALE], 'linear2')
+                    .line([0, 50 * _SCALE], 'linear3')
                     .line([0, 0], 'linear4')
                     .build(),
                 h=50,
                 ),
             anchors=(
                 core.surface_args('linear1', 0, 0),
-                core.surface_args('linear1', 0.5, 25 * SCALE),
+                core.surface_args('linear1', 0.5, 25 * _SCALE),
                 core.surface_args('linear2', 0, 0),
                 core.surface_args('linear2', 1, 0),
                 )),
@@ -2000,8 +2001,8 @@ class LinearExtrude(ExtrudedShape):
             shape_args=core.args(
                 PathBuilder()
                     .move([0, 0])
-                    .line([50 * SCALE, 0], 'linear1')
-                    .arc_tangent_point([0, 50 * SCALE], name='curve', degrees=90)
+                    .line([50 * _SCALE, 0], 'linear1')
+                    .arc_tangent_point([0, 50 * _SCALE], name='curve', degrees=90)
                     .line([0, 0], 'linear4')
                     .build(),
                 h=50,
@@ -2010,7 +2011,7 @@ class LinearExtrude(ExtrudedShape):
                 ),
             anchors=(
                 core.surface_args('linear1', 0, 0),
-                core.surface_args('linear1', 0.5, 25 * SCALE),
+                core.surface_args('linear1', 0.5, 25 * _SCALE),
                 core.surface_args('curve', 0, 0),
                 core.surface_args('curve', 0.6, 0),
                 core.surface_args('curve', 1, 0),
