@@ -428,6 +428,10 @@ def clean_polygons(points: np.ndarray, tolerance=EPSILON) -> np.ndarray:
             points[-2:] = new_last.points[::-1]
             
         points = remove_colinear_points(points, tolerance)
+
+    # Remove the last point if it is almost the same as the first.
+    if np.abs(np.sum(points[0] - points[-1])) < tolerance:
+        points = points[:-1]
             
     return points
 
