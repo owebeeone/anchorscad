@@ -28,13 +28,16 @@ def closest_points(points1: np.array, points2: np.array) \
 
 
 def correct_circular_sequence(numbers:List[int], set_size:int):
-    '''Reorder a list of numbers representing a circular set (0 to N-1) 
-    to form a continuous sequence considering the circular nature.
+    '''Reorder a list of elements in the set (0..set_size-1) 
+    that forms a circular group of set_size elements.
 
-    The function finds the largest gap in the sequence, considering
-    the circular nature (where 0 follows N-1), and reorders the list 
-    starting from the number after this gap.
-
+    This takes a list of numbers that represent a quasi sequence in 
+    the set (0..set_size-1) and reorders the list so that the sequence
+    starts at the beginning of the sequence. e.g. for set_size=15,
+    the input [0, 2, 10, 12, 13], the result will be [10, 12, 13, 0, 2].
+    i.e the sequence starts at 10 and wraps around to 2 while the 
+    elements 11, 14, and 1 are missing in the sequence.
+    
     Parameters:
     numbers (list or array-like): The input list or array of numbers.
     set_size (int): The size of the circular set, with values ranging 
