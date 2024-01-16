@@ -37,7 +37,8 @@ def correct_circular_sequence(numbers:List[int], set_size:int):
 
     Parameters:
     numbers (list or array-like): The input list or array of numbers.
-    N (int): The size of the circular set, with values ranging from 0 to N-1.
+    set_size (int): The size of the circular set, with values ranging 
+        from 0 to set_size-1.
 
     Returns:
     numpy.ndarray: A reordered array where the sequence is continuous,
@@ -59,14 +60,6 @@ def correct_circular_sequence(numbers:List[int], set_size:int):
     # Rearrange the array to start after the largest gap
     return np.roll(numbers, -max_gap_index - 1)
 
-
-# Example usage
-N = 15
-numbers = [0, 2, 3, 10, 12, 13, 14]
-numbers = [10, 11, 13]
-numbers = [10, 11, 13, 1, 2]
-result = correct_circular_sequence(numbers, N)
-print(result)
 
 
 @dataclass
