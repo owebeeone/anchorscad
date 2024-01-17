@@ -4,7 +4,7 @@
 
 import unittest
 from dataclasses import dataclass, field
-from anchorscad.path_mesh import closest_points, tesselate_between_paths
+from anchorscad.path_mesh import closest_points, tesselate_between_paths, overlaps
 import numpy as np
 import sys
 
@@ -124,12 +124,22 @@ class TestPathMesh(unittest.TestCase):
             list((r * np.sin(t + offset_angle), r * np.cos(t + offset_angle)) 
                  for r, t in zip(radiuses, angles)))
         
+    def overlaps_helper(self, p1, p2):
+        v1 = overlaps(p1, p2)
+        v2 = overlaps(p2, p1)
+        self.assertEqual(v1, v2)
+        return v1
 
+    def test_overlaps(self):
+        
+        self.assertFalse(self.overlaps_helper((4, 4), (4, 0)))
+        self.assertFalse(self.overlaps_helper((6, 6), (7, 3)))
+        self.assertTrue(self.overlaps_helper((7, 3), (1, 1)))
 
         
     def test_tesselate_with_noisy_points(self):
         # Test case with specific 3D points
-        s = 54
+        s = 34
         n = 15
         points1 = self.make_points_noise(15, 20, n, s + 10, s + 11, np.pi / 5)
         points2 = self.make_points_noise(25, 30, n + 10, s + 12, s + 13, 0)
@@ -138,10 +148,10 @@ class TestPathMesh(unittest.TestCase):
         s1, s2 = closest_points(points1, points2)
         #print(closest_points(points2, points1))
         
-        #MapClosestPoints(points1, points2, s1, s2, f'Noisy points (seed={s} n={n})')
+        MapClosestPoints(points1, points2, s1, s2, f'Noisy points (seed={s} n={n})')
         #MapClosestPoints(points1, points2, s1, s2, 'Noisy points Test')
 
-        #tesselate_between_paths(points1, 100, points2, 200)
+        tesselate_between_paths(points1, 100, points2, 200)
 
         #self.assertEqual(closest_points_monotonic(points2, points1), expected_result)
         
@@ -154,7 +164,6 @@ class TestPathMesh(unittest.TestCase):
             (0, 1.3), 
             (2, 2),
             (2, 0),
-            (0, 0),
             (0, 0.0), 
             (0, 0.7), 
             (0, 0.8), 
@@ -163,11 +172,13 @@ class TestPathMesh(unittest.TestCase):
         
         points2 = np.array([
             (0.1, 1), 
-            (1, 1), 
+            (0.7, 1.1), 
             (1.8, 1.8), 
             (1.8, 0.2), 
             (0.2, 0.2)
             ])
+        
+        points2 = np.roll(points2, -1, axis=0)
         
         
         # Call closest_points() to and plot the results.
@@ -197,6 +208,7 @@ def pause_on_close():
         if manager is not None:
             canvas = manager.canvas
             if canvas.figure.stale:
+                # Update the screen as the canvas wasn't fully drawn yet.
                 canvas.draw_idle()
             canvas.start_event_loop(0.1)
     return

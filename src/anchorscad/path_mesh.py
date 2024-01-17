@@ -64,6 +64,23 @@ def correct_circular_sequence(numbers:List[int], set_size:int):
     return np.roll(numbers, -max_gap_index - 1)
 
 
+def overlaps(range1: Tuple[int, int], range2: Tuple[int, int]) -> bool:
+    # Overlapping here is defined as the two ranges having more than an end point
+    # in common.
+    wrap1 = range1[0] > range1[1]
+    wrap2 = range2[0] > range2[1]
+    if wrap1:
+        # This is a wrap around range.
+        if wrap2:
+            # Both are wrap around ranges so they must overlap.
+            return True
+        return range2[0] < range1[1] or range2[1] > range1[0]
+    elif wrap2:
+        # range2 is a wrap around range but range1 is not.
+        return range1[0] < range2[1] or range1[1] > range2[0]
+    
+    # Both ranges don't wrap:
+    return not (range2[1] <= range1[0] or range1[1] <= range2[0])
 
 @dataclass
 class _TesselatorHelperSide:
@@ -73,67 +90,63 @@ class _TesselatorHelperSide:
     tesselator: '_TesselatorHelper'
     other_side: '_TesselatorHelperSide' = field(init=False)
     incoming: List[List[int]] = field(init=False)
+    ranges: List[Tuple[int, int]] = field(init=False)
 
     def initialize_state(self) -> None:
         self.incoming = [[] for _ in range(len(self.points))]
+        self.ranges = [None] * len(self.points)
 
     def populate_edges(self) -> None:
         self.other_side.initialize_state()
         for i, j in enumerate(self.map_closest):
             self.other_side.incoming[j].append(i)
-            
+        self.other_side.correct_sequences()
+
+                
+    def correct_sequences(self) -> None:
+        # The incoming edges are not necessarily in the correct order,
+        # this fixes that.
+        # These index the other side's points so n is the number of
+        # points in the other side.
+        n = len(self.other_side.points)
+        for i in range (len(self.points)):
+            osi = self.incoming[i]
+            if len(osi) > 0:
+                self.incoming[i] = correct_circular_sequence(osi, n)
+    
+        for i in range (len(self.points)):
+            self.ranges[i] = self._get_range_of(i)
+           
     def prev(self, idx: int) -> int:
         return (idx - 1) % len(self.points)
     
     def next(self, idx: int) -> int:
         return (idx + 1) % len(self.points)
     
-    def get_range_of(self, idx: int) -> Tuple[int, int]:
+    def _get_range_of(self, idx: int) -> Tuple[int, int]:
         # Returns the range of incoming edges that are inclusive.
         closest = self.map_closest[idx]
         incoming = self.incoming[idx]
-        print(f'get_range_of({idx}) closest={closest} incoming={incoming}')
-        # if there are no incoming edges then the closest point 
-        # is the only edge in range.
+        # if there are no incoming edges or has one and it's the same as closest,
+        # then the closest point is the only point in the range.
         if len(incoming) == 0 or len(incoming) == 1 and incoming[0] == closest:
-            val = (closest, closest)
-            print(f'+++ returning {val}')
-            return val
+            return (closest, closest)
         
-        nd2 = len(self.points) // 2
+        n = len(self.other_side.points)
         
-        if abs(incoming[0] - incoming[-1]) > nd2:
-            incoming = incoming[::-1]
-            # Possible wrap around range.
-            val = (incoming[-1], closest)
-            print(f'+++ returning {val}')
-            return val
+        if len(incoming) == 1:
+            return tuple(correct_circular_sequence((incoming[0], closest), n))
         
-        diff_closest = abs(closest - incoming[0])
-        if diff_closest > nd2:
-            # This may be a wrap around range.
-            if abs(closest - incoming[-1]) > nd2:
-                val = (incoming[-1], closest)
-                print(f'+++ returning {val}')
-                return val
-            val = (closest, self.other_prev(incoming[0]))
-            print(f'+++ returning {val}')
-            return val
+        # Include the closest point if it is not already included.
+        if not closest in incoming:
+            # Use the correct_circular_sequence to make sure the sequence is consistent.
+            incoming = correct_circular_sequence(tuple(incoming) + (closest,), n)
+        
+        return (incoming[0], incoming[-1])
+    
+    def get_range_of(self, idx: int) -> Tuple[int, int]:
+        return self.ranges[idx]
 
-        if closest < incoming[0]:
-            # This may be a wrap around range.
-            if incoming[-1] < closest:
-                val = (closest, incoming[-1])
-                print(f'+++ returning {val}')
-                return val
-        
-        if closest > incoming[-1]:
-            val = (incoming[0], closest)
-            print(f'+++ returning {val}')
-            return val
-        val = (incoming[0], self.other_next(incoming[-1]))
-        print(f'+++ returning {val}')
-        return val
         
     def other_next(self, idx: int) -> int:
         return self.other_side.next(idx)
@@ -141,25 +154,6 @@ class _TesselatorHelperSide:
     def other_prev(self, idx: int) -> int:
         return self.other_side.prev(idx)
     
-    def overlaps(self, range1: Tuple[int, int], range2: Tuple[int, int]) -> bool:
-        # Overlapping here is defined as the two ranges having more than an end point
-        # in common.
-        if range1[0] >= range1[1]:
-            # This is a wrap around range.
-            if range2[0] >= range2[1]:
-                # Both are wrap around ranges so they must overlap.
-                return True
-            return range2[1] >= range1[0] - 1 or range2[0] < range1[1]
-        elif range2[0] >= range2[1]:
-            # range2 is a wrap around range but range1 is not.
-            return range1[1] >= range2[0] - 1 or range1[0] < range2[1]
-        
-        # Both ranges don't wrap:
-        return not (range2[1] <= range1[0] or range1[1] <= range2[0])
-            
-    
-    def other_overlaps(self, range1: Tuple[int, int], range2: Tuple[int, int]) -> bool:
-        return self.other_side.overlaps(range1, range2)
     
     def handle_crossover(self, idx: int, adjacent:int) -> None:
         print(f'crossover at {idx}-{adjacent}')  
@@ -169,15 +163,17 @@ class _TesselatorHelperSide:
         range_this = self.get_range_of(idx)
         range_next = self.get_range_of(self.next(idx))
         
-        if self.overlaps(range_next, range_this):
+        if overlaps(range_next, range_this):
             self.handle_crossover(idx, self.next(idx))
-            print(f'overlaps at {range_this} {range_next} ')
+            print(f'{self.name()} overlaps at {range_this} {range_next} ')
             
     def fix_crossovers(self) -> None:
         for idx in range(len(self.points)):
             self.detect_crossover(idx)
         
-            
+    def name(self) -> str:
+        return 'side1'
+    
     def distance_sq_between(self, this_side_idx: int, other_side_idx: int) -> float:
         return self.tesselator.distance2_between(this_side_idx, other_side_idx)
 
@@ -186,6 +182,9 @@ class _TesselatorHelperOtherSide(_TesselatorHelperSide):
     # Override this to keep the indexes in the correct order.
     def distance_sq_between(self, this_side_idx: int, other_side_idx: int) -> float:
         return self.tesselator.distance2_between(other_side_idx, this_side_idx)
+    
+    def name(self) -> str:
+        return 'side2'
 
 @dataclass
 class _TesselatorHelper:
