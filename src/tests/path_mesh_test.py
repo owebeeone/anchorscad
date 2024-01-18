@@ -5,7 +5,7 @@
 import unittest
 from dataclasses import dataclass, field
 from anchorscad.path_mesh import closest_points, tesselate_between_paths, overlaps, \
-    _TesselatorHelper, circular_range
+    _TesselatorHelper, circular_range, intersect
 import numpy as np
 import sys
 
@@ -222,7 +222,40 @@ class TestPathMesh(unittest.TestCase):
         self.assertFalse(self.overlaps_helper((4, 4), (4, 0)))
         self.assertFalse(self.overlaps_helper((6, 6), (7, 3)))
         self.assertTrue(self.overlaps_helper((7, 3), (1, 1)))
+        
+    def test_intersect(self):
+        
+        self.assertEqual(
+            intersect((0, 1), (1, 1)), 
+            ((1, 1),))
+        
+        self.assertEqual(
+            intersect((5, 1), (1, 5)), 
+            ((1, 1), (5, 5)))
+        
+        self.assertEqual(
+            intersect((1, 5), (5, 1)), 
+            ((1, 1), (5, 5)))
+        
+        self.assertEqual(
+            intersect((1, 5), (6, 0)), 
+            ())
+    
+        self.assertEqual(
+            intersect((6, 0), (1, 5)), 
+            ())
 
+        self.assertEqual(
+            intersect((0, 1), (3, 5)), 
+            ())
+                    
+        self.assertEqual(
+            intersect((1, 5), (6, 1)), 
+            ((1, 1),))
+        
+        self.assertEqual(
+            intersect((6, 1), (1, 5)), 
+            ((1, 1),))
         
     def test_tesselate_with_noisy_points(self):
         # Test case with specific 3D points

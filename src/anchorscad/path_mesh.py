@@ -82,6 +82,43 @@ def overlaps(range1: Tuple[int, int], range2: Tuple[int, int]) -> bool:
     # Both ranges don't wrap:
     return not (range2[1] <= range1[0] or range1[1] <= range2[0])
 
+def intersect(range1: Tuple[int, int], range2: Tuple[int, int]) \
+    -> Tuple[Tuple[int, int], Tuple[int, int]]:
+    '''Returns up to 2 ranges of numbers in a circular set that are in the 
+    intersection of range1 and range2. The intersection of 2 circular ranges can be 2 
+    discontinuous ranges.'''
+    
+    wrap1 = range1[0] > range1[1]
+    wrap2 = range2[0] > range2[1]
+    if wrap1:
+        # This is a wrap around range.
+        if wrap2:
+            # Both are wrap around ranges so they must overlap.
+            return ((max(range1[0], range2[0]), min(range1[1], range2[1])),)
+        result = ()
+        if range2[0] <= range1[1]:
+            result = ((range2[0], range1[1]),)
+        
+        if range2[1] >= range1[0]:
+            result += ((range2[1], range1[0]),)
+        return result
+    elif wrap2:
+        # range2 is a wrap around range but range1 is not.
+        result = ()
+        if range1[0] <= range2[1]:
+            result = ((range1[0], range2[1]),)
+        
+        if range1[1] >= range2[0]:
+            result += ((range1[1], range2[0]),)
+        return result
+    
+    # Both ranges don't wrap:
+    result = (max(range1[0], range2[0]), min(range1[1], range2[1]))
+    if result[0] > result[1]:
+        return ()
+    return (result,)
+
+
 @dataclass
 class _TesselatorHelperSide:
     points: np.array
@@ -261,7 +298,8 @@ def circular_range(start_end: Tuple[int], size: int) -> List[int]:
     while curr != start_end[1]:
         curr = (curr + 1) % size
         yield curr
-    
+        
+
 
 def tesselate_between_paths(
         points1: np.array, index_offset1: int, points2: np.array, index_offset2: int) \
