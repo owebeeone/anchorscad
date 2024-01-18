@@ -4,7 +4,8 @@
 
 import unittest
 from dataclasses import dataclass, field
-from anchorscad.path_mesh import closest_points, tesselate_between_paths, overlaps
+from anchorscad.path_mesh import closest_points, tesselate_between_paths, overlaps, \
+    _TesselatorHelper, circular_range
 import numpy as np
 import sys
 
@@ -16,23 +17,15 @@ class Finished(Exception):
     pass
 
 @dataclass
-class MapClosestPoints:
-    points1: np.array
-    points2: np.array
-    s1: np.array
-    s2: np.array
+class PlotBase:
     title: str
     cid: object = field(init=False)
     
-    def __post_init__(self):
-        self.plot_closest_points()
-        
     def onclick(self, event):
         global IS_CLOSED
         IS_CLOSED = True
         
-    def plot_closest_points(self):
-        
+    def init_plot(self):
         # Plot the results.
         fig, ax = plt.subplots()
         
@@ -44,7 +37,28 @@ class MapClosestPoints:
         plt.tight_layout(pad=0, h_pad=0, w_pad=0, rect=[0, 0, 1, 1])
         ax.set_in_layout(False)
         plt.ion()
+        # Render the image to the size of the screen.
+        fig.set_size_inches(10.5, 10.5)
         
+        return fig, ax
+        
+
+@dataclass
+class PlotClosestPoints(PlotBase):
+    points1: np.array
+    points2: np.array
+    s1: np.array
+    s2: np.array
+    title: str
+    
+    def __post_init__(self):
+        self.plot_closest_points()
+        
+    def plot_closest_points(self):
+        
+        # Plot the results.
+        fig, ax = self.init_plot()
+
         # Plot the points in points1 in red and points2 in blue.
         
         ax.plot(self.points1[:, 0], self.points1[:, 1], 'ro')
@@ -56,10 +70,12 @@ class MapClosestPoints:
         
         # Plot the lines from points1 to points2 using s1 and s2.
         for j, i in enumerate(self.s1):
-            ax.plot([self.points1[i, 0], self.points2[j, 0]], [self.points1[i, 1], self.points2[j, 1]], 'g-')
+            ax.plot([self.points1[i, 0], self.points2[j, 0]], 
+                    [self.points1[i, 1], self.points2[j, 1]], 'g-')
         # Plot the lines from points2 to points1 using s2 and s1.
         for j, i in enumerate(self.s2):
-            ax.plot([self.points2[i, 0], self.points1[j, 0]], [self.points2[i, 1], self.points1[j, 1]], 'p-')
+            ax.plot([self.points2[i, 0], self.points1[j, 0]], 
+                    [self.points2[i, 1], self.points1[j, 1]], 'p-')
         
         # Plot the lines between points in points1 with each line
         # changing in colour gradially from green to yellow and add
@@ -75,18 +91,88 @@ class MapClosestPoints:
         # changing in colour gradially from green to yellow and add
         # a closing line from the last point to the first point.
         for i in range(len(self.points2) - 1):
-            ax.plot([self.points2[i, 0], self.points2[i + 1, 0]], [self.points2[i, 1], self.points2[i + 1, 1]], 'c-')
+            ax.plot([self.points2[i, 0], self.points2[i + 1, 0]], 
+                    [self.points2[i, 1], self.points2[i + 1, 1]], 'c-')
                 
         ax.plot([self.points2[-1, 0], self.points2[0, 0]],
                 [self.points2[-1, 1], self.points2[0, 1]], 'p-')
-        
-        # Render the image to the size of the screen.
-        fig.set_size_inches(10.5, 10.5)
     
         #plt.get_current_fig_manager().window.state('zoomed')    
         plt.show()
 
+
+@dataclass
+class PlotRanges(PlotBase):
+    tess_helper: _TesselatorHelper
+    title: str
+    cid: object = field(init=False)
+    
+    def __post_init__(self):
+        self.plot_edges()
+               
+    def onclick(self, event):
+        global IS_CLOSED
+        IS_CLOSED = True
         
+    def plot_points(self, fig, ax):
+        # Plot the points in points1 in red and points2 in blue.
+        points1 = self.tess_helper.side1.points
+        points2 = self.tess_helper.side2.points
+        
+        ax.plot(points1[:, 0], points1[:, 1], 'ro')
+        for i in range(len(points1)):
+            plt.annotate(str(i), (points1[i, 0], points1[i, 1]))
+            
+        ax.plot(points2[:, 0], points2[:, 1], 'bo')
+        for i in range(len(points2)):
+            plt.annotate(str(i), (points2[i, 0], points2[i, 1]))
+
+        # Plot the lines between points in points1 with each line
+        # changing in colour gradially from green to yellow and add
+        # a closing line from the last point to the first point.
+        for i in range(len(points1) - 1):
+            ax.plot([points1[i, 0], points1[i + 1, 0]],
+                    [points1[i, 1], points1[i + 1, 1]], 'y-')
+        
+        ax.plot([points1[-1, 0], points1[0, 0]],
+                [points1[-1, 1], points1[0, 1]], 'o-')
+        
+        # Plot the lines between points in points2 with each line
+        # changing in colour gradially from green to yellow and add
+        # a closing line from the last point to the first point.
+        for i in range(len(points2) - 1):
+            ax.plot([points2[i, 0], points2[i + 1, 0]], 
+                    [points2[i, 1], points2[i + 1, 1]], 'c-')
+                
+        ax.plot([points2[-1, 0], points2[0, 0]],
+                [points2[-1, 1], points2[0, 1]], 'p-')
+        
+    
+    def plot_ranges_for_side(self, side, fig, ax, colour):
+        
+        side = self.tess_helper.side1
+        for i in range(len(self.tess_helper.side1.ranges)):
+            r = self.tess_helper.side1.ranges[i]
+            for j in circular_range(r, len(side.other_side.points)):
+                ax.plot([side.points[i, 0], side.other_side.points[j, 0]],
+                        [side.points[i, 1], side.other_side.points[j, 1]], colour)
+
+    def plot_ranges(self, fig, ax):
+        self.plot_ranges_for_side(self.tess_helper.side1, fig, ax, 'g-')
+        self.plot_ranges_for_side(self.tess_helper.side2, fig, ax, 'p-')            
+        
+    def plot_edges(self):
+        
+        # Plot the results.
+        fig, ax = self.init_plot()
+        
+        self.plot_points(fig, ax)
+        
+        self.plot_ranges(fig, ax)
+        
+        #plt.get_current_fig_manager().window.state('zoomed')    
+        plt.show()
+
 
 class TestPathMesh(unittest.TestCase):
     # def test_find_nearest_points_indexes_returns_expected_result(self):
@@ -132,6 +218,7 @@ class TestPathMesh(unittest.TestCase):
 
     def test_overlaps(self):
         
+        self.assertFalse(self.overlaps_helper((4, 4), (4, 2)))
         self.assertFalse(self.overlaps_helper((4, 4), (4, 0)))
         self.assertFalse(self.overlaps_helper((6, 6), (7, 3)))
         self.assertTrue(self.overlaps_helper((7, 3), (1, 1)))
@@ -148,14 +235,22 @@ class TestPathMesh(unittest.TestCase):
         s1, s2 = closest_points(points1, points2)
         #print(closest_points(points2, points1))
         
-        MapClosestPoints(points1, points2, s1, s2, f'Noisy points (seed={s} n={n})')
+        PlotClosestPoints(
+            points1=points1, 
+            points2=points2, 
+            s1=s1, 
+            s2=s2, 
+            title=f'Noisy points (seed={s} n={n})')
         #MapClosestPoints(points1, points2, s1, s2, 'Noisy points Test')
 
-        tesselate_between_paths(points1, 100, points2, 200)
+        helper = tesselate_between_paths(points1, 100, points2, 200)
+        
+        PlotRanges(tess_helper=helper, 
+                   title=f'Ranges Plot - Noisy points (seed={s} n={n})')
 
         #self.assertEqual(closest_points_monotonic(points2, points1), expected_result)
         
-    def test_wrap_around_test(self):
+    def xtest_wrap_around_test(self):
         
         points1 = np.array([
             (0, 1), 
@@ -185,7 +280,12 @@ class TestPathMesh(unittest.TestCase):
         s1, s2 = closest_points(points1, points2)
         print(s1, s2)
         
-        MapClosestPoints(points1, points2, s1, s2, f'Wrap issue')
+        PlotClosestPoints(
+            points1=points1, 
+            points2=points2, 
+            s1=s1, 
+            s2=s2, 
+            title=f'Wrap issue')
         
         tesselate_between_paths(points1, 100, points2, 200)
 

@@ -163,9 +163,16 @@ class _TesselatorHelperSide:
         range_this = self.get_range_of(idx)
         range_next = self.get_range_of(self.next(idx))
         
-        if overlaps(range_next, range_this):
+        # It can be that this range starts after the next range which is
+        # still a crossover so we make the test range end way beyond the
+        # end of the next range and test that for overlap.
+        n = len(self.other_side.points)
+        mid_next = (n - (range_next[1] - range_next[0]) % n) // 2
+        range_test = (range_next[0], (range_next[1] + mid_next) % n)
+        
+        if overlaps(range_this, range_test):
             self.handle_crossover(idx, self.next(idx))
-            print(f'{self.name()} overlaps at {range_this} {range_next} ')
+            print(f'{self.name()} overlaps at this={range_this} next={range_next} test={range_test}')
             
     def fix_crossovers(self) -> None:
         for idx in range(len(self.points)):
@@ -239,7 +246,22 @@ class _TesselatorHelper:
         self.side1.populate_edges()
         self.side2.populate_edges()
 
-
+def circular_range(start_end: Tuple[int], size: int) -> List[int]:
+    '''Returns a list of numbers in the range [start, end] that wraps around
+    the given size.
+    
+    Args:
+    '''
+    if len(start_end) == 0:
+        return
+    
+    curr = start_end[0]
+    yield curr
+    
+    while curr != start_end[1]:
+        curr = (curr + 1) % size
+        yield curr
+    
 
 def tesselate_between_paths(
         points1: np.array, index_offset1: int, points2: np.array, index_offset2: int) \
@@ -282,4 +304,4 @@ def tesselate_between_paths(
     #print(helper.side1.incoming)
     #print(helper.side2.incoming)
 
-    return ()
+    return helper
