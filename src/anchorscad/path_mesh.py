@@ -97,10 +97,10 @@ def intersect(range1: Tuple[int, int], range2: Tuple[int, int]) \
             return ((max(range1[0], range2[0]), min(range1[1], range2[1])),)
         result = ()
         if range2[0] <= range1[1]:
-            result = ((range2[0], range1[1]),)
+            result = ((range2[0], min(range1[1], range2[1])),)
         
         if range2[1] >= range1[0]:
-            result += ((range2[1], range1[0]),)
+            result += ((max(range2[1], range1[0]), range1[0]),)
         return result
     elif wrap2:
         # range2 is a wrap around range but range1 is not.
@@ -118,6 +118,14 @@ def intersect(range1: Tuple[int, int], range2: Tuple[int, int]) \
         return ()
     return (result,)
 
+def size_range(r: Tuple[int, int], size: int) -> int:
+    '''Returns the number of elements of the range in the circular set of size.'''
+    if not r:
+        return 0
+    if r[0] > r[1]:
+        return size - r[0] + r[1] + 1
+    return r[1] - r[0] + 1
+
 
 @dataclass
 class _TesselatorHelperSide:
@@ -128,10 +136,12 @@ class _TesselatorHelperSide:
     other_side: '_TesselatorHelperSide' = field(init=False)
     incoming: List[List[int]] = field(init=False)
     ranges: List[Tuple[int, int]] = field(init=False)
+    fixed_ranges: List[Tuple[int, int]] = field(init=False)
 
     def initialize_state(self) -> None:
         self.incoming = [[] for _ in range(len(self.points))]
         self.ranges = [None] * len(self.points)
+        self.fixed_ranges = [None] * len(self.points)
 
     def populate_edges(self) -> None:
         self.other_side.initialize_state()
@@ -139,7 +149,6 @@ class _TesselatorHelperSide:
             self.other_side.incoming[j].append(i)
         self.other_side.correct_sequences()
 
-                
     def correct_sequences(self) -> None:
         # The incoming edges are not necessarily in the correct order,
         # this fixes that.
@@ -153,6 +162,7 @@ class _TesselatorHelperSide:
     
         for i in range (len(self.points)):
             self.ranges[i] = self._get_range_of(i)
+            self.fixed_ranges[i] = self.ranges[i]
            
     def prev(self, idx: int) -> int:
         return (idx - 1) % len(self.points)
@@ -184,6 +194,9 @@ class _TesselatorHelperSide:
     def get_range_of(self, idx: int) -> Tuple[int, int]:
         return self.ranges[idx]
 
+    def get_fixed_range_of(self, idx: int) -> Tuple[int, int]:
+        return self.fixed_ranges[idx]
+
         
     def other_next(self, idx: int) -> int:
         return self.other_side.next(idx)
@@ -192,13 +205,63 @@ class _TesselatorHelperSide:
         return self.other_side.prev(idx)
     
     
-    def handle_crossover(self, idx: int, adjacent:int) -> None:
-        print(f'crossover at {idx}-{adjacent}')  
-    
+    def handle_crossover(self, 
+        idx: int, er: Tuple[int, int], 
+        aidx:int, aer: Tuple[int, int],
+        aer_test: Tuple[int, int],
+        n: int) -> int:
+        '''Handles a crossover between the current range and the next range.
+        Returns 1 or -1 depending on whether the next or previous vertex needs
+        checking.
+        '''
+        siz = size_range(er, n)
+        asiz = size_range(aer, n)
+        
+        print(f'crossover at {idx}-{aidx}')  
+        
+        if siz == 1:
+            if asiz == 1:
+                # Overlap here means that er is beyond aer.
+                self.fixed_ranges[idx] = (aer[0], aer[0])
+                # Because we moved the current range, we need to go back and fix check
+                # the previous range.
+                return -1
+            
+        common = intersect(er, aer)
+        
+        # If the first point in common is not the same as 
+        # the first point in aer, than that means we have to
+        # move the current range to start at the start point and then
+        # somehow bisect the ranges.
+        if not common or common[0][0] != aer[0]:
+            # We need to move the current range to start at the start point.
+            self.fixed_ranges[idx] = (aer[0], aer[0])
+            # Because we moved the current range, we need to go back and fix check
+            # the previous range.
+            return -1
+        
+        if asiz >= siz:
+            self.fixed_ranges[idx] = (er[0], aer[0])
+        else:
+            self.fixed_ranges[idx] = (er[0], common[0][1])
+            c1 = (common[0][1], aer[1])
+            c2 = (common[0][1], er[1])
+            if max(size_range(c1, n), size_range(c2, n)) > max(siz, asiz):
+                assert False, 'This should not happen.'
+            if size_range(c1, n) > size_range(c2, n):
+                self.fixed_ranges[aidx] = c1
+            else:
+                self.fixed_ranges[aidx] = c2
+
+        return 1
+        
     def detect_crossover(self, idx: int) -> None:
+        '''Returns 1 or -1 depending on whether the next or previous vertex needs
+        checking.'''
         # First find the adjacent points crossovers.
-        range_this = self.get_range_of(idx)
-        range_next = self.get_range_of(self.next(idx))
+        range_this = self.get_fixed_range_of(idx)
+        nidx = self.next(idx)
+        range_next = self.get_fixed_range_of(nidx)
         
         # It can be that this range starts after the next range which is
         # still a crossover so we make the test range end way beyond the
@@ -208,12 +271,17 @@ class _TesselatorHelperSide:
         range_test = (range_next[0], (range_next[1] + mid_next) % n)
         
         if overlaps(range_this, range_test):
-            self.handle_crossover(idx, self.next(idx))
+            offs = self.handle_crossover(idx, range_this, nidx, range_next, range_test, n)
             print(f'{self.name()} overlaps at this={range_this} next={range_next} test={range_test}')
+            return offs
+        
+        return 1
             
     def fix_crossovers(self) -> None:
-        for idx in range(len(self.points)):
-            self.detect_crossover(idx)
+        count = 0
+        n = len(self.points)
+        while count < n:
+            count += self.detect_crossover(count)
         
     def name(self) -> str:
         return 'side1'

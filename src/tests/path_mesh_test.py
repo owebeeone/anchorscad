@@ -148,11 +148,14 @@ class PlotRanges(PlotBase):
                 [points2[-1, 1], points2[0, 1]], 'p-')
         
     
+    def get_range_for_side(self, side, i):
+        return side.ranges[i]
+        
     def plot_ranges_for_side(self, side, fig, ax, colour):
         
         side = self.tess_helper.side1
         for i in range(len(self.tess_helper.side1.ranges)):
-            r = self.tess_helper.side1.ranges[i]
+            r = self.get_range_for_side(side, i)
             for j in circular_range(r, len(side.other_side.points)):
                 ax.plot([side.points[i, 0], side.other_side.points[j, 0]],
                         [side.points[i, 1], side.other_side.points[j, 1]], colour)
@@ -172,7 +175,12 @@ class PlotRanges(PlotBase):
         
         #plt.get_current_fig_manager().window.state('zoomed')    
         plt.show()
+        
+@dataclass
+class PlotFixedRanges(PlotRanges):
 
+    def get_range_for_side(self, side, i):
+        return side.fixed_ranges[i]
 
 class TestPathMesh(unittest.TestCase):
     # def test_find_nearest_points_indexes_returns_expected_result(self):
@@ -257,12 +265,16 @@ class TestPathMesh(unittest.TestCase):
             intersect((6, 1), (1, 5)), 
             ((1, 1),))
         
+        self.assertEqual(
+            intersect((38, 9), (7, 7)), 
+            ((7, 7),))
+        
     def test_tesselate_with_noisy_points(self):
         # Test case with specific 3D points
-        s = 34
-        n = 15
-        points1 = self.make_points_noise(15, 20, n, s + 10, s + 11, np.pi / 5)
-        points2 = self.make_points_noise(25, 30, n + 10, s + 12, s + 13, 0)
+        s = 200
+        n = 17
+        points1 = self.make_points_noise(15, 23, n, s + 10, s + 11, np.pi / 4)
+        points2 = self.make_points_noise(25, 32, n + 20, s + 12, s + 13, 0)
         
         # Call closest_points() to and plot the results.
         s1, s2 = closest_points(points1, points2)
@@ -280,6 +292,9 @@ class TestPathMesh(unittest.TestCase):
         
         PlotRanges(tess_helper=helper, 
                    title=f'Ranges Plot - Noisy points (seed={s} n={n})')
+        
+        PlotFixedRanges(tess_helper=helper, 
+                   title=f'Fixed Ranges Plot - Noisy points (seed={s} n={n})')
 
         #self.assertEqual(closest_points_monotonic(points2, points1), expected_result)
         
