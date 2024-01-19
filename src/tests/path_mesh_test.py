@@ -271,7 +271,7 @@ class TestPathMesh(unittest.TestCase):
         
     def test_tesselate_with_noisy_points(self):
         # Test case with specific 3D points
-        s = 200
+        s = 276
         n = 17
         points1 = self.make_points_noise(15, 23, n, s + 10, s + 11, np.pi / 4)
         points2 = self.make_points_noise(25, 32, n + 20, s + 12, s + 13, 0)
@@ -281,7 +281,7 @@ class TestPathMesh(unittest.TestCase):
         #print(closest_points(points2, points1))
         
         PlotClosestPoints(
-            points1=points1, 
+            points1=points1,
             points2=points2, 
             s1=s1, 
             s2=s2, 

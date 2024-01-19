@@ -278,10 +278,17 @@ class _TesselatorHelperSide:
         return 1
             
     def fix_crossovers(self) -> None:
-        count = 0
+        idx = 0
         n = len(self.points)
-        while count < n:
-            count += self.detect_crossover(count)
+        # Once having visited all the points, we need need to continue
+        # if the next range has changed since it may cause a new crossover.
+        next_changed = False
+        while idx < n or next_changed:
+            nidx = self.next(idx)
+            range_next = self.get_fixed_range_of(nidx)
+            idx += self.detect_crossover(idx % n)
+            post_range_next = self.get_fixed_range_of(nidx)
+            next_changed = range_next != post_range_next
         
     def name(self) -> str:
         return 'side1'
