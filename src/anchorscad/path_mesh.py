@@ -21,9 +21,6 @@ def closest_points(points1: np.array, points2: np.array) \
     # Calculate squared distances between all points.
     distances_sq = np.sum((points1[:, None, :] - points2[None, :, :])**2, axis=-1)
 
-    #print(distances_sq.shape)
-    #print(distances_sq)
-
     return np.argmin(distances_sq, axis=0), np.argmin(distances_sq, axis=1)
 
 
@@ -314,6 +311,37 @@ class _TesselatorHelperSide:
     
     def distance_sq_between(self, this_side_idx: int, other_side_idx: int) -> float:
         return self.tesselator.distance2_between(this_side_idx, other_side_idx)
+    
+    def tesselation(self, flipped: bool) -> Tuple[Tuple[int], ...]:
+        '''Returns the tesselation as a tuple of faces.'''
+        # Now we can create the faces.
+        faces = []
+        for i in range(len(self.points)):
+            r = self.get_fixed_range_of(i)
+            i_next = self.next(i)
+            r_next = self.get_fixed_range_of(i_next)
+          
+            itr = circular_range(r, len(self.other_side.points))
+            lastj = next(itr)
+            for j in itr:
+                v = (lastj, j) if flipped else (j, lastj)
+                faces.append(
+                    (self.index_offset + i, 
+                     self.other_side.index_offset + v[0],
+                     self.other_side.index_offset + v[1]))
+                lastj = j
+            
+            v = (i, i_next) if flipped else (i_next, i)
+            
+            assert r[1] == r_next[0], "The ranges must be contiguous."
+            
+            faces.append(
+                (self.index_offset + v[1],
+                 self.index_offset + v[0],
+                 self.other_side.index_offset + lastj)
+            )
+                
+        return tuple(faces)
 
 @dataclass
 class _TesselatorHelperOtherSide(_TesselatorHelperSide):    
@@ -329,11 +357,17 @@ class _TesselatorHelper:
 
     side1: _TesselatorHelperSide = field(init=False)
     side2: _TesselatorHelperSide = field(init=False)
+    flipped: bool = field(init=False)
     distances_sq: np.array = field(init=False)
     map1_closest: np.array = field(init=False)
     map2_closest: np.array = field(init=False)
 
-    def __init__(self, points1: np.array, index_offset1: int, points2: np.array, index_offset2: int) -> None:
+    def __init__(self, 
+            points1: np.array, 
+            index_offset1: int, 
+            points2: np.array, 
+            index_offset2: int,
+            flipped: bool) -> None:
 
         if index_offset1 > index_offset2:
             points1, points2, index_offset1, index_offset2 = \
@@ -343,6 +377,7 @@ class _TesselatorHelper:
         assert (index_offset2 >= index_offset1 + len(points1)), \
             'The index offsets must not overlap between points.'
 
+        self.flipped = flipped
         self.distances_sq = np.sum((points1[:, None, :] - points2[None, :, :])**2, axis=-1)
         map2_closest = np.argmin(self.distances_sq, axis=0)
         map1_closest = np.argmin(self.distances_sq, axis=1)
@@ -364,11 +399,6 @@ class _TesselatorHelper:
         self.side1.fix_crossovers()
         self.side2.fix_crossovers()
         
-        self.identify_anchor_points()
-        
-    def identify_anchor_points(self) -> None:
-        
-        pass
 
     def add_edge(self, side: _TesselatorHelperSide, i: int, j: int) -> None:
         side.incoming[j].append(i)
@@ -376,6 +406,10 @@ class _TesselatorHelper:
     def _populate_closest_edges(self) -> None:
         self.side1.populate_edges()
         self.side2.populate_edges()
+        
+    def tesselation(self) -> Tuple[Tuple[int], ...]:
+        '''Returns the tesselation as a tuple of faces.'''
+        return self.side1.tesselation(self.flipped)
 
 def circular_range(start_end: Tuple[int], size: int) -> List[int]:
     '''Returns a list of numbers in the range [start, end] that wraps around
@@ -393,7 +427,29 @@ def circular_range(start_end: Tuple[int], size: int) -> List[int]:
         curr = (curr + 1) % size
         yield curr
         
+        
+def _create_tesselator_helper(
+    points1: np.array, index_offset1: int, points2: np.array, index_offset2: int) \
+    -> _TesselatorHelper:
+  
+    # Make sure the index offsets are valid.
+    assert (index_offset2 >= index_offset1 + len(points1)) or \
+           (index_offset1 >= index_offset2 + len(points2)), \
+           'The index offsets must not overlap.'
+    flipped = False
 
+    # To make the algorithm simpler, we will make the smallest offset the first set.
+    if index_offset1 > index_offset2:
+        points1, points2, index_offset1, index_offset2 = \
+            points2, points1, index_offset2, index_offset1
+        flipped = True
+
+    helper = _TesselatorHelper(points1, index_offset1, points2, index_offset2, flipped)
+
+    helper.perform_tesselation()
+    
+    return helper      
+    
 
 def tesselate_between_paths(
         points1: np.array, index_offset1: int, points2: np.array, index_offset2: int) \
@@ -418,22 +474,8 @@ def tesselate_between_paths(
     A list of faces, where each face is an array of indices with the given offsets
     applied.
     """
-
-    # Make sure the index offsets are valid.
-    assert (index_offset2 >= index_offset1 + len(points1)) or \
-           (index_offset1 >= index_offset2 + len(points2)), \
-           'The index offsets must not overlap.'
-
-    # To make the algorithm simpler, we will make the smallest offset the first set.
-    if index_offset1 > index_offset2:
-        points1, points2, index_offset1, index_offset2 = \
-            points2, points1, index_offset2, index_offset1
-
-    helper = _TesselatorHelper(points1, index_offset1, points2, index_offset2)
-
-    helper.perform_tesselation()
     
-    #print(helper.side1.incoming)
-    #print(helper.side2.incoming)
+    helper = _create_tesselator_helper(points1, index_offset1, points2, index_offset2)
 
-    return helper
+    return helper.tesselation()
+

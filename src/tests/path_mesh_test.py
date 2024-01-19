@@ -5,7 +5,7 @@
 import unittest
 from dataclasses import dataclass, field
 from anchorscad.path_mesh import closest_points, tesselate_between_paths, overlaps, \
-    _TesselatorHelper, circular_range, intersect
+    _TesselatorHelper, circular_range, intersect, _create_tesselator_helper
 import numpy as np
 import sys
 
@@ -271,11 +271,11 @@ class TestPathMesh(unittest.TestCase):
         
     def test_tesselate_with_noisy_points(self):
         # Test case with specific 3D points
-        s = 10
-        n = 15
-        dn = 15
-        sep = 5.4
-        points1 = self.make_points_noise(22 - sep, 22, n, s + 10, s + 11, np.pi / 2)
+        s = 15
+        n = 20
+        dn = 30
+        sep = 6.4
+        points1 = self.make_points_noise(22 - sep, 22, n, s + 10, s + 11, np.pi / 4.5)
         points2 = self.make_points_noise(31 - sep, 31, n + dn, s + 12, s + 13, 0)
         
         # Call closest_points() to and plot the results.
@@ -290,7 +290,7 @@ class TestPathMesh(unittest.TestCase):
             title=f'Noisy points (seed={s} n={n} dn={dn})')
         #MapClosestPoints(points1, points2, s1, s2, 'Noisy points Test')
 
-        helper = tesselate_between_paths(points1, 100, points2, 100 + n)
+        helper = _create_tesselator_helper(points1, 100, points2, 100 + n)
         
         PlotRanges(tess_helper=helper, 
                    title=f'Ranges Plot - Noisy points (seed={s} n={n} dn={dn})')
@@ -300,7 +300,7 @@ class TestPathMesh(unittest.TestCase):
 
         #self.assertEqual(closest_points_monotonic(points2, points1), expected_result)
         
-    def xtest_wrap_around_test(self):
+    def test_wrap_around_test(self):
         
         points1 = np.array([
             (0, 1), 
@@ -337,7 +337,10 @@ class TestPathMesh(unittest.TestCase):
             s2=s2, 
             title=f'Wrap issue')
         
-        tesselate_between_paths(points1, 100, points2, 200)
+        helper = _create_tesselator_helper(points1, 100, points2, 200)
+        PlotFixedRanges(tess_helper=helper, title='test_wrap_around_test')
+        
+        print(helper.tesselation())
 
 
     def test_find_nearest_points_indexes_larger(self):
