@@ -271,10 +271,12 @@ class TestPathMesh(unittest.TestCase):
         
     def test_tesselate_with_noisy_points(self):
         # Test case with specific 3D points
-        s = 276
-        n = 17
-        points1 = self.make_points_noise(15, 23, n, s + 10, s + 11, np.pi / 4)
-        points2 = self.make_points_noise(25, 32, n + 20, s + 12, s + 13, 0)
+        s = 10
+        n = 15
+        dn = 15
+        sep = 5.4
+        points1 = self.make_points_noise(22 - sep, 22, n, s + 10, s + 11, np.pi / 2)
+        points2 = self.make_points_noise(31 - sep, 31, n + dn, s + 12, s + 13, 0)
         
         # Call closest_points() to and plot the results.
         s1, s2 = closest_points(points1, points2)
@@ -285,16 +287,16 @@ class TestPathMesh(unittest.TestCase):
             points2=points2, 
             s1=s1, 
             s2=s2, 
-            title=f'Noisy points (seed={s} n={n})')
+            title=f'Noisy points (seed={s} n={n} dn={dn})')
         #MapClosestPoints(points1, points2, s1, s2, 'Noisy points Test')
 
-        helper = tesselate_between_paths(points1, 100, points2, 200)
+        helper = tesselate_between_paths(points1, 100, points2, 100 + n)
         
         PlotRanges(tess_helper=helper, 
-                   title=f'Ranges Plot - Noisy points (seed={s} n={n})')
+                   title=f'Ranges Plot - Noisy points (seed={s} n={n} dn={dn})')
         
         PlotFixedRanges(tess_helper=helper, 
-                   title=f'Fixed Ranges Plot - Noisy points (seed={s} n={n})')
+                   title=f'Fixed Ranges Plot - Noisy points (seed={s} n={n} dn={dn})')
 
         #self.assertEqual(closest_points_monotonic(points2, points1), expected_result)
         

@@ -276,17 +276,36 @@ class _TesselatorHelperSide:
             return offs
         
         return 1
+    
+    def fix_quad(self, idx: int, nidx: int) -> None:
+        '''If the next space is a quad, then extend the range at idx or nidx to
+        include the shortest adjacent edge.'''
+        
+        range_this = self.get_fixed_range_of(idx)
+        range_next = self.get_fixed_range_of(nidx)
+        if range_this[1] != range_next[0]:
+            len2_idx_to_nidx = self.distance_sq_between(idx, range_next[0])
+            len2_nidx_to_idx = self.distance_sq_between(nidx, range_this[1])
+            
+            if len2_idx_to_nidx < len2_nidx_to_idx:
+                self.fixed_ranges[idx] = (range_this[0], range_next[0])
+            else:
+                self.fixed_ranges[nidx] = (range_this[1], range_next[1])
             
     def fix_crossovers(self) -> None:
-        idx = 0
+        iter = 0
         n = len(self.points)
         # Once having visited all the points, we need need to continue
         # if the next range has changed since it may cause a new crossover.
         next_changed = False
-        while idx < n or next_changed:
+        while iter < n or next_changed:
+            idx = iter % n
             nidx = self.next(idx)
             range_next = self.get_fixed_range_of(nidx)
-            idx += self.detect_crossover(idx % n)
+            iter += self.detect_crossover(idx)
+            
+            self.fix_quad(idx, nidx)
+            
             post_range_next = self.get_fixed_range_of(nidx)
             next_changed = range_next != post_range_next
         
