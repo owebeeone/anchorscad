@@ -7,11 +7,13 @@ from dataclasses import dataclass, field
 from anchorscad.path_mesh import closest_points, tesselate_between_paths, overlaps, \
     _TesselatorHelper, circular_range, intersect, _create_tesselator_helper
 import numpy as np
+import time
 import sys
 
 import matplotlib.pyplot as plt
 
 IS_CLOSED = False
+IS_INTERACTIVE = False
 
 class Finished(Exception):
     pass
@@ -22,6 +24,10 @@ class PlotBase:
     cid: object = field(init=False)
     
     def onclick(self, event):
+        global IS_INTERACTIVE
+        IS_INTERACTIVE = True
+    
+    def onclose(self, event):
         global IS_CLOSED
         IS_CLOSED = True
         
@@ -29,7 +35,8 @@ class PlotBase:
         # Plot the results.
         fig, ax = plt.subplots()
         
-        self.cid = fig.canvas.mpl_connect('close_event', lambda e : self.onclick(e))
+        self.cid = fig.canvas.mpl_connect('close_event', lambda e : self.onclose(e))
+        self.cid = fig.canvas.mpl_connect('button_press_event', lambda e : self.onclick(e))
         # Add a title to the plot.
         ax.set_title(self.title)
         ax.set_aspect('equal')
@@ -110,10 +117,6 @@ class PlotRanges(PlotBase):
     def __post_init__(self):
         self.plot_edges()
                
-    def onclick(self, event):
-        global IS_CLOSED
-        IS_CLOSED = True
-        
     def plot_points(self, fig, ax):
         # Plot the points in points1 in red and points2 in blue.
         points1 = self.tess_helper.side1.points
@@ -355,8 +358,10 @@ class TestPathMesh(unittest.TestCase):
 
         #self.assertEqual(closest_points_monotonic(points2, points1), expected_result)
 
-def pause_on_close():
-    while not IS_CLOSED:
+def pause_on_close(timeout_seconds):
+    start_time = time.time()
+    is_timed_out = False
+    while not IS_CLOSED and (not is_timed_out or IS_INTERACTIVE):
         manager = plt.get_current_fig_manager()
         if manager is not None:
             canvas = manager.canvas
@@ -364,10 +369,10 @@ def pause_on_close():
                 # Update the screen as the canvas wasn't fully drawn yet.
                 canvas.draw_idle()
             canvas.start_event_loop(0.1)
+        is_timed_out = (time.time() - start_time >= timeout_seconds)
     return
 
 if __name__ == '__main__':
     test = unittest.main(exit=False)
-    pause_on_close()
+    pause_on_close(3)
     sys.exit(not test.result.wasSuccessful())
-    
