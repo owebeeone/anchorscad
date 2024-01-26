@@ -330,19 +330,20 @@ class MaterialMapStack(MaterialMap):
         return material
     
 
-@dataclass(frozen=True)
+@datatree(frozen=True)
 class ModelAttributes(object):
-    colour: Colour = None
-    fa: float = None
-    fs: float = None
-    fn: int = None
-    disable: bool = None
-    show_only: bool = None
-    debug: bool = None
-    transparent: bool = None
-    use_polyhedrons: bool = None
-    material: Material = None
-    material_map: MaterialMap = None
+    colour: Colour = dtfield(None, doc='Colour to be applied to this shape.')
+    fa: float = dtfield(None, doc='$fa parameter for openscad - only for openscad rendered shapes.')
+    fs: float = dtfield(None, doc='$fs parameter for openscad - only for openscad rendered shapes.')
+    fn: int = dtfield(None, doc='Number of segements for arcs and splines for openscad shapes.')
+    segment_lines: bool = dtfield(None, doc='Use fn, fs, fa to segment lines in extruded paths.')
+    disable: bool = dtfield(None, doc='Flag to disable the shape.')
+    show_only: bool = dtfield(None, doc='Flag to show only the shape.')
+    debug: bool = dtfield(None, doc='Flag to enable debug mode.')
+    transparent: bool = dtfield(None, doc='Flag to make the shape transparent.')
+    use_polyhedrons: bool = dtfield(None, doc='Flag to use polyhedrons for the shape.')
+    material: Material = dtfield(None, doc='Material to be applied to this shape.')
+    material_map: MaterialMap = dtfield(None, doc='Material map for the shape.')
     
     def _merge_of(self, attr, other):
         self_value = getattr(self, attr)
@@ -399,6 +400,9 @@ class ModelAttributes(object):
     
     def with_fn(self, fn: int):
         return self._with(fn=fn)
+    
+    def with_segment_lines(self, segment_lines: bool):
+        return self._with(segment_lines=segment_lines)
     
     def with_disable(self, disable: bool):
         return self._with(disable=disable)
@@ -567,6 +571,10 @@ class NamedShapeBase(object):
     def fn(self, fn: int):
         return self._with(
             attributes=self.get_attributes_or_default().with_fn(fn))
+        
+    def segment_lines(self, segment_lines: bool):
+        return self._with(
+            attributes=self.get_attributes_or_default().with_segment_lines(segment_lines))
     
     def disable(self, disable: bool):
         return self._with(

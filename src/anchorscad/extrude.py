@@ -398,10 +398,10 @@ class Segment:
         return segments
 
 
-def clean_polygons(points: np.ndarray, tolerance=EPSILON) -> np.ndarray:
+def clean_polygons(points: np.ndarray, colinear_remove: bool, tolerance=EPSILON) -> np.ndarray:
     '''Returns a cleaned polygon. Removes colinear segments.'''
-    
-    points = remove_colinear_points(points, tolerance)
+    if colinear_remove:
+        points = remove_colinear_points(points, tolerance)
     
     last_len = 0
     
@@ -427,12 +427,13 @@ def clean_polygons(points: np.ndarray, tolerance=EPSILON) -> np.ndarray:
         else:
             points[-2:] = new_last.points[::-1]
             
-        points = remove_colinear_points(points, tolerance)
+        if colinear_remove:
+            points = remove_colinear_points(points, tolerance)
 
     # Remove the last point if it is almost the same as the first.
     if np.abs(np.sum(points[0] - points[-1])) < tolerance:
         points = points[:-1]
-            
+
     return points
 
 
@@ -514,7 +515,10 @@ class Path():
         if ranges:
             return points, ranges
         
-        points = clean_polygons(points)
+        # Only remove colinear points if there is no request to segment lines.
+        colinear_remove = not meta_data.segment_lines
+        
+        points = clean_polygons(points, colinear_remove)
 
         return (points,)
     
@@ -801,21 +805,51 @@ class PathBuilder():
             compare=False)
         name: str=None
         direction_override: np.array=None
+        direction_norm: np.array=None
+        meta_data: object=None
+        
+        def __post_init__(self):
+            if not self.direction_override:
+                object.__setattr__(
+                    self, 'direction_override', self.point - self.prev_op.lastPosition())
+            if not self.direction_norm:
+                object.__setattr__(
+                    self, 'direction_norm', _normalize(self.direction_override))
             
         def lastPosition(self):
             return self.point
         
         def populate(self, path_builder, start_indexes, map_builder, meta_data):
-            path_builder.append(self.point)
-            map_builder.append(self, self.point, 1, 1.0)
+            should_segment = meta_data.segment_lines or \
+                (self.meta_data.segment_lines if self.meta_data else False)
+            if not should_segment:
+                path_builder.append(self.point)
+                map_builder.append(self, self.point, 1, 1.0)
+                return
+            
+            # Use this object's meta_data if it has it.
+            meta_data = self.meta_data if self.meta_data else meta_data
+            
+            n = meta_data.fn
+            if not n:
+                if meta_data.fs:
+                    last_pos = self.prev_op.lastPosition()
+                    this_pos = self.point
+                    n = _vlen(this_pos - last_pos) // meta_data.fs
+                else:
+                    n = 4 # Default to 4 segments.
+            
+            for i in range(1, n + 1):
+                t = i / n
+                point = self.position(t)
+                path_builder.append(point)
+                map_builder.append(self, point, n, t)
             
         def direction(self, t):
-            if not self.direction_override is None:
-                return self.direction_override
-            return self.point - self.prev_op.lastPosition()
+            return self.direction_override
         
         def direction_normalized(self, t):
-            return _normalize(self.direction(t))
+            return self.direction_norm
         
         def normal2d(self, t, dims=[0, 1]):
             last_point = self.prev_op.lastPosition()
@@ -1253,11 +1287,12 @@ class PathBuilder():
                                         dir=direction,
                                         prev_op=self.last_op(), name=name))
                         
-    def line(self, point, name=None):
+    def line(self, point, name=None, metadata=None):
         '''A line from the current point to the given point is added.'''
         assert len(self.ops) > 0, "Cannot line to without starting point"
         return self.add_op(self._LineTo(np.array(LIST_2_FLOAT(point)), 
-                                        prev_op=self.last_op(), name=name))
+                                        prev_op=self.last_op(), name=name,
+                                        meta_data=metadata))
         
     def stroke(self,
                length,
@@ -1265,7 +1300,8 @@ class PathBuilder():
                radians=None, 
                sinr_cosr=None,
                xform=None, 
-               name=None):
+               name=None,
+               metadata=None):
         '''A line from the current point to a length away given
         by following the tangent from the previous op transformed by rotating
         by angle or a GMatrix transform.'''
@@ -1290,16 +1326,19 @@ class PathBuilder():
         return self.add_op(self._LineTo(point, 
                                         prev_op=self.last_op(),
                                         name=name,
-                                        direction_override=d_vector.A[:2]))
+                                        direction_override=d_vector.A[:2],
+                                        meta_data=metadata))
             
     def relative_line(self,
                relative_pos,
-               name=None):
+               name=None,
+               metadata=None):
         '''A line from the current point to the relative X,Y position given.'''
         point = (np.array(LIST_2_FLOAT(relative_pos)) 
                  + self.last_op().lastPosition())
         return self.add_op(self._LineTo(point[:2], 
-                                        prev_op=self.last_op(), name=name))
+                                        prev_op=self.last_op(), name=name,
+                                        meta_data=metadata))
         
     def _rotate(self, direction: l.GVector, degrees: float, radians: float, sinr_cosr:float, 
                 xform: l.GMatrix) -> l.GVector:
@@ -1956,7 +1995,7 @@ class LinearExtrude(ExtrudedShape):
         h=80,
         fn=30,
         twist=45,
-        slices=40,
+        slices=10,
         scale=(1, 0.3),
         use_polyhedrons=False
         )
@@ -2011,7 +2050,9 @@ class LinearExtrude(ExtrudedShape):
                     .build(),
                 h=50,
                 fn=80,
-                use_polyhedrons=True
+                #slices=20,
+                #twist=90,
+                use_polyhedrons=False
                 ),
             anchors=(
                 core.surface_args('linear1', 0, 0),
@@ -2034,10 +2075,19 @@ class LinearExtrude(ExtrudedShape):
             return self.render_as_polyhedron(renderer)
         else:
             return self.render_as_linear_extrude(renderer)
+        
+    def get_path_attributes(self, renderer):
+        metadata = renderer.get_current_attributes()
+        if self.fn:
+            metadata = metadata.with_fn(self.fn)
+            
+        if self.twist or self.scale != (1, 1):
+            metadata = metadata.with_segment_lines(True)
+        return metadata
 
     def render_as_linear_extrude(self, renderer):
         polygon = renderer.model.Polygon(*self.path.cleaned_polygons(
-            self if self.fn else renderer.get_current_attributes()))
+            self.get_path_attributes(renderer)))
         params = core.fill_params(
             self, 
             renderer, 
@@ -2060,7 +2110,7 @@ class LinearExtrude(ExtrudedShape):
 
     def render_as_polyhedron(self, renderer):
         points_paths = self.path.cleaned_polygons(
-            self if self.fn else renderer.get_current_attributes())
+            self.get_path_attributes(renderer))
         builders = PolyhedronBuilder.create_builders_from_paths(points_paths)
         
         transforms = self.generate_transforms()
@@ -2237,16 +2287,18 @@ class RotateExtrude(ExtrudedShape):
         }
     
     def select_attrs(self, renderer):
+        meta_data = renderer.get_current_attributes()
         if self.fn:
-            return core.ModelAttributes(fn=self.fn)
+            return meta_data.with_fn(self.fn)
         if self.path_fn:
-            return core.ModelAttributes(fn=self.path_fn)
-        return renderer.get_current_attributes()
+            return meta_data.with_fn(self.path_fn)
+        return meta_data
     
     def select_path_attrs(self, renderer):
+        meta_data = self.select_attrs(renderer)
         if self.path_fn:
-            return core.ModelAttributes(fn=self.path_fn)
-        return self.select_attrs(renderer)
+            meta_data = meta_data.with_fn(self.path_fn)
+        return meta_data
     
     def render(self, renderer):
         renderer.add_path(self.path)
