@@ -809,10 +809,10 @@ class PathBuilder():
         meta_data: object=None
         
         def __post_init__(self):
-            if not self.direction_override:
+            if self.direction_override is None:
                 object.__setattr__(
                     self, 'direction_override', self.point - self.prev_op.lastPosition())
-            if not self.direction_norm:
+            if self.direction_norm is None:
                 object.__setattr__(
                     self, 'direction_norm', _normalize(self.direction_override))
             
@@ -1287,12 +1287,16 @@ class PathBuilder():
                                         dir=direction,
                                         prev_op=self.last_op(), name=name))
                         
-    def line(self, point, name=None, metadata=None):
+    def line(self, point, name=None, metadata=None, direction_override=None):
         '''A line from the current point to the given point is added.'''
         assert len(self.ops) > 0, "Cannot line to without starting point"
+        if not (direction_override is None):
+            direction_override = np.array(LIST_2_FLOAT(point))
+    
         return self.add_op(self._LineTo(np.array(LIST_2_FLOAT(point)), 
                                         prev_op=self.last_op(), name=name,
-                                        meta_data=metadata))
+                                        meta_data=metadata,
+                                        direction_override=direction_override))
         
     def stroke(self,
                length,
@@ -1997,7 +2001,7 @@ class LinearExtrude(ExtrudedShape):
         twist=45,
         slices=10,
         scale=(1, 0.3),
-        use_polyhedrons=False
+        use_polyhedrons=True
         )
 
     EXAMPLE_ANCHORS=(
