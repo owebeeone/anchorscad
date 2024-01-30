@@ -63,8 +63,8 @@ class CaseShell(ad.CompositeShape):
     cut_depth: float=20
     
     case_holes: tuple=ad.dtfield(
-        ((ad.surface_args('base_cutter', 'cutter', 'face_edge', 'left', 0, 0.25), 3.5),
-         (ad.surface_args('base_cutter', 'cutter', 'face_edge', 'left', 0, 0.75), 5.5),
+        ((ad.surface_args('base_cutter', 'cutter', 'face_edge', 'left', 0, 0.25), 5.5),
+         (ad.surface_args('base_cutter', 'cutter', 'face_edge', 'left', 0, 0.75), 3.5),
          (ad.surface_args('base_cutter', 'cutter', 'face_edge', 'right', 0, 0.25), 3.5),
          (ad.surface_args('base_cutter', 'cutter', 'face_edge', 'right', 0, 0.75), 3.5),
         ),
