@@ -16,7 +16,6 @@ from anchorscad.datatrees import datatree, dtfield
 import anchorscad.linear as l
 from anchorscad.path_utils import remove_colinear_points
 import numpy as np
-import pyclipper as pc
 import traceback as tb
 import numbers
 
@@ -213,13 +212,7 @@ def _normal_of_2d(v1, v2, dims=[0, 1]):
     l = np.sqrt(np.sum(vr * vr))
     return vr / l
 
-@dataclass(frozen=True)
-class OffsetType:
-    offset_type: int
-    
-OFFSET_ROUND=OffsetType(pc.JT_ROUND)
-OFFSET_MITER=OffsetType(pc.JT_MITER)
-OFFSET_SQUARE=OffsetType(pc.JT_SQUARE)
+
 
 def adder(a, b):
     if a is None:
@@ -568,25 +561,6 @@ class Path():
         return self.transform_to_builder(m).build()
 
 
-def make_offset_polygon2d(path, size, offset_type, meta_data, offset_meta_data=None):
-    if not offset_meta_data:
-        offset_meta_data = meta_data
-    points, start_indexes, _ = path.build(meta_data)
-    
-    start_indexes = start_indexes + [len(points),]
-    pco = pc.PyclipperOffset()
-    scaled_size = pc.scale_to_clipper(size)
-    pco.ArcTolerance = np.abs(scaled_size) * (1 -  np.cos(np.pi / offset_meta_data.fn))
-    for i in range(len(start_indexes) - 1):
-        pco.AddPath(
-            pc.scale_to_clipper(points[start_indexes[i]:start_indexes[i+1]]), 
-            offset_type.offset_type,
-            pc.ET_CLOSEDPOLYGON)
-    result = pco.Execute(scaled_size)
-    
-    return pc.scale_from_clipper(result)
-
-    
 def to_gvector(np_array):
     if len(np_array) == 2:
         return l.GVector([np_array[0], np_array[1], 0, 1])

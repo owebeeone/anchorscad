@@ -6,6 +6,7 @@ Created on 8 Jan 2021
 from textwrap import indent
 
 from anchorscad.extrude import LinearExtrude
+from anchorscad.extrude_flex import make_offset_polygon2d, OFFSET_ROUND
 import anchorscad.svg_renderer as sr
 import numpy as np
 from test_tools import iterable_assert
@@ -22,6 +23,7 @@ import anchorscad.core as core
 @dataclass
 class TestMetaData:
     fn: int = 10
+    segment_lines: bool = False
 
 
 class ExtrudeTest(TestCase):
@@ -793,8 +795,8 @@ class ExtrudeTest(TestCase):
     def testOffset(self):
         path = self.makePathWithCentreSweep(90)
 
-        result = extrude.make_offset_polygon2d(
-            path, 1, extrude.OFFSET_ROUND, TestMetaData())
+        result = make_offset_polygon2d(
+            path, 1, OFFSET_ROUND, TestMetaData())
 
         iterable_assert(self.assertAlmostEqual, np.array(result),
                         ([[-9.61731657, -10.92387953],

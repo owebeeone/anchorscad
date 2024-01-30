@@ -18,12 +18,45 @@ import anchorscad.linear as l
 
 from anchorscad.datatrees import datatree, dtfield
 import numpy as np
-from typing import List, Tuple
+from typing import List, Tuple, Callable
+
+
+import pyclipper as pc
+
+
+@datatree(frozen=True)
+class OffsetType:
+    offset_type: int
+    
+
+OFFSET_ROUND=OffsetType(pc.JT_ROUND)
+OFFSET_MITER=OffsetType(pc.JT_MITER)
+OFFSET_SQUARE=OffsetType(pc.JT_SQUARE)
+
+
+def make_offset_polygon2d(path, size, offset_type, meta_data, offset_meta_data=None):
+    if not offset_meta_data:
+        offset_meta_data = meta_data
+    points, start_indexes, _ = path.build(meta_data)
+    
+    start_indexes = start_indexes + [len(points),]
+    pco = pc.PyclipperOffset()
+    scaled_size = pc.scale_to_clipper(size)
+    pco.ArcTolerance = np.abs(scaled_size) * (1 -  np.cos(np.pi / offset_meta_data.fn))
+    for i in range(len(start_indexes) - 1):
+        pco.AddPath(
+            pc.scale_to_clipper(points[start_indexes[i]:start_indexes[i+1]]), 
+            offset_type.offset_type,
+            pc.ET_CLOSEDPOLYGON)
+    result = pco.Execute(scaled_size)
+    
+    return pc.scale_from_clipper(result)
+
 
 @datatree
 class ExtrudeLayerParams:
     '''Per layer extrusion parameters.'''
-    t: float = dtfield(doc='The t parameter (0-1) of the layer.')
+    a: tuple = dtfield(doc='The anchor specifier for this layer.')
     z: float = dtfield(doc='The z location of the layer.')
     twist: float = dtfield(doc='The twist of the layer in degrees.')
     scale: float = dtfield(doc='The scale of the layer in X and Y.')
@@ -44,7 +77,7 @@ class ParamtericExtrusionIf:
     
 @datatree
 class BevelledProfile:
-    '''A Path builder for a bevelled profile.'''
+    '''A Path builder for a bevelled extrusion.'''
     h: float = dtfield(1, doc='The overall height of extrusion.')
     r_base: float = dtfield(0, doc='The radius of the base bevel.')
     r_top: float = dtfield(0, doc='The radius of the top bevel.')
@@ -100,8 +133,77 @@ class BevelledProfile:
                 builder.line((self.r_top, self.h), 'top_bevel_line', metadata=self.metadata)
         
         return builder.build()
+    
+class PathGeneratorIf:
+    
+    def init_processor(self, metadata: core.ModelAttributes) -> 'ParamtericExtrusionProcessor':
+        '''Generates a processor for the given metadata.'''
+        raise NotImplementedError()
+
+class ParamtericExtrusionProcessorIf:
+    def get_path(self, k: int) -> Path:
+        '''Returns the path for the given index.'''
+        raise NotImplementedError()
+    
+    def get_count(self) -> int:
+        '''Returns the number of paths.'''
+        raise NotImplementedError()
+    
+    def get_z_extents(self) -> Tuple[float, float]:
+        '''Returns the z extents of the paths.'''
+        raise NotImplementedError()
+    
+    def get_x_extents(self) -> Tuple[float, float]:
+        '''Returns the x extents of the paths.'''
+        raise NotImplementedError()
+
+
+@datatree
+class ParamtericExtrusionProcessorBasic(ParamtericExtrusionProcessorIf):
+    
+    parametric_extrusion: ParamtericExtrusionIf = dtfield(doc='The parametric extrusion.')
+    metadata: core.ModelAttributes = dtfield(None, doc='The metadata to use for the extrusions.')
+    
+    bevel_path_: Path = dtfield(doc='The bevel path.', init=False)
+    points: List[List[float]] = dtfield(doc='The points of the bevel profile.', init=False)
+    extents: Tuple[float, float] = dtfield(doc='The extents of the bevel profile.', init=False)
+    
+    def __post_init__(self):
+        self.parametric_extrusion = self.parametric_extrusion()
+        self.bevel_path_ = self.parametric_extrusion.bevel_profile.build()
+        self.extents = self.bevel_path_.get_extents()
+        
+    def get_path(self, k: int) -> Path:
+        if k >= len(self.points):
+            raise ValueError(f'Index {k} out of range.')
         
         
+            
+    def get_count(self) -> int:
+        return len(self.points)
+    
+    def get_z_extents(self) -> Tuple[float, float]:
+        '''Returns the z extents of the paths.'''
+        raise NotImplementedError()
+    
+    def get_x_extents(self) -> Tuple[float, float]:
+        '''Returns the x extents of the paths.'''
+        raise NotImplementedError()
+    
+@datatree
+class ParamtericExtrusionBasic(ParamtericExtrusionIf):
+    '''A basic flex extrusion implementation.'''
+    
+    bevel_profile: BevelledProfile = dtfield(doc='The bevel profile.')
+    path_gen: PathGeneratorIf = dtfield(doc='The path generator.')
+    twist_gen: Callable[[float], float] = dtfield(doc='The twist generator.')
+    scale_gen: Callable[[float], Tuple[float, float]] = dtfield(doc='The scale generator.')
+    points_gen: Callable[[float, List[List[float]]], List[List[float]]] = dtfield(doc='The points generator.')
+    
+    def init_processor(self, metadata: core.ModelAttributes) -> ParamtericExtrusionProcessorIf:
+        return ParamtericExtrusionProcessorBasic(self, metadata)
+
+
 @core.shape
 @datatree
 class BevelProfileShapeTest(core.CompositeShape):
@@ -119,7 +221,7 @@ class BevelProfileShapeTest(core.CompositeShape):
         r_base=20,
         slope_base=25,
         chamfer_top=False,
-        chamfer_base=False,
+        chamfer_base=True,
         use_polyhedrons=False
         )
     
