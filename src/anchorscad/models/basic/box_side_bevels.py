@@ -50,6 +50,8 @@ class BoxSideBevels(ad.CompositeShape):
             anchors=(ad.surface_args('face_edge', 0, 0),))
         }
     
+    EDGE=('edge_0_5', 'edge_5_3', 'edge_3_2', 'edge_3_0')
+    
 
     def build(self) -> ad.Maker:
         shape = ad.Box(self.size)
@@ -67,13 +69,13 @@ class BoxSideBevels(ad.CompositeShape):
             path = (ad.PathBuilder()
                     .move([r, 0])
                     .line([sx - r, 0], 'face_0')
-                    .arc_tangent_point([sx, r], name='edge_0_5', metadata=metadata)
+                    .arc_tangent_point([sx, r], name=self.EDGE[0], metadata=metadata)
                     .line([sx, sy - r], 'face_5')
-                    .arc_tangent_point([sx - r, sy], name='edge_5_3', metadata=metadata)
+                    .arc_tangent_point([sx - r, sy], name=self.EDGE[1], metadata=metadata)
                     .line([r, sy], 'face_3')
-                    .arc_tangent_point([0, sy - r], name='edge_3_2', metadata=metadata)
+                    .arc_tangent_point([0, sy - r], name=self.EDGE[2], metadata=metadata)
                     .line([0, r], 'face_2')
-                    .arc_tangent_point([r, 0], name='edge_3_0', metadata=metadata)
+                    .arc_tangent_point([r, 0], name=self.EDGE[3], metadata=metadata)
                     .build())
             
             maker.add_at(
