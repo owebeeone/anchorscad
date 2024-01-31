@@ -159,7 +159,7 @@ class BendyPlate(ad.CompositeShape):
     plate_node : ad.Node = ad.ShapeNode(ad.Box)
     plate_shape : ad.Shape = ad.dtfield(self_default=lambda s: s.plate_node())
 
-    EXAMPLE_SHAPE_ARGS=ad.args()
+    EXAMPLE_SHAPE_ARGS=ad.args(rows=50, cols=3, l=10)
     EXAMPLE_ANCHORS=()
 
     def build(self) -> ad.Maker:
