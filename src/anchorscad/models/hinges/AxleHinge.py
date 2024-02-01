@@ -94,19 +94,55 @@ class HingeWithAxle(ad.CompositeShape):
     
     segment_node: ad.Node=ad.ShapeNode(HingeWithAxleSegment)
     
+    material_a: str = ad.Material('hinge_left')
+    material_b: str = ad.Material('hinge_right')
+    
+    cage_a: bool = False
+    cage_b: bool = False
+    
     EXAMPLE_SHAPE_ARGS=ad.args(fn=64)
+    
+    EXAMPLE_ANCHORS=(
+        ad.surface_args(('segment', 0), 'centre_of', 'axle_tube', 1),
+        )
+    
+    
+    def apply_material(self, named_shape, even):
+        mat = self.material_a if even else self.material_b
+        if mat:
+            return named_shape.material(mat)
+        return named_shape
+    
+    def name_shape(self, shape, i, even):
+        
+        name = ('segment', i)
+        
+        is_cage = self.cage_a if even else self.cage_b
+        
+        shape_type = ad.ModeShapeFrame.CAGE if is_cage else ad.ModeShapeFrame.COMPOSITE
+        
+        return shape.named_shape(name, shape_type)
+    
+    def apply_shape(self, shape, i, even):
+        
+        return self.apply_material(
+            self.name_shape(shape, i, even),
+            even)
+        
     
     def build(self) -> ad.Maker:
         shape = self.segment_node()
         
-        maker = shape.composite(('segment', 0)).at('centre_of', 'axle_tube', 0.5)
+        maker = (self.apply_shape(shape, 0, True)
+                 .at('centre_of', 'axle_tube', 1))
         
         for i in range(1, self.n):
             even = i % 2 == 0
             trans = self.sep if even else -self.sep
+
+            applied_shape = self.apply_shape(shape, i, even)
             maker.add_at(
-                shape.composite(('segment', i))
-                    .at('centre_of', 'axle_tube', even),
+                applied_shape.at('centre_of', 'axle_tube', even),
                 (('segment', i - 1)), 'centre_of', 'axle_tube', even,
                 post=ad.ROTY_180 * ad.tranZ(trans))
         
