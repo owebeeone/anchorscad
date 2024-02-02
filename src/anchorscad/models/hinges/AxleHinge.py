@@ -36,7 +36,8 @@ class AxleSegmentPathBuilder:
                 name='flange')
             .line((self.fl, -self.ft), 'foot_right')
             .line((self.sep, -self.ft), 'foot_base')
-            .line((self.sep, self.sep), 'foot_left')
+            .line((self.sep, 0), 'foot_left') # Anchor point for plate
+            .line((self.sep, self.sep), 'foot_left_sep')
             .line(start_point, 'axle_bevel')
         )
         
