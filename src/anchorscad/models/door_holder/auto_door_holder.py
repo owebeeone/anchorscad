@@ -338,7 +338,7 @@ class DoorHolderHookMount(ad.CompositeShape):
         # that should allow the hool to be inserted into the mount with no interference.        
         stadium_shape = hook_cut_shape.make_clearance_shape(0)
         
-        maker.add_at(stadium_shape.hole('clearance').at('arc_centre', post=ad.rotZ(110)),
+        maker.add_at(stadium_shape.hole('clearance').at('arc_centre', post=ad.rotZ(0)),
                      'hook_low', 'pin_axis')
         
         # The axle hole needs to be interference fit so it should be a bit smaller than the axle hole

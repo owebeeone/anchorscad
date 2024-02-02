@@ -85,10 +85,10 @@ class CaseShell(ad.CompositeShape):
         
     screw_mounts: tuple=ad.dtfield(
         (
-            (ad.surface_args('hull', 'centre_of', BoxSideBevels.EDGE[0], 0),),
-            (ad.surface_args('hull', 'centre_of', BoxSideBevels.EDGE[1], 0),),
-            (ad.surface_args('hull', 'centre_of', BoxSideBevels.EDGE[2], 0),),
-            (ad.surface_args('hull', 'centre_of', BoxSideBevels.EDGE[3], 0),),
+            (ad.surface_args('hull', 'centre_of', BoxSideBevels.EDGE[0]),),
+            (ad.surface_args('hull', 'centre_of', BoxSideBevels.EDGE[1]),),
+            (ad.surface_args('hull', 'centre_of', BoxSideBevels.EDGE[2]),),
+            (ad.surface_args('hull', 'centre_of', BoxSideBevels.EDGE[3]),),
         ),
         doc='List of (anchor, hole_radius) pairs for case holes')
     
@@ -104,7 +104,7 @@ class CaseShell(ad.CompositeShape):
     EXAMPLE_SHAPE_ARGS=ad.args(fn=16)
     
     EXAMPLE_ANCHORS=(
-        ad.surface_args('hull', 'centre_of', 'edge_0_5', 1, post=ad.translate((-3, -3, 0))),
+        ad.surface_args('hull', 'centre_of', 'edge_0_5', rh=1, post=ad.translate((-3, -3, 0))),
         ad.surface_args('cut', 'left', 0),
         ad.surface_args('top_cutter', 'cutter', 'face_edge', 'right', 0),
         ad.surface_args('top_cutter', 'cutter', 'face_edge', 'right', 0, 0.2),

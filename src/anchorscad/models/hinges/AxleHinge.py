@@ -80,7 +80,7 @@ class HingeWithAxleSegment(ad.CompositeShape):
         
         axle_hole = self.axle_node().hole('axle_hole').at('centre')
 
-        maker.add_at(axle_hole, 'centre_of', 'axle_tube', 0.5)        
+        maker.add_at(axle_hole, 'centre_of', 'axle_tube', rh=0.5)        
         
         return maker
 
@@ -104,7 +104,7 @@ class HingeWithAxle(ad.CompositeShape):
     EXAMPLE_SHAPE_ARGS=ad.args(fn=64)
     
     EXAMPLE_ANCHORS=(
-        ad.surface_args(('segment', 0), 'centre_of', 'axle_tube', 1),
+        ad.surface_args(('segment', 0), 'centre_of', 'axle_tube', rh=1, normal_segment='foot_base'),
         )
     
     
@@ -134,8 +134,10 @@ class HingeWithAxle(ad.CompositeShape):
     def build(self) -> ad.Maker:
         shape = self.segment_node()
         
+        normal_spec = {'normal_segment' : 'foot_base'}
+        
         maker = (self.apply_shape(shape, 0, True)
-                 .at('centre_of', 'axle_tube', 1))
+                 .at('centre_of', 'axle_tube', rh=1, **normal_spec))
         
         for i in range(1, self.n):
             even = i % 2 == 0
@@ -143,8 +145,9 @@ class HingeWithAxle(ad.CompositeShape):
 
             applied_shape = self.apply_shape(shape, i, even)
             maker.add_at(
-                applied_shape.at('centre_of', 'axle_tube', even),
-                (('segment', i - 1)), 'centre_of', 'axle_tube', even,
+                applied_shape.at('centre_of', 'axle_tube', t=0.6, rh=even, **normal_spec),
+                (('segment', i - 1)), 'centre_of', 'axle_tube', t=0.6, rh=even,
+                **normal_spec,
                 post=ad.ROTY_180 * ad.tranZ(trans))
         
         return maker

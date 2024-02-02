@@ -2043,7 +2043,32 @@ class LinearExtrude(ExtrudedShape):
                 core.surface_args('curve', 1, 50),
                 core.surface_args('linear4', 0, 0),
                 core.surface_args('linear4', 1, 0),
-                ))
+                )),
+        'example4': core.ExampleParams(
+            shape_args=core.args(
+                PathBuilder()
+                    .move([5 * _SCALE, 0])
+                    .line([50 * _SCALE, 0], 'linear1')
+                    .arc_tangent_point([55 * _SCALE, 5 * _SCALE], name='curve1')
+                    .line([55 * _SCALE, 50 * _SCALE], 'linear2')
+                    .arc_tangent_point([50 * _SCALE, 55 * _SCALE], name='curve2')
+                    .line([5 * _SCALE, 55 * _SCALE], 'linear3')
+                    .arc_tangent_point([0 * _SCALE, 50 * _SCALE], name='curve3')
+                    .line([0 * _SCALE, 5 * _SCALE], 'linear4')
+                    .arc_tangent_point([5 * _SCALE, 0 * _SCALE], name='curve4')
+                    .build(),
+                h=55,
+                fn=64,
+                #slices=20,
+                #twist=90,
+                use_polyhedrons=False
+                ),
+            anchors=(
+                core.surface_args('centre_of', 'curve1', 0, normal_segment='linear3'),
+                core.surface_args('centre_of', 'curve2', 0),
+                core.surface_args('centre_of', 'curve3', 0),
+                core.surface_args('centre_of', 'curve4', 0)
+                )),
         }
 
     def render(self, renderer):
@@ -2175,17 +2200,26 @@ class LinearExtrude(ExtrudedShape):
         return result
     
     @core.anchor('Centre of segment.')
-    def centre_of(self, segment_name, rh=0) -> l.GMatrix:
+    def centre_of(self, segment_name, t=0, rh=0, normal_segment=None) -> l.GMatrix:
         '''Returns a transformation to the centre of the given segment (arc) with the
         direction aligned to the coordinate system. The rh parameter is the 
-        relative height (0-1) of the arc centre.'''
+        relative height (0-1) of the arc centre. The normal_segment is the name of the
+        segment to align the normal to. If not given the normal will be aligned to the
+        segment given by segment_name at the given t value.'''
 
         centre_2d = self.path.get_centre_of(segment_name)
         if centre_2d is None:
             raise ValueError(f'Segment has no "centre" property: {segment_name}')
         
-        return l.translate((centre_2d[0], centre_2d[1], rh * self.h)) * l.ROTY_180
-
+        op = self.path.name_map.get(normal_segment if normal_segment else segment_name)
+        if not op:
+            raise ValueError(f'Could not find normal segment name "{normal_segment}"')
+        normal = op.normal2d(t)
+        
+        return (l.translate([centre_2d[0], centre_2d[1], rh * self.h])
+                * l.rotZSinCos(-normal[1], -normal[0])
+                * l.ROTY_180
+                * l.ROTZ_90)
 
 @core.shape
 @dataclass
@@ -2203,14 +2237,14 @@ class RotateExtrude(ExtrudedShape):
     use_polyhedrons: bool=core.dtfield(
         None, doc='Use polyhedrons instead of rotate_extrude.')
 
-    SCALE=1.0
+    _SCALE=1.0
     
     EXAMPLE_SHAPE_ARGS=core.args(
         PathBuilder()
             .move([0, 0])
-            .line([110 * SCALE, 0], 'linear')
-            .arc_tangent_point([10 * SCALE, 100 * SCALE], name='curve', degrees=120)
-            .line([0, 100 * SCALE], 'linear2')
+            .line([110 * _SCALE, 0], 'linear')
+            .arc_tangent_point([10 * _SCALE, 100 * _SCALE], name='curve', degrees=120)
+            .line([0, 100 * _SCALE], 'linear2')
             .line([0, 0], 'linear3')
             .build(),
         degrees=120,
@@ -2246,10 +2280,10 @@ class RotateExtrude(ExtrudedShape):
             shape_args=core.args(
                 PathBuilder()
                     .move([0, 0])
-                    .line([110 * SCALE, 0], 'linear')
-                    .line([25 * SCALE, 25 * SCALE], 'linear1')
-                    .arc_tangent_point([10 * SCALE, 100 * SCALE], name='curve', degrees=-40)
-                    .line([0, 100 * SCALE], 'linear2')
+                    .line([110 * _SCALE, 0], 'linear')
+                    .line([25 * _SCALE, 25 * _SCALE], 'linear1')
+                    .arc_tangent_point([10 * _SCALE, 100 * _SCALE], name='curve', degrees=-40)
+                    .line([0, 100 * _SCALE], 'linear2')
                     .line([0, 0], 'linear3')
                     .build(),
                 degrees=120,
@@ -2261,7 +2295,30 @@ class RotateExtrude(ExtrudedShape):
                 core.surface_args('linear1', 0.5),
                 core.surface_args('linear1', 1),
                 core.surface_args('curve', 0.2),
-                core.surface_args('curve', 1),))
+                core.surface_args('curve', 1),)),
+        'example4': core.ExampleParams(
+            shape_args=core.args(
+                PathBuilder()
+                    .move([5 * _SCALE, 0])
+                    .line([50 * _SCALE, 0], 'linear1')
+                    .arc_tangent_point([55 * _SCALE, 5 * _SCALE], name='curve1')
+                    .line([55 * _SCALE, 50 * _SCALE], 'linear2')
+                    .arc_tangent_point([50 * _SCALE, 55 * _SCALE], name='curve2')
+                    .line([5 * _SCALE, 55 * _SCALE], 'linear3')
+                    .arc_tangent_point([0 * _SCALE, 50 * _SCALE], name='curve3')
+                    .line([0 * _SCALE, 5 * _SCALE], 'linear4')
+                    .arc_tangent_point([5 * _SCALE, 0 * _SCALE], name='curve4')
+                    .build(),
+                fn=64,
+                degrees=90,
+                use_polyhedrons=False
+                ),
+            anchors=(
+                core.surface_args('centre_of', 'curve1', 0),
+                core.surface_args('centre_of', 'curve2', 0),
+                core.surface_args('centre_of', 'curve3', 0),
+                core.surface_args('centre_of', 'curve4', 0)
+                )),
         }
     
     def select_attrs(self, renderer):
@@ -2379,7 +2436,7 @@ class RotateExtrude(ExtrudedShape):
         return l.IDENTITY
     
     @core.anchor('Centre of segment.')
-    def centre_of(self, segment_name, t=0, degrees=0, radians=None) -> l.GMatrix:
+    def centre_of(self, segment_name, t=0, degrees=0, radians=None, normal_segment=None) -> l.GMatrix:
         '''Returns a transformation to the centre of the given segment (arc) with the
         direction aligned to the coordinate system.'''
 
@@ -2387,7 +2444,9 @@ class RotateExtrude(ExtrudedShape):
         if centre_2d is None:
             raise ValueError(f'Segment has no "centre" property: {segment_name}')
         
-        op = self.path.name_map.get(segment_name)
+        op = self.path.name_map.get(normal_segment if normal_segment else segment_name)
+        if not op:
+            raise ValueError(f'Could not find normal segment name "{normal_segment}"')
         normal = op.normal2d(t)
         
         return (l.rotZ(degrees=degrees, radians=radians)
