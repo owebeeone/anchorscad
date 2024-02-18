@@ -24,7 +24,7 @@ def is_iterable(v):
         pass
     return ()
 
-def _iterable_assert(expect_fun, va, vb, depth=()):
+def _iterable_assert(expect_fun, va, vb, *args, depth=(), **kwargs):
     ii_va = is_iterable(va)
     ii_vb = is_iterable(vb)
 
@@ -39,7 +39,7 @@ def _iterable_assert(expect_fun, va, vb, depth=()):
                 f'Lengths different depth={depth} len(va)={len(va)} != len(vb)={len(vb)}')
             for i, evab in enumerate(zip(va, vb)):
                 eva, evb = evab
-                _iterable_assert(expect_fun, eva, evb, depth + (i,))
+                _iterable_assert(expect_fun, eva, evb, *args, depth=depth + (i,), **kwargs)
         except AssertionException:
             raise
         except BaseException as ex:
@@ -47,15 +47,15 @@ def _iterable_assert(expect_fun, va, vb, depth=()):
     else:
         try:
             assert not ii_va and not ii_vb
-            expect_fun(va, vb)
+            expect_fun(va, vb, *args, **kwargs)
         except AssertionException:
             raise
         except (BaseException, AssertionError) as ex:
             raise AssertionException(depth, ex)
 
-def iterable_assert(expect_fun, va, vb):
+def iterable_assert(expect_fun, va, vb, *args, **kwargs):
     try:
-        _iterable_assert(expect_fun, va, vb)
+        _iterable_assert(expect_fun, va, vb, *args, **kwargs)
     except AssertionException as e:
         msg = f'depth={e.depth!r}\nva={va!r}\nvb={vb!r}\n{e.ex}\n'
         raise IterableAssert(msg)

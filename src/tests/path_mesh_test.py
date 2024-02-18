@@ -6,6 +6,8 @@ import unittest
 from dataclasses import dataclass, field
 from anchorscad.path_mesh import closest_points, tesselate_between_paths, overlaps, \
     _TesselatorHelper, circular_range, intersect, _create_tesselator_helper
+from anchorscad import PathBuilder, MappedPolygon, ModelAttributes, EMPTY_ATTRS
+from anchorscad.extrude_flex import PathOffsetMaker
 import numpy as np
 import time
 import sys
@@ -207,6 +209,20 @@ class TestPathMesh(unittest.TestCase):
         return np.array(
             list((r * np.sin(t), r * np.cos(t)) 
                  for t in np.linspace(offset_ang, offset_ang + 2 * np.pi * (n - 1) / n, n)))
+        
+    def make_path(self, n, r, offset):
+        return self.make_path_from(self.make_points, n, r, offset)
+        
+    def make_path_from(self, func, *args, **kwds):
+        points = func(*args, **kwds)
+        builder = PathBuilder()
+        builder.move(points[0])
+        for i, p in enumerate(points[1:]):
+            builder.line(p, name=('line', i))
+            
+        builder.line(points[0], name=('line', len(points) - 1))
+        return builder.build()
+        
     
     def make_pointsx(self, n, r, offset):
         return np.array([(i + offset + r, i + r) for i in range(n)])
@@ -220,6 +236,11 @@ class TestPathMesh(unittest.TestCase):
         return np.array(
             list((r * np.sin(t + offset_angle), r * np.cos(t + offset_angle)) 
                  for r, t in zip(radiuses, angles)))
+        
+    def maker_path_noise(self, min_radius, max_radius, n, radius_seed, angle_seed, offset_angle):
+        return self.make_path_from(
+            self.make_points_noise, min_radius, max_radius, n, radius_seed, angle_seed, offset_angle)
+    
         
     def overlaps_helper(self, p1, p2):
         v1 = overlaps(p1, p2)
@@ -302,6 +323,41 @@ class TestPathMesh(unittest.TestCase):
                    title=f'Fixed Ranges Plot - Noisy points (seed={s} n={n} dn={dn})')
 
         #self.assertEqual(closest_points_monotonic(points2, points1), expected_result)
+        
+    def test_tesselate_with_noisy_path(self):
+        s = 15
+        n = 20
+        dn = 30
+        sep = 6.4
+        path = self.maker_path_noise(22 - sep, 22, n, s + 10, s + 11, np.pi / 4.5)
+        
+        mapped_poly = MappedPolygon(path, EMPTY_ATTRS.with_fn(32))
+        
+        path_offsetter = PathOffsetMaker(mapped_poly)
+        
+        points1 = path_offsetter.offset_polygon(5)
+        points2 = path_offsetter.offset_polygon(-5)
+        
+                # Call closest_points() to and plot the results.
+        s1, s2 = closest_points(points1, points2)
+        #print(closest_points(points2, points1))
+        
+        PlotClosestPoints(
+            points1=points1,
+            points2=points2, 
+            s1=s1, 
+            s2=s2, 
+            title=f'Noisy points (seed={s} n={n} dn={dn})')
+        #MapClosestPoints(points1, points2, s1, s2, 'Noisy points Test')
+
+        helper = _create_tesselator_helper(points1, 100, points2, 100 + len(points1))
+        
+        PlotRanges(tess_helper=helper, 
+                   title=f'Ranges Plot - Noisy points (seed={s} n={n} dn={dn})')
+        
+        PlotFixedRanges(tess_helper=helper, 
+                   title=f'Fixed Ranges Plot - Noisy points (seed={s} n={n} dn={dn})')
+        
         
     def test_wrap_around_test(self):
         

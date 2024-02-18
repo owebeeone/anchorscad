@@ -18,6 +18,7 @@ from anchorscad.path_utils import remove_colinear_points
 import numpy as np
 import traceback as tb
 import numbers
+import manifold3d
 
 
 class DuplicateNameException(Exception):
@@ -82,7 +83,10 @@ def _vlen(v):
     return np.sqrt(np.sum(v**2))
 
 def _normalize(v):
-    return v / _vlen(v)
+    l = _vlen(v)
+    if l == 0:
+        raise ValueError('Cannot normalize a zero length vector.')
+    return v / l
 
 def extentsof(p):
     return np.array((p.min(axis=0), p.max(axis=0)))
@@ -429,9 +433,44 @@ def clean_polygons(points: np.ndarray, colinear_remove: bool, tolerance=EPSILON)
 
     return points
 
+@dataclass
+class MappedPolygon:
+    '''A polygon with a map of points to the OpMetaData associated with the point.'''
+    path: 'Path'
+    meta_data: core.ModelAttributes
+    map_builder_type: FunctionType=NullMapBuilder
+    epsilon: float=EPSILON
+    points: np.ndarray=field(init=False)
+    ranges: np.ndarray=field(init=False)
+    opmap: List[OpMetaData]=field(init=False)
+    cleaned_polygons: np.ndarray=field(default=None, init=False)
+    
+    def __post_init__(self):
+        self.points, self.ranges, self.opmap = self.path.polygons_with_map_ops(
+            self.meta_data,
+            map_builder_type=self.map_builder_type)
+    
+    def cleaned(self, tolerance=EPSILON):
+        '''Returns a cleaned polygon. Removes colinear segments. If colinear_remove
+        is False and removes overlappiing end segments.'''
+        
+        if self.cleaned_polygons is not None:
+            return self.cleaned_polygons
+    
+        if not self.ranges:
+        
+            # Only remove colinear points if there is no request to segment lines.
+            colinear_remove = not self.meta_data.segment_lines
+            
+            self.cleaned_polygons = clean_polygons(self.points, colinear_remove)
+            
+            return self.cleaned_polygons
+        
+        return self.points
+    
 
 @dataclass(frozen=True)
-class Path():
+class Path:
     '''Encapsulated a "path" generate by a list of path "Op"s (move, line, arc etc).
     Each move op indicates a separate path. This can be a hole (anticlockwise) or a
     polygon (clockwise).
@@ -784,9 +823,11 @@ class PathBuilder():
         
         def __post_init__(self):
             if self.direction_override is None:
-                object.__setattr__(
-                    self, 'direction_override', self.point - self.prev_op.lastPosition())
-            if self.direction_norm is None:
+                d = self.point - self.prev_op.lastPosition()
+                if _vlen2(d) > EPSILON:
+                    object.__setattr__(
+                        self, 'direction_override', self.point - self.prev_op.lastPosition())
+            if self.direction_override is not None and self.direction_norm is None:
                 object.__setattr__(
                     self, 'direction_norm', _normalize(self.direction_override))
             
@@ -1733,10 +1774,8 @@ def quad(prev_offs, curr_offs, pi, pj, direction):
 @dataclass
 class PolyhedronBuilder:
     ctxt: PolyhedronBuilderContext
-    
-    def __post_init__(self):
-        self.points = []
-        self.faces = []
+    points: List[Tuple[float]] = field(default_factory=list, init=False)
+    faces: List[Tuple[int, ...]] = field(default_factory=list, init=False)
         
     def add_transformed(self, tansform):
         new_points = list(tansform * p for p in self.ctxt.vec_points)
@@ -2209,11 +2248,11 @@ class LinearExtrude(ExtrudedShape):
 
         centre_2d = self.path.get_centre_of(segment_name)
         if centre_2d is None:
-            raise ValueError(f'Segment has no "centre" property: {segment_name}')
+            raise UnknownOperationException(f'Segment has no "centre" property: {segment_name}')
         
         op = self.path.name_map.get(normal_segment if normal_segment else segment_name)
         if not op:
-            raise ValueError(f'Could not find normal segment name "{normal_segment}"')
+            raise UnknownOperationException(f'Could not find normal segment name "{normal_segment}"')
         normal = op.normal2d(t)
         
         return (l.translate([centre_2d[0], centre_2d[1], rh * self.h])
@@ -2249,7 +2288,7 @@ class RotateExtrude(ExtrudedShape):
             .build(),
         degrees=120,
         fn=80,
-        use_polyhedrons=False
+        use_polyhedrons=True
         )
 
     EXAMPLE_ANCHORS=(
@@ -2442,11 +2481,11 @@ class RotateExtrude(ExtrudedShape):
 
         centre_2d = self.path.get_centre_of(segment_name)
         if centre_2d is None:
-            raise ValueError(f'Segment has no "centre" property: {segment_name}')
+            raise UnknownOperationException(f'Segment has no "centre" property: {segment_name}')
         
         op = self.path.name_map.get(normal_segment if normal_segment else segment_name)
         if not op:
-            raise ValueError(f'Could not find normal segment name "{normal_segment}"')
+            raise UnknownOperationException(f'Could not find normal segment name "{normal_segment}"')
         normal = op.normal2d(t)
         
         return (l.rotZ(degrees=degrees, radians=radians)

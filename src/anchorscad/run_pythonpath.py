@@ -1,5 +1,5 @@
 '''
-Print the PYTHONPATH to the command line.
+Print the PYTHONPATH to the command line terminal.
 
 Created on 20 Feb 2022
 
@@ -19,6 +19,9 @@ set "{env}={ppath}"
 
 For powershell:
 $env:{env} = '{ppath}'
+
+For mingw:
+export {env}='{ppath}'
 
 For vscode .env
 WORKSPACE_FOLDER={workspace}

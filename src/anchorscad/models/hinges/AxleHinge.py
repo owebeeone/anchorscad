@@ -115,7 +115,6 @@ class HingeWithAxle(ad.CompositeShape):
         return named_shape
     
     def name_shape(self, shape, i, even):
-        
         name = ('segment', i)
         
         is_cage = self.cage_a if even else self.cage_b

@@ -13,15 +13,16 @@ the extrusion process.
 
 import anchorscad.core as core
 from anchorscad.datatrees import datatree, dtfield
-from anchorscad.extrude import ExtrudedShape, Path, PathBuilder, PolyhedronBuilder, LinearExtrude
+from anchorscad.extrude import ExtrudedShape, Path, PathBuilder, PolyhedronBuilder, \
+    LinearExtrude, UnknownOperationException, MappedPolygon
 import anchorscad.linear as l
 
 from anchorscad.datatrees import datatree, dtfield
 import numpy as np
 from typing import List, Tuple, Callable
 
-
-import pyclipper as pc
+import numpy as np
+import manifold3d as m3d
 
 
 @datatree(frozen=True)
@@ -29,28 +30,81 @@ class OffsetType:
     offset_type: int
     
 
-OFFSET_ROUND=OffsetType(pc.JT_ROUND)
-OFFSET_MITER=OffsetType(pc.JT_MITER)
-OFFSET_SQUARE=OffsetType(pc.JT_SQUARE)
+@datatree
+class PathOffsetMaker:
+    '''A MappedPolygon with an offset applied.'''
+    
+    OFFSET_ROUND=OffsetType(m3d.JoinType.Round)
+    OFFSET_MITER=OffsetType(m3d.JoinType.Miter)
+    OFFSET_SQUARE=OffsetType(m3d.JoinType.Square)
+    
+    mapped_poly: MappedPolygon = dtfield(doc='The mapped polygon to offset.')
+    offset_type: OffsetType = dtfield(OFFSET_ROUND, doc='The type of offset to apply.')
+    miter_limit: float=dtfield(2, doc='The miter limit for the offset.')
+    circular_segments: int=dtfield(
+        None, 
+        doc='The number of circular segments to use for the offset. meta_data.fn is used if None.')
+    
+    m3d_cs: m3d.CrossSection=dtfield(None, init=False, doc='The manifold3d cross section.')
+    order_reversed: bool=dtfield(None, doc='If true the order of the points is reversed.')
+    
+    def __post_init__(self):
+        if self.circular_segments is None:
+            self.circular_segments = self.mapped_poly.meta_data.fn
+
+    def offset_polygon(self, size: float):
+        '''Returns an offset of the polygon.'''
+
+        if self.m3d_cs is None:
+            poly = [self.mapped_poly.cleaned()]
+            
+            assert len(poly) > 0, \
+                f'Only one polygon is supported. {poly}'
+            cs = m3d.CrossSection(poly)
+            
+            if cs.is_empty():
+                # AnchorSCAD Paths may be incorrectly ordered. Manifold3D requires a correct order
+                # otherise it will return an empty cross section since it is deemed to be a hole.
+                # TODO: Fix AnchorSCAD to handle multiple paths correctly.
+                cs = m3d.CrossSection([poly[0][::-1]])
+                self.order_reversed = True
+                assert not cs.is_empty(), f'Empty cross section should not happen.'
+            else:
+                self.order_reversed = False
+            
+            self.m3d_cs = cs
+        
+        # If the size is less than the epsilon then we return the original polygon
+        # with the order corrected.
+        if np.abs(size) < self.mapped_poly.epsilon / 2:
+            return self.m3d_cs.to_polygons()[0]
+        
+        # This is where we call the manifold/clipper2 offset function.
+        offsed_cs = self.m3d_cs.offset(
+            size, 
+            self.offset_type.offset_type, 
+            miter_limit=self.miter_limit, 
+            circular_segments=self.circular_segments)
+        
+        polys = offsed_cs.to_polygons()
+        
+        return polys[0]
 
 
-def make_offset_polygon2d(path, size, offset_type, meta_data, offset_meta_data=None):
+def make_offset_polygon2d(path: Path, size: float, offset_type: OffsetType, 
+                          meta_data: core.ModelAttributes, offset_meta_data: core.ModelAttributes=None):
+    '''This is just a test to see if we can use the manifold3d library to do the offsetting.'''
     if not offset_meta_data:
         offset_meta_data = meta_data
-    points, start_indexes, _ = path.build(meta_data)
+ 
+    mapped_poly = MappedPolygon(path, meta_data)
+        
+    points = mapped_poly.cleaned();
+    cs = m3d.CrossSection([points])
     
-    start_indexes = start_indexes + [len(points),]
-    pco = pc.PyclipperOffset()
-    scaled_size = pc.scale_to_clipper(size)
-    pco.ArcTolerance = np.abs(scaled_size) * (1 -  np.cos(np.pi / offset_meta_data.fn))
-    for i in range(len(start_indexes) - 1):
-        pco.AddPath(
-            pc.scale_to_clipper(points[start_indexes[i]:start_indexes[i+1]]), 
-            offset_type.offset_type,
-            pc.ET_CLOSEDPOLYGON)
-    result = pco.Execute(scaled_size)
+    offsed_cs = cs.offset(size, offset_type.offset_type, miter_limit=0.1, circular_segments=offset_meta_data.fn)
     
-    return pc.scale_from_clipper(result)
+    return offsed_cs.to_polygons()[0]
 
 
 @datatree
@@ -101,19 +155,19 @@ class BevelledProfile:
         builder = PathBuilder()
         if self.r_base > 0:
             if self.chamfer_base:
-                builder.move((self.r_base, 0), name='base', direction=(-1, 1))
+                builder.move((-self.r_base, 0), name='base', direction=(-1, 1))
                 builder.line((0, self.r_base), name='base_bevel', metadata=self.metadata)
             else:
                 sinr = l.clean(np.sin(np.radians(self.slope_base)))
                 cosr = l.clean(np.cos(np.radians(self.slope_base)))
-                line_to = ((1 - sinr) * self.r_base,
+                line_to = (-(1 - sinr) * self.r_base,
                            (1 - cosr) * self.r_base)
                 if sinr == 0:
-                    line_from = (self.r_base, 0)
+                    line_from = (-self.r_base, 0)
                     direction = (-1, 0)
                 else:
-                    line_from = (line_to[0] + line_to[1] * (cosr / sinr), 0)
-                    direction = (line_to[0] - line_from[0], line_to[1] - line_from[1])
+                    line_from = (-(line_to[0] + line_to[1] * (cosr / sinr)), 0)
+                    direction = (-(line_to[0] - line_from[0]), line_to[1] - line_from[1])
                 direction = np.array(direction)
                 builder.move(line_from, 'base', direction=direction)
                 builder.line(line_to, 'base_bevel_line', metadata=self.metadata, 
@@ -125,18 +179,18 @@ class BevelledProfile:
         
         if self.r_top > 0:
             if self.chamfer_top:
-                builder.line((self.r_top, self.h), name='top_bevel', metadata=self.metadata)
+                builder.line((-self.r_top, self.h), name='top_bevel', metadata=self.metadata)
             else:
-                arc_to = ((1 - np.sin(np.radians(self.slope_top))) * self.r_top,
+                arc_to = (-(1 - np.sin(np.radians(self.slope_top))) * self.r_top,
                             self.h - (1 - np.cos(np.radians(self.slope_top))) * self.r_top)
                 builder.arc_tangent_point(arc_to, name='top_bevel', metadata=self.metadata_arcs)
-                builder.line((self.r_top, self.h), 'top_bevel_line', metadata=self.metadata)
+                builder.line((-self.r_top, self.h), 'top_bevel_line', metadata=self.metadata)
         
         return builder.build()
     
 class PathGeneratorIf:
     
-    def init_processor(self, metadata: core.ModelAttributes) -> 'ParamtericExtrusionProcessor':
+    def init_processor(self, metadata: core.ModelAttributes) -> 'ParamtericExtrusionProcessorIf':
         '''Generates a processor for the given metadata.'''
         raise NotImplementedError()
 
@@ -164,6 +218,7 @@ class ParamtericExtrusionProcessorBasic(ParamtericExtrusionProcessorIf):
     parametric_extrusion: ParamtericExtrusionIf = dtfield(doc='The parametric extrusion.')
     metadata: core.ModelAttributes = dtfield(None, doc='The metadata to use for the extrusions.')
     
+    mapped_poly: MappedPolygon = dtfield(self_default=lambda s: MappedPolygon(path, meta_data))
     bevel_path_: Path = dtfield(doc='The bevel path.', init=False)
     points: List[List[float]] = dtfield(doc='The points of the bevel profile.', init=False)
     extents: Tuple[float, float] = dtfield(doc='The extents of the bevel profile.', init=False)
@@ -230,6 +285,35 @@ class BevelProfileShapeTest(core.CompositeShape):
         maker = shape.solid('test').at()
         return maker
 
+@datatree
+class BevelProfilePolyhedronBuilderContext:
+    builder: 'BevelProfilePolyhedronBuilder'
+    metadata: core.ModelAttributes
+    points: List[List[float]]
+
+@datatree
+class BevelProfilePolyhedronBuilder:
+    '''A builds a polyhedron using a profile.'''
+    
+    bevel_path_builder_node: core.Node = dtfield(
+        core.ShapeNode(BevelledProfile),
+        doc='The path builder for the extrusion profile.')
+    bevel_path: Path = dtfield(self_default=lambda s: s.path_builder_node().build(), 
+                         doc='The path to extrude.')
+    
+    pbuilder: PolyhedronBuilder = dtfield(
+        default_factory=PolyhedronBuilder, init=False, doc='The polyhedron builder.')
+    
+    def __post_init__(self):
+        self.bevel_path = self.bevel_path_builder_node().build()
+
+    def _get_polygon_for_layer(self, layer: int) -> List[List[float]]:
+        pass
+        
+
+    def get_points_and_faces(self) -> Tuple[List[List[float]], List[List[int]]]:
+        '''Returns the points and faces of the polyhedron.'''
+        raise NotImplementedError()
 
 #@core.shape
 @datatree

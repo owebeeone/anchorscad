@@ -1,6 +1,6 @@
 numpy
 frozendict
-pyclipper
+manifold3d
 dataclasses_json
 debugpy
 dill
