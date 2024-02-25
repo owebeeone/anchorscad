@@ -297,7 +297,7 @@ class TestPathMesh(unittest.TestCase):
             intersect((33, 1), (34, 34)), 
             ((33, 34),))
         
-    def xtest_tesselate_with_noisy_points(self):
+    def test_tesselate_with_noisy_points(self):
         # Test case with specific 3D points
         s = 15
         n = 20
