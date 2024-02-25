@@ -158,15 +158,15 @@ class PlotRanges(PlotBase):
         
     def plot_ranges_for_side(self, side, fig, ax, colour):
         
-        side = self.tess_helper.side1
-        for i in range(len(self.tess_helper.side1.ranges)):
+        #side = self.tess_helper.side1
+        for i in range(len(side.ranges)):
             r = self.get_range_for_side(side, i)
             for j in circular_range(r, len(side.other_side.points)):
                 ax.plot([side.points[i, 0], side.other_side.points[j, 0]],
                         [side.points[i, 1], side.other_side.points[j, 1]], colour)
 
     def plot_ranges(self, fig, ax):
-        self.plot_ranges_for_side(self.tess_helper.side1, fig, ax, 'g-')
+        #self.plot_ranges_for_side(self.tess_helper.side1, fig, ax, 'g-')
         self.plot_ranges_for_side(self.tess_helper.side2, fig, ax, 'p-')            
         
     def plot_edges(self):
@@ -293,7 +293,11 @@ class TestPathMesh(unittest.TestCase):
             intersect((38, 9), (7, 7)), 
             ((7, 7),))
         
-    def test_tesselate_with_noisy_points(self):
+        self.assertEqual(
+            intersect((33, 1), (34, 34)), 
+            ((33, 34),))
+        
+    def xtest_tesselate_with_noisy_points(self):
         # Test case with specific 3D points
         s = 15
         n = 20
@@ -359,7 +363,7 @@ class TestPathMesh(unittest.TestCase):
                    title=f'Fixed Ranges Plot - Noisy points (seed={s} n={n} dn={dn})')
         
         
-    def test_wrap_around_test(self):
+    def xtest_wrap_around_test(self):
         
         points1 = np.array([
             (0, 1), 

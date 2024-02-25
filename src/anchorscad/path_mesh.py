@@ -97,7 +97,7 @@ def intersect(range1: Tuple[int, int], range2: Tuple[int, int]) \
             result = ((range2[0], min(range1[1], range2[1])),)
         
         if range2[1] >= range1[0]:
-            result += ((max(range2[1], range1[0]), range1[0]),)
+            result += ((range1[0], max(range2[1], range1[0])),)
         return result
     elif wrap2:
         # range2 is a wrap around range but range1 is not.
@@ -214,14 +214,10 @@ class _TesselatorHelperSide:
         siz = size_range(er, n)
         asiz = size_range(aer, n)
         
-        print(f'crossover at {idx}-{aidx}')  
-        
         if siz == 1:
             if asiz == 1:
-                # Overlap here means that er is beyond aer.
-                self.fixed_ranges[idx] = (aer[0], aer[0])
-                # Because we moved the current range, we need to go back and fix check
-                # the previous range.
+                #self.set_fixed_range(aidx, (er[0], er[0]))
+                self.set_fixed_range(idx, (aer[0], aer[0]))
                 return -1
             
         common = intersect(er, aer)
@@ -232,25 +228,29 @@ class _TesselatorHelperSide:
         # somehow bisect the ranges.
         if not common or common[0][0] != aer[0]:
             # We need to move the current range to start at the start point.
-            self.fixed_ranges[idx] = (aer[0], aer[0])
+            self.set_fixed_range(idx, (aer[0], aer[0]))
             # Because we moved the current range, we need to go back and fix check
             # the previous range.
             return -1
         
         if asiz >= siz:
-            self.fixed_ranges[idx] = (er[0], aer[0])
+            self.set_fixed_range(idx, (er[0], aer[0]))
         else:
-            self.fixed_ranges[idx] = (er[0], common[0][1])
+            self.set_fixed_range(idx, (er[0], common[0][1]))
             c1 = (common[0][1], aer[1])
             c2 = (common[0][1], er[1])
             if max(size_range(c1, n), size_range(c2, n)) > max(siz, asiz):
                 assert False, 'This should not happen.'
             if size_range(c1, n) > size_range(c2, n):
-                self.fixed_ranges[aidx] = c1
+                self.set_fixed_range(aidx, c1)
             else:
-                self.fixed_ranges[aidx] = c2
+                self.set_fixed_range(aidx, c2)
 
         return 1
+    
+    def set_fixed_range(self, i: int, r: Tuple[int, int]) -> None:
+        was = self.fixed_ranges[i]
+        self.fixed_ranges[i] = r
         
     def detect_crossover(self, idx: int) -> None:
         '''Returns 1 or -1 depending on whether the next or previous vertex needs
@@ -269,7 +269,6 @@ class _TesselatorHelperSide:
         
         if overlaps(range_this, range_test):
             offs = self.handle_crossover(idx, range_this, nidx, range_next, range_test, n)
-            print(f'{self.name()} overlaps at this={range_this} next={range_next} test={range_test}')
             return offs
         
         return 1
@@ -285,9 +284,9 @@ class _TesselatorHelperSide:
             len2_nidx_to_idx = self.distance_sq_between(nidx, range_this[1])
             
             if len2_idx_to_nidx < len2_nidx_to_idx:
-                self.fixed_ranges[idx] = (range_this[0], range_next[0])
+                self.set_fixed_range(idx, (range_this[0], range_next[0]))
             else:
-                self.fixed_ranges[nidx] = (range_this[1], range_next[1])
+                self.set_fixed_range(nidx, (range_this[1], range_next[1]))
             
     def fix_crossovers(self) -> None:
         iter = 0
@@ -299,7 +298,8 @@ class _TesselatorHelperSide:
             idx = iter % n
             nidx = self.next(idx)
             range_next = self.get_fixed_range_of(nidx)
-            iter += self.detect_crossover(idx)
+            offs = self.detect_crossover(idx)
+            iter += offs
             
             self.fix_quad(idx, nidx)
             
@@ -310,7 +310,13 @@ class _TesselatorHelperSide:
         return 'side1'
     
     def distance_sq_between(self, this_side_idx: int, other_side_idx: int) -> float:
+        # Returns the squared distance between the points at the given indices.
         return self.tesselator.distance2_between(this_side_idx, other_side_idx)
+        
+    def distance_sq_delta_between(self, this_side_idx: int, other_side_idx1: int, other_side_idx2: int) -> float:
+        # Returns the difference in squared distances between the points at the given indices.
+        return np.abs(self.tesselator.distance2_between(this_side_idx, other_side_idx1)
+            - self.tesselator.distance2_between(this_side_idx, other_side_idx2))
     
     def tesselation(self, flipped: bool) -> Tuple[Tuple[int], ...]:
         '''Returns the tesselation as a tuple of faces.'''
