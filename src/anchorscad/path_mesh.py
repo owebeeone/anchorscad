@@ -194,13 +194,11 @@ class _TesselatorHelperSide:
     def get_fixed_range_of(self, idx: int) -> Tuple[int, int]:
         return self.fixed_ranges[idx]
 
-        
     def other_next(self, idx: int) -> int:
         return self.other_side.next(idx)
     
     def other_prev(self, idx: int) -> int:
         return self.other_side.prev(idx)
-    
     
     def handle_crossover(self, 
         idx: int, er: Tuple[int, int], 
@@ -360,6 +358,7 @@ class _TesselatorHelperOtherSide(_TesselatorHelperSide):
 
 @dataclass
 class _TesselatorHelper:
+    '''A helper class for tessellating two sets of points.'''
 
     side1: _TesselatorHelperSide = field(init=False)
     side2: _TesselatorHelperSide = field(init=False)
@@ -374,32 +373,41 @@ class _TesselatorHelper:
             points2: np.array, 
             index_offset2: int,
             flipped: bool) -> None:
-
-        if index_offset1 > index_offset2:
-            points1, points2, index_offset1, index_offset2 = \
-                points2, points1, index_offset2, index_offset1
             
-        # Make sure the index offsets are valid.
+        # Ensure the index offsets do not overlap, which is crucial for maintaining
+        # a correct mapping between the point sets and their indices in the final tessellation.
         assert (index_offset2 >= index_offset1 + len(points1)), \
             'The index offsets must not overlap between points.'
 
-        self.flipped = flipped
+        self.flipped = flipped  # Indicates if the order of points sets was flipped during initialization.
+
+        # Calculate squared distances between each point in points1 and each point in points2.
+        # This matrix is used to find the closest points between the two sets.
         self.distances_sq = np.sum((points1[:, None, :] - points2[None, :, :])**2, axis=-1)
-        map2_closest = np.argmin(self.distances_sq, axis=0)
+        
+        # Find the index of the closest point in points2 for each point in points1.
         map1_closest = np.argmin(self.distances_sq, axis=1)
         
+        # Find the index of the closest point in points1 for each point in points2.
+        map2_closest = np.argmin(self.distances_sq, axis=0)
+        
+        # Initialize the sides of the tessellator helper with their respective points,
+        # index offsets, and mappings of closest points.
         self.side1 = _TesselatorHelperSide(points1, index_offset1, map1_closest, self)
         self.side2 = _TesselatorHelperOtherSide(points2, index_offset2, map2_closest, self)
+        
+        # Establish mutual references between the two sides for easy access and manipulation.
         self.side1.other_side = self.side2
         self.side2.other_side = self.side1
 
     def distance2_between(self, p1_idx: int, p2_idx: int) -> float:
         # Returns the squared distance between the points at the given indices
-        # in the two sets of points.
+        # in the two sets of points. This is used for various geometric calculations.
         return self.distances_sq[p1_idx, p2_idx]
 
     def perform_tesselation(self) -> None:
-
+        # Populate edges based on the closest points mapping, then fix any crossovers
+        # in the tessellation to ensure a correct and visually appealing mesh.
         self._populate_closest_edges()
         
         self.side1.fix_crossovers()
@@ -407,21 +415,29 @@ class _TesselatorHelper:
         
 
     def add_edge(self, side: _TesselatorHelperSide, i: int, j: int) -> None:
+        # Adds an edge from point i to point j on the specified side. This is part of
+        # the process of building up the tessellation structure.
         side.incoming[j].append(i)
 
     def _populate_closest_edges(self) -> None:
+        # Initializes the tessellation by populating edges based on the closest points
+        # mapping. This sets up the initial connections between the two sets of points.
         self.side1.populate_edges()
         self.side2.populate_edges()
         
     def tesselation(self) -> Tuple[Tuple[int], ...]:
-        '''Returns the tesselation as a tuple of faces.'''
+        # Returns the tessellation as a tuple of faces. Each face is represented by a tuple
+        # of indices, which correspond to points in the combined set of points1 and points2.
+        # The 'flipped' attribute is used to ensure the correct orientation of the faces.
         return self.side1.tesselation(self.flipped)
 
-def circular_range(start_end: Tuple[int], size: int) -> List[int]:
-    '''Returns a list of numbers in the range [start, end] that wraps around
+def circular_range(start_end: Tuple[int, int], size: int) -> List[int]:
+    '''Returns a generator of numbers in the range [start, end] that wraps around
     the given size.
     
     Args:
+    start_end (tuple): A tuple of 2 integers representing the start and end of the range.
+    size (int): The size of the circular set.
     '''
     if len(start_end) == 0:
         return
@@ -437,6 +453,7 @@ def circular_range(start_end: Tuple[int], size: int) -> List[int]:
 def _create_tesselator_helper(
     points1: np.array, index_offset1: int, points2: np.array, index_offset2: int) \
     -> _TesselatorHelper:
+    '''Creates a tesselator helper for the given points and index offsets.'''
   
     # Make sure the index offsets are valid.
     assert (index_offset2 >= index_offset1 + len(points1)) or \
@@ -460,7 +477,7 @@ def _create_tesselator_helper(
 def tesselate_between_paths(
         points1: np.array, index_offset1: int, points2: np.array, index_offset2: int) \
         -> Tuple[np.array, ...]:
-    """
+    '''
     Creates a tesselation of the given points, where each point in the first set
     is connected to its closest point in the second set modulo the differing number
     of points in each set.
@@ -479,7 +496,7 @@ def tesselate_between_paths(
     Returns:
     A list of faces, where each face is an array of indices with the given offsets
     applied.
-    """
+    '''
     
     helper = _create_tesselator_helper(points1, index_offset1, points2, index_offset2)
 
