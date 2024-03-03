@@ -50,6 +50,25 @@ class SimpleGridBox(ad.CompositeShape):
                 z=130 / 6,
                 nx=4, 
                 ny=4),
+        ),
+        'medium_holes' : ad.ExampleParams(
+            shape_args=ad.args(
+                x=763 - 4 * 150, 
+                z=130 / 6,
+                nx=4, 
+                ny=2),
+        ),
+        'larger_holes' : ad.ExampleParams(
+            shape_args=ad.args(
+                x=763 - 4 * 150, 
+                z=130 / 6,
+                nx=2, 
+                ny=2),
+        ),
+        'one_hole' : ad.ExampleParams(
+            shape_args=ad.args(
+                nx=1, 
+                ny=1),
         )
     }
 
@@ -69,7 +88,6 @@ class SimpleGridBox(ad.CompositeShape):
                         self.t + j * (self.hole_size[1] + self.t),
                         -self.bt)))
 
-        print(self.size)
         return maker
     
     
