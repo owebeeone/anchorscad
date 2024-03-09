@@ -50,6 +50,7 @@ class SpoolAdaptorRing(ad.CompositeShape):
     EXAMPLE_SHAPE_ARGS=ad.args()
     EXAMPLE_ANCHORS=()
 
+
     def build(self) -> ad.Maker:
         shape = self.extrude_node()
         maker = shape.solid('adaptor').at()
@@ -88,8 +89,11 @@ class SpoolAdaptor(ad.CompositeShape):
         # so you need to leave the AMS door ajar to fit them in.
         'creality': ad.ExampleParams(
             shape_args=ad.args(h=4.2, r=199 / 2),
-            anchors=())
-        }
+            anchors=()),
+        'siddament' : ad.ExampleParams(
+            shape_args=ad.args(h=3.1, r=198.2 / 2),  # Was 197.7 / 2
+        ),
+    }
 
     def build(self) -> ad.Maker:
         maker = self.ring.composite('spool_adaptor').at()

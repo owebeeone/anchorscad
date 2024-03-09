@@ -326,6 +326,10 @@ class HingeBar(ad.CompositeShape):
                                     outside_r=self.sleeve_r,
                                     start_degrees=0, 
                                     end_degrees=180)
+        
+    @ad.anchor('Base of the hinge')
+    def hinge_base(self):
+        return self.maker.at('centre') * ad.ROTY_90 * ad.tranZ(self.bar_r)
 
 
 @ad.shape
@@ -454,6 +458,8 @@ class Hinge(ad.CompositeShape):
             sleeve_odds.hole('sleeve_odds')
             .at('centre', post=ad.ROTZ_180), 
             'centre')
+        
+
         return maker
 
 

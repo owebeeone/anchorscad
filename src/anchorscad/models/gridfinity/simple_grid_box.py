@@ -69,6 +69,34 @@ class SimpleGridBox(ad.CompositeShape):
             shape_args=ad.args(
                 nx=1, 
                 ny=1),
+        ),
+        'B5x6' : ad.ExampleParams(
+            shape_args=ad.args(
+                x=(322 - 1.5) / 2,
+                y=(348- 1.5) / 2,
+                nx=5,
+                ny=6),
+        ),
+        'B4x5' : ad.ExampleParams(
+            shape_args=ad.args(
+                x=(322 - 1.5) / 2,
+                y=(348- 1.5) / 2,
+                nx=4,
+                ny=5),
+        ),
+        'B6x1' : ad.ExampleParams(
+            shape_args=ad.args(
+                x=(322 - 1.5) / 2,
+                y=(348- 1.5) / 2,
+                nx=6,
+                ny=1),
+        ),
+        'rings' : ad.ExampleParams(
+            shape_args=ad.args(
+                x=(322 - 1.5) / 2,
+                y=(348- 1.5) / 2,
+                nx=10,
+                ny=1),
         )
     }
 
