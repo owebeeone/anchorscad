@@ -14,9 +14,9 @@ import anchorscad as ad
 @ad.datatree
 class HingedFlap(ad.CompositeShape):
     '''
-    <description>
+    Flaps with a hinge. Bacically a couple of places with a hinge in the middle.
     '''
-    
+
     sep: float=ad.dtfield(0.25, doc='Separation between the front and back of the flap.')
     
     
