@@ -46,10 +46,6 @@ class ShapeName(ad.CompositeShape):
     '''
     <description>
     '''
-    x: float=10
-    y: float=20
-    z: float=30
-    
     path_builder: ad.Node = ad.ShapeNode(ExamplePathBuilder)
     path: ad.Path=ad.dtfield(self_default=lambda s: s.path_builder().build())
     
@@ -57,11 +53,6 @@ class ShapeName(ad.CompositeShape):
     
     extrude_node: ad.Node=ad.ShapeNode(ad.LinearExtrude)
     
-    
-    size: tuple=ad.dtfield(
-        doc='The (x,y,z) size of ShapeName',
-        self_default=lambda s: (s.x, s.y, s.z))
-    box_node: ad.Node=ad.dtfield(ad.ShapeNode(ad.Box, 'size'), init=False)
     
     EXAMPLE_SHAPE_ARGS=ad.args(fn=32)
     EXAMPLE_ANCHORS=()
