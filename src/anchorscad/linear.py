@@ -577,7 +577,7 @@ def rotZ(degrees=90, radians=None, sinr_cosr=None):
     either in degrees, radians or a sin/cos pair.
     Only one of sinr_cosr or radians or degrees is used in the order
     stated here.'''
-    if sinr_cosr:
+    if not sinr_cosr is None:
         return rotZSinCos(clean(sinr_cosr[0]), clean(sinr_cosr[1]))
     if radians is None:
         radians = np.pi * (degrees / 180.0)
