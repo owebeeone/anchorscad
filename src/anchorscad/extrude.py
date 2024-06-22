@@ -1327,7 +1327,7 @@ class PathBuilder():
         assert length >= 0, f"Cannot stroke with a negative length of {length}"
         assert len(self.ops) > 0, "Cannot line to without starting point"
         d_vector = to_gvector(self.last_op().direction_normalized(1.0))
-        if degrees or radians or sinr_cosr:
+        if degrees or radians or not (sinr_cosr is None):
             d_vector = l.rotZ(degrees=degrees, 
                               radians=radians, 
                               sinr_cosr=sinr_cosr) * d_vector
