@@ -870,15 +870,16 @@ _POST_38_DEFAULTS = dtargs(match_args=True, kw_only=False, slots=False).kwds
 
 
 def _process_datatree(clz, init, repr, eq, order, unsafe_hash, frozen,
-                      match_args, kw_only, slots, chain_post_init):
+                      match_args, kw_only, slots, chain_post_init, provide_override_field):
 
     if OVERRIDE_FIELD_NAME in clz.__annotations__:
-        if clz.__annotations__['override'] != Overrides:
+        if clz.__annotations__[OVERRIDE_FIELD_NAME] != Overrides:
             raise ReservedFieldNameException(
                 f'Reserved field name {OVERRIDE_FIELD_NAME} used by class '
                 f'{clz.__name__}')
-    clz.__annotations__['override'] = Overrides
-    setattr(clz, OVERRIDE_FIELD_NAME, field(default=None, repr=False))
+    if provide_override_field:
+        clz.__annotations__[OVERRIDE_FIELD_NAME] = Overrides
+        setattr(clz, OVERRIDE_FIELD_NAME, field(default=None, repr=False))
 
     post_init_chain = dict()
     if chain_post_init:
@@ -929,14 +930,32 @@ def _process_datatree(clz, init, repr, eq, order, unsafe_hash, frozen,
 
 def datatree(clz=None, /, *, init=True, repr=True, eq=True, order=False,
              unsafe_hash=False, frozen=False, match_args=True,
-             kw_only=False, slots=False, chain_post_init=False):
+             kw_only=False, slots=False, chain_post_init=False,
+             provide_override_field=True):
     '''Python decorator similar to dataclasses.dataclass providing parameter injection,
     injection, binding and overrides for parameters deeper inside a tree of objects.
+    Args:
+        clz: The class to decorate.
+        init: If True, a __init__ method will be generated.
+        repr: If True, a __repr__ method will be generated.
+        eq: If True, __eq__ and __ne__ methods will be generated.
+        order: If True, __lt__, __le__, __gt__, and __ge__ methods will be generated.
+        unsafe_hash: If True, a __hash__ method will be generated.
+        frozen: If True, the class is made immutable.
+        match_args: If True, the generated __init__ method will accept only the parameters
+            that are defined in the class.
+        kw_only: If True, the generated __init__ method will accept only keyword arguments.
+        slots: If True, the class will be a slots class.
+        chain_post_init: If True, the __post_init__ method will chain the post init methods
+            of the base classes.
+        provide_override_field: If True, the class will provide an override field that can be
+            used to provide overrides for the Node fields
     '''
 
     def wrap(clz):
-        return _process_datatree(clz, init, repr, eq, order, unsafe_hash,
-                                 frozen, match_args, kw_only, slots, chain_post_init)
+        return _process_datatree(
+            clz, init, repr, eq, order, unsafe_hash, frozen, match_args, kw_only, 
+            slots, chain_post_init, provide_override_field)
 
     # See if we're being called as @datatree or @datatree().
     if clz is None:

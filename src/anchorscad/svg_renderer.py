@@ -111,6 +111,15 @@ class SvgPathRenderer(object):
         seg = Segment(name=name, trace=trace, shape_type='splineto',
                       path=last_path + self._builder[-1], points=points)
         self._segs.append(seg)
+        
+    def qsplineto(self, points, name, trace=None):
+        last_path, last_pos = self._set_last_position(points[1])
+        self._builder.append(
+            f'Q ' + ' '.join(f'{p[0]:G} {p[1]:G}' for p in points))
+        points = (last_pos, points[0], points[1])
+        seg = Segment(name=name, trace=trace, shape_type='splineto',
+                      path=last_path + self._builder[-1], points=points)
+        self._segs.append(seg)
 
     def close(self):
         '''Closes the path by creating a line from the last added point to the
