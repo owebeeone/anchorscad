@@ -5,7 +5,6 @@ Created on 7 Jan 2021
 '''
 
 from collections.abc import Iterable
-from dataclasses import dataclass, field
 from types import FunctionType
 from typing import Dict, List, Tuple
 
@@ -71,6 +70,7 @@ LIST_2_FLOAT_OR_NONE = l.list_of(strict_float_or_none, len_min_max=(2, 2), fill_
 LIST_2_INT_OR_NONE = l.list_of(strict_float_or_none, len_min_max=(2, 2), fill_to_min='None')
 LIST_2_FLOAT = l.list_of(l.strict_float, len_min_max=(2, 3), fill_to_min=0.0)
 LIST_3_FLOAT = l.list_of(l.strict_float, len_min_max=(3, 3), fill_to_min=0.0)
+LIST_2X2_FLOAT = l.list_of(LIST_2_FLOAT, len_min_max=(2, 2), fill_to_min=None)
 LIST_3X2_FLOAT = l.list_of(LIST_2_FLOAT, len_min_max=(3, 3), fill_to_min=None)
 LIST_23X2_FLOAT = l.list_of(LIST_2_FLOAT, len_min_max=(2, 3), fill_to_min=None)
 
@@ -89,11 +89,14 @@ def extentsof(p):
     return np.array((p.min(axis=0), p.max(axis=0)))
 
 
-@dataclass(frozen=True)
+@datatree(frozen=True)
 class CubicSpline():
     '''Cubic spline evaluator, extents and inflection point finder.'''
-    p: object
-    dimensions: int=2
+    p: object=dtfield(doc='The control points for the spline.')
+    dimensions: int=dtfield(
+        self_default=lambda s: len(s.p[0]),
+        init=True, 
+        doc='The number of dimensions in the spline.')
     
     COEFFICIENTS=np.array([
         [-1.,  3, -3,  1 ],
@@ -125,12 +128,12 @@ class CubicSpline():
     def _make_ta3(self, t):
         t2 = t * t
         t3 = t2 * t
-        ta = [c * self.dimensions for c in [[t3], [t2], [t], [1]]]
+        ta = np.tile([t3, t2, t, 1], (self.dimensions, 1)).T
         return ta
         
     def _make_ta2(self, t):
         t2 = t * t
-        ta = [c * self.dimensions for c in [[t2], [t], [1], [0]]]
+        ta = np.tile([t2, t, 1, 0], (self.dimensions, 1)).T
         return ta
     
     def evaluate(self, t):
@@ -173,7 +176,7 @@ class CubicSpline():
         return dict((i, self.find_roots(*(d_coefs[0:3, i]), t_range=t_range)) 
                     for i in range(self.dimensions))
 
-    def cuve_inflexion_t(self, t_range=(0.0, 1.0)):
+    def curve_inflexion_t(self, t_range=(0.0, 1.0)):
         '''Returns a dict with an entry for each dimension containing a list of
         t for each inflection point found.'''
         # Splines are defined only for t in the range [0..1] however the curve may
@@ -206,6 +209,111 @@ class CubicSpline():
         extr = self.extremes()
         return extentsof(extr)
 
+
+@datatree(frozen=True)
+class QuadraticSpline():
+    '''Quadratic spline evaluator, extents and inflection point finder.'''
+    p: object=dtfield(doc='The control points for the spline.')
+    dimensions: int=dtfield(
+        self_default=lambda s: len(s.p[0]),
+        init=True, 
+        doc='The number of dimensions in the spline.')
+    
+    COEFFICIENTS=np.array([
+        [  1., -2,  1 ],
+        [ -2.,  2,  0 ],
+        [  1.,  0,  0 ]])
+    
+    #@staticmethod # For some reason this breaks on Raspberry Pi OS.
+    def _dcoeffs_builder(dims):
+        zero_order_derivative_coeffs=np.array([[1.] * dims, [1] * dims, [1] * dims])
+        derivative_coeffs=np.array([[2] * dims, [1] * dims, [0] * dims])
+        second_derivative=np.array([[2] * dims, [0] * dims, [0] * dims])
+        return (zero_order_derivative_coeffs, derivative_coeffs, second_derivative)
+    
+    DERIVATIVE_COEFFS = tuple((
+        _dcoeffs_builder(1), 
+        _dcoeffs_builder(2), 
+        _dcoeffs_builder(3), ))
+    
+    def _dcoeffs(self, deivative_order):
+        return self.DERIVATIVE_COEFFS[self.dimensions - 1][deivative_order]
+    
+    class InvalidTypeForP(Exception):
+        '''The parameter p must be a numpy.ndarray.'''
+        
+    def __post_init__(self):
+        object.__setattr__(self, 'coefs', np.matmul(self.COEFFICIENTS, self.p))
+    
+    def _qmake_ta2(self, t):
+        ta = np.tile([t**2, t, 1], (self.dimensions, 1)).T
+        return ta
+        
+    def _qmake_ta1(self, t):
+        ta = np.tile([t, 1, 0], (self.dimensions, 1)).T
+        return ta
+    
+    def evaluate(self, t):
+        return np.sum(np.multiply(self.coefs, self._qmake_ta2(t)), axis=0)
+    
+    @classmethod
+    def find_roots(cls, a, b, *, t_range=(0.0, 1.0)):
+        '''Find roots of linear equation that are between t_range.'''
+        # There either 1 or no roots.
+        if a == 0:
+            # Degenerate curve is constant so there is no 0 gradient.
+            return ()
+        
+        # Only return the root if it is within the range.
+        t = -b / a
+        return (t,) if  t >= t_range[0] and t <= t_range[1] else ()
+
+    
+    # Solve for minima and maxima over t. There are two possible locations 
+    # for each axis. The results for t outside of the bounds 0-1 are ignored
+    # since the cubic spline is only interpolated in those bounds.
+    def curve_maxima_minima_t(self, t_range=(0.0, 1.0)):
+        '''Returns a dict with an entry for each dimension containing a list of
+        t for each minima or maxima found.'''
+        # Splines are defined only for t in the range [0..1] however the curve may
+        # go beyond those points. Each axis has a potential of two roots.
+        d_coefs = self.coefs * self._dcoeffs(1)
+        return dict((i, self.find_roots(*(d_coefs[0:2, i]), t_range=t_range)) 
+                    for i in range(self.dimensions))
+
+    def curve_inflexion_t(self, t_range=(0.0, 1.0)):
+        '''Returns a dict with an entry for each dimension containing a list of
+        t for each inflection point found.'''
+        
+        # Quadradic splines have no inflection points since their second order
+        # derivative is constant.
+        return dict((i, ()) for i in range(self.dimensions))
+    
+    def derivative(self, t):
+        return -np.sum(
+            np.multiply(
+                np.multiply(self.coefs, self._dcoeffs(1)), self._qmake_ta1(t)), axis=0)
+    
+    def normal2d(self, t, dims=[0, 1]):
+        '''Returns the normal to the curve at t for the 2 given dimensions.'''
+        d = self.derivative(t)
+        vr = np.array([d[dims[0]], -d[dims[1]]])
+        l = np.sqrt(np.sum(vr**2))
+        return vr / l
+    
+    def extremes(self):
+        roots = self.curve_maxima_minima_t()
+        t_values = [0.0, 1.0]
+        for v in roots.values():
+            t_values.extend(v)
+        t_values.sort()
+        return np.array(tuple(self.evaluate(t) for t in t_values if t >= 0 and t <= 1))
+    
+    def extents(self):
+        extr = self.extremes()
+        return extentsof(extr)
+
+
 def _normal_of_2d(v1, v2, dims=[0, 1]):
     vr = np.array(v1)
     vr[dims[0]] = v1[dims[1]] - v2[dims[1]]
@@ -213,7 +321,7 @@ def _normal_of_2d(v1, v2, dims=[0, 1]):
     l = np.sqrt(np.sum(vr * vr))
     return vr / l
 
-@dataclass(frozen=True)
+@datatree(frozen=True)
 class OffsetType:
     offset_type: int
     
@@ -229,14 +337,14 @@ def adder(a, b):
     return a + b
 
 
-@dataclass(frozen=True)
+@datatree(frozen=True, provide_override_field=False)
 class OpBase:
     '''Base class for path operations (move, line, arc and spline).
     '''
     # Implementation state should consist of control points that can be easily 
     # transformed via a matrix multiplication.
     
-    trace: tb.FrameSummary=field(
+    trace: tb.FrameSummary=dtfield(
         default_factory=lambda: tb.extract_stack(limit=5)[-4], 
         init=False, 
         repr=False,
@@ -261,26 +369,26 @@ class OpBase:
         return None
     
 
-@dataclass
+@datatree
 class OpMetaData():
     '''The Op and parameters used to generate the point.'''
     op: OpBase
     point: tuple
     count: int=None
     t: float=None
-    dupe_ops_md: list=field(default_factory=list, init=False)
+    dupe_ops_md: list=dtfield(default_factory=list, init=False)
 
     
-@dataclass()
+@datatree()
 class MapBuilder:
     '''Builder for a map of points to the OpMetaData associated with the point.'''
-    opmap: List[OpMetaData]=field(default_factory=list)
+    opmap: List[OpMetaData]=dtfield(default_factory=list)
     
     def append(self, op: OpBase, point: tuple, count: int=None, t: float=None):
         self.opmap.append(OpMetaData(op, point, count, t))
 
 
-@dataclass()
+@datatree()
 class NullMapBuilder:
     '''A null builder'''
     opmap: List[OpMetaData]=None
@@ -328,7 +436,7 @@ def _eval_removed_range(base_range: np.ndarray, remove_range: np.ndarray, tolera
                 np.array((remove_range[1], base_range[1])))
 
    
-@dataclass
+@datatree
 class Segment:
     points: List[np.ndarray]  # 2 points
     
@@ -432,7 +540,7 @@ def clean_polygons(points: np.ndarray, tolerance=EPSILON) -> np.ndarray:
     return points
 
 
-@dataclass(frozen=True)
+@datatree(frozen=True)
 class Path():
     '''Encapsulated a "path" generate by a list of path "Op"s (move, line, arc etc).
     Each move op indicates a separate path. This can be a hole (anticlockwise) or a
@@ -720,7 +828,7 @@ def _less_than(a, b):
 def _greater_than(a, b):
     return (a - b) > EPSILON
 
-@dataclass()
+@datatree()
 class CircularArc:
     start_angle: float  # Angles in radians
     sweep_angle: float  # Angles in radians
@@ -778,7 +886,7 @@ def optional_arrayeq(ary1, ary2):
     return np.array_equal(ary1, ary2)
 
 
-@dataclass()
+@datatree()
 class PathBuilder():
     '''Builds a Path from a series of points, lines, splines and arcs.'''
     ops: list
@@ -786,11 +894,11 @@ class PathBuilder():
     multi: bool=False
 
 
-    @dataclass(frozen=True)
+    @datatree(frozen=True)
     class _LineTo(OpBase):
         '''Line segment from current position.'''
         point: np.array
-        prev_op: object=field(
+        prev_op: OpBase=dtfield(
             default=None,
             repr=False, 
             hash=False, 
@@ -846,12 +954,12 @@ class PathBuilder():
         def __hash__(self):
             return hash((tuple(self.point.flatten()), self.name))
 
-    @dataclass(frozen=True)
+    @datatree(frozen=True)
     class _MoveTo(OpBase):
         '''Move to position.'''
         point: np.array
         dir: np.array=None
-        prev_op: object=field(
+        prev_op: object=dtfield(
             default=None,
             repr=False, 
             hash=False, 
@@ -915,11 +1023,11 @@ class PathBuilder():
                 None if self.dir is None else tuple(self.dir.flatten()), 
                 self.name))
 
-    @dataclass(frozen=True)
-    class _SplineTo(OpBase):
+    @datatree(frozen=True, provide_override_field=False)
+    class _SplineToBase(OpBase):
         '''Cubic Bezier Spline to.'''
         points: np.array
-        prev_op: object=field(
+        prev_op: object=dtfield(
             default=None,
             repr=False, 
             hash=False, 
@@ -927,14 +1035,13 @@ class PathBuilder():
         name: str=None
         meta_data: object=None
         
+        SPLINE_CLASS=None # Derived class must set this.
+        
         def __post_init__(self):
             self.points.setflags(write=False)
             to_cat = [[self.prev_op.lastPosition()],  self.points]
             spline_points = np.concatenate(to_cat)
-            object.__setattr__(self, 'spline', CubicSpline(spline_points))
-            
-        def lastPosition(self):
-            return self.points[2]
+            object.__setattr__(self, 'spline', self.SPLINE_CLASS(spline_points))
             
         def populate(self, path_builder, start_indexes, map_builder, meta_data):
             if self.meta_data and self.meta_data.fn:
@@ -969,7 +1076,7 @@ class PathBuilder():
             if t < 0:
                 return self.direction(0) * t + self.prev_op.lastPosition()
             elif t > 1:
-                return self.direction(1) * t + self.points[2]
+                return self.direction(1) * t + self.lastPosition()
             return self.spline.evaluate(t)
         
         def transform(self, m):
@@ -978,9 +1085,6 @@ class PathBuilder():
             params = self._as_non_defaults_dict()
             params['points'] = points
             return (self.__class__, params)
-
-        def render_as_svg(self, svg_model):
-            svg_model.splineto(self.points, self.name, self.trace)
             
         def __eq__(self, other):
             if self.__class__ != other.__class__:
@@ -992,14 +1096,58 @@ class PathBuilder():
 
         def __hash__(self):
             return hash((tuple(self.points.flatten()), self.name, self.meta_data))
+        
+    @datatree(frozen=True, chain_post_init=True)
+    class _SplineTo(_SplineToBase):
+        
+        SPLINE_CLASS = CubicSpline
 
-    @dataclass(frozen=True)
+        def __hash__(self):
+            return super().__hash__()
+        
+        def lastPosition(self):
+            return self.points[2]
+
+        def render_as_svg(self, svg_model):
+            svg_model.splineto(self.points, self.name, self.trace)
+        
+    @datatree(frozen=True, chain_post_init=True)
+    class _QuadraticSplineTo(_SplineToBase):
+        
+        SPLINE_CLASS = QuadraticSpline
+
+        def __hash__(self):
+            return super().__hash__()
+        
+        def lastPosition(self):
+            return self.points[1]
+
+        def render_as_svg(self, svg_model):
+            svg_model.qsplineto(self.points, self.name, self.trace)
+            
+                    
+        def populate(self, path_builder, start_indexes, map_builder, meta_data):
+            if self.meta_data and self.meta_data.fn:
+                meta_data = self.meta_data
+    
+            count = meta_data.fn
+            if not count:
+                count = 10
+    
+            for i in range(1, count + 1):
+                t = float(i) / float(count)
+                point = self.spline.evaluate(t)
+                path_builder.append(point)
+                map_builder.append(self, point, count, t)
+
+
+    @datatree(frozen=True)
     class _ArcTo(OpBase):
         '''Draw a circular arc.'''
         end_point: np.array
         centre: np.array
         path_direction: bool
-        prev_op: object=field(
+        prev_op: object=dtfield(
             default=None,
             repr=False, 
             hash=False, 
@@ -1120,13 +1268,13 @@ class PathBuilder():
                  self.meta_data))
 
 
-    @dataclass(frozen=True)
+    @datatree(frozen=True)
     class _LinearSprialTo(OpBase):
         '''Draw a linear sprial.'''
         end_point: np.array
         centre: np.array
         path_direction: bool
-        prev_op: object=field(
+        prev_op: object=dtfield(
             default=None,
             repr=False, 
             hash=False, 
@@ -1398,6 +1546,16 @@ class PathBuilder():
         points_2d = list(p.A[:2] for p in points)
 
         return self.spline(points_2d, name, metadata, rel_len)
+    
+    def qspline(self, points, name=None, metadata=None):
+        '''A quadratic spline from the current point to the given points.
+        Points consists of a control point (points[0]) and an end point (points[1]).
+        '''
+        assert len(self.ops) > 0, "Cannot line to without starting point"
+        points = np.array(LIST_2X2_FLOAT(points))
+        return self.add_op(
+            self._QuadraticSplineTo(points, prev_op=self.last_op(), name=name, meta_data=metadata))
+        
     
     def spline(self, points, name=None, metadata=None, 
                cv_len=(None, None), degrees=(0, 0), radians=(0, 0), rel_len=None):
@@ -1681,7 +1839,7 @@ class ExtrudedShape(core.Shape):
     def eval_z_vector(self, h):
         return l.GVector([0, 0, h])
 
-@dataclass
+@datatree
 class PolyhedronBuilderContext:
     points: tuple
     path: tuple=None
@@ -1709,7 +1867,7 @@ def quad(prev_offs, curr_offs, pi, pj, direction):
         )
     
     
-@dataclass
+@datatree
 class PolyhedronBuilder:
     ctxt: PolyhedronBuilderContext
     
@@ -1802,11 +1960,11 @@ class PathGenerator:
         raise NotImplemented
 
 
-@dataclass
+@datatree
 class BasicPathGenerator(PathGenerator):
     '''Provides an isomorphic path.'''
     path: Path
-    polygons: tuple=field(init=False)
+    polygons: tuple=dtfield(init=False)
     
     def get_r_generator(self, metadata):
         self.polygons = self.path.cleaned_polygons(metadata)
@@ -1819,7 +1977,7 @@ class BasicPathGenerator(PathGenerator):
         return self.polygons
 
 
-@dataclass
+@datatree
 class Polyhedron2BuilderContext:
     path_generator: PathGenerator
     metadata: object
@@ -1831,7 +1989,7 @@ class Polyhedron2BuilderContext:
 
 
 
-@dataclass
+@datatree
 class Polyhedron2Builder:
     ctxt: Polyhedron2BuilderContext
     xform_function: FunctionType
@@ -2020,6 +2178,24 @@ class LinearExtrude(ExtrudedShape):
                 core.surface_args('curve', 1, 50),
                 core.surface_args('linear4', 0, 0),
                 core.surface_args('linear4', 1, 0),
+                )),
+        'example4': core.ExampleParams(
+            shape_args=core.args(
+                PathBuilder()
+                    .move([0, _SCALE * 50])
+                    .qspline([(100 * _SCALE, 100 * _SCALE), (_SCALE * 50, 0)], name='curve')
+                    .line([0, _SCALE * 50], 'linear1')
+                    .build(),
+                h=50,
+                fn=80,
+                use_polyhedrons=False
+                ),
+            anchors=(
+                core.surface_args('linear1', 0, 0),
+                core.surface_args('linear1', 0.5, 25 * _SCALE),
+                core.surface_args('curve', 0, 0),
+                core.surface_args('curve', 0.6, 0),
+                core.surface_args('curve', 1, 0),
                 ))
         }
 
@@ -2156,7 +2332,7 @@ class LinearExtrude(ExtrudedShape):
 
 
 @core.shape
-@dataclass
+@datatree
 class RotateExtrude(ExtrudedShape):
     '''Generates a circular/arc extrusion of a given Path.'''
     path: Path=core.dtfield(doc='The path to extrude.')
