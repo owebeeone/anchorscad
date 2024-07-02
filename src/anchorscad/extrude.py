@@ -2083,31 +2083,6 @@ class LinearExtrude(ExtrudedShape):
                 core.surface_args('linear4', 0, 0),
                 core.surface_args('linear4', 1, 0),
                 )),
-        'example4': core.ExampleParams(
-            shape_args=core.args(
-                PathBuilder()
-                    .move([5 * _SCALE, 0])
-                    .line([50 * _SCALE, 0], 'linear1')
-                    .arc_tangent_point([55 * _SCALE, 5 * _SCALE], name='curve1')
-                    .line([55 * _SCALE, 50 * _SCALE], 'linear2')
-                    .arc_tangent_point([50 * _SCALE, 55 * _SCALE], name='curve2')
-                    .line([5 * _SCALE, 55 * _SCALE], 'linear3')
-                    .arc_tangent_point([0 * _SCALE, 50 * _SCALE], name='curve3')
-                    .line([0 * _SCALE, 5 * _SCALE], 'linear4')
-                    .arc_tangent_point([5 * _SCALE, 0 * _SCALE], name='curve4')
-                    .build(),
-                h=55,
-                fn=64,
-                #slices=20,
-                #twist=90,
-                use_polyhedrons=False
-                ),
-            anchors=(
-                core.surface_args('centre_of', 'curve1', 0, normal_segment='linear3'),
-                core.surface_args('centre_of', 'curve2', 0),
-                core.surface_args('centre_of', 'curve3', 0),
-                core.surface_args('centre_of', 'curve4', 0)
-                )),
         }
 
     def render(self, renderer):
