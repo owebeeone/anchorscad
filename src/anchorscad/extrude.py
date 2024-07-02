@@ -2335,7 +2335,7 @@ class RotateExtrude(ExtrudedShape):
                 core.surface_args('linear1', 1),
                 core.surface_args('curve', 0.2),
                 core.surface_args('curve', 1),)),
-        'example4': core.ExampleParams(
+        'example5': core.ExampleParams(
             shape_args=core.args(
                 PathBuilder()
                     .move([5 * _SCALE, 0])
