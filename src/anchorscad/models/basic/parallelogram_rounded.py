@@ -33,7 +33,7 @@ class ParallelogramRoundedPath:
 
         l = (self.l1, self.l2)
         degrees = (self.degrees1, self.degrees2)    
-        for n in range(5):
+        for n in range(4):
             builder.arc_tangent_radius_sweep(
                 radius=self.r, 
                 sweep_angle_degrees=-degrees[n % 2], name=('arc', n))
