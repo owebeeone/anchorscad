@@ -234,7 +234,7 @@ def field_docs(obj, field_name):
     return doc_metadata.get_doc()
 
 
-_Node = MISSING  # Forward declaration for Node.
+_Node = None  # Forward declaration for Node. This is set later.
 
 def dtfield(default=MISSING, doc=None, self_default=None, init=MISSING, **kwargs):
     '''Like dataclasses.field but also supports doc parameter.
@@ -253,9 +253,9 @@ def dtfield(default=MISSING, doc=None, self_default=None, init=MISSING, **kwargs
         default = BindingDefault(self_default)
         
     if init is MISSING:
-        # Don't make Node fields init by default.
-        if not _Node is MISSING:
-            init = not isinstance(default, _Node)
+        # Don't make self_default and Node fields init by self_default.
+        types = (_Node, BindingDefault) if _Node is not None else BindingDefault
+        init = not isinstance(default, types)
 
     return field(**kwargs, default=default, metadata=metadata, init=init)
 

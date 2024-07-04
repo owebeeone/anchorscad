@@ -324,14 +324,6 @@ def _normal_of_2d(v1, v2, dims=[0, 1]):
     l = np.sqrt(np.sum(vr * vr))
     return vr / l
 
-# @datatree(frozen=True)
-# class OffsetType:
-#     offset_type: int
-    
-# OFFSET_ROUND=OffsetType(pc.JT_ROUND)
-# OFFSET_MITER=OffsetType(pc.JT_MITER)
-# OFFSET_SQUARE=OffsetType(pc.JT_SQUARE)
-
 def adder(a, b):
     if a is None:
         return None
