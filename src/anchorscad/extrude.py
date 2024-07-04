@@ -576,7 +576,8 @@ class MappedPolygon:
             # Only remove colinear points if there is no request to segment lines.
             colinear_remove = not self.meta_data.segment_lines
             
-            self.cleaned_polygons = clean_polygons(self.points, colinear_remove)
+            self.cleaned_polygons = clean_polygons(
+                self.points, colinear_remove, tolerance=tolerance)
             
             return self.cleaned_polygons
         

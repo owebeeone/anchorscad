@@ -27,6 +27,7 @@ import manifold3d as m3d
 
 @datatree(frozen=True)
 class OffsetType:
+    '''The type of offset to apply.'''
     offset_type: int
     
 
@@ -128,10 +129,17 @@ class ParamtericExtrusionIf:
     def get_layer(self, i: int) -> Tuple[ExtrudeLayerParams, Path, List[List[float]]]:
         '''Returns the path for the given parameters.'''
         raise NotImplementedError()
+
+class OffsetProfile:
+    '''A Path builder for an offset profile.'''
     
+    def build(self) -> Path:
+        raise NotImplementedError("Override in subclass.")
+
+
 @datatree
-class BevelledProfile:
-    '''A Path builder for a bevelled extrusion.'''
+class BevelledProfile(OffsetProfile):
+    '''Offset profile for bevelled extrusions.'''
     h: float = dtfield(1, doc='The overall height of extrusion.')
     r_base: float = dtfield(0, doc='The radius of the base bevel.')
     r_top: float = dtfield(0, doc='The radius of the top bevel.')
@@ -142,7 +150,7 @@ class BevelledProfile:
     metadata: core.ModelAttributes = dtfield(None, doc='The metadata to use for the extrusions.')
     metadata_arcs: core.ModelAttributes = dtfield(None, doc='The metadata to use for the arcs.')
     
-    def build(self):
+    def build(self) -> Path:
         if self.r_top < 0:
             raise ValueError(f'The top radius (r_top={self.r_top}) cannot be negative.')
         if self.r_base < 0:
@@ -188,15 +196,23 @@ class BevelledProfile:
         
         return builder.build()
     
+    
 class PathGeneratorIf:
     
     def init_processor(self, metadata: core.ModelAttributes) -> 'ParamtericExtrusionProcessorIf':
         '''Generates a processor for the given metadata.'''
         raise NotImplementedError()
+    
+@datatree
+class LayerData:
+    '''Data for a layer.'''
+    h: float=dtfield(doc='The height of the layer.')
+    polygon: List[List[float]]=dtfield(doc='The polygon of the layer.')
+
 
 class ParamtericExtrusionProcessorIf:
-    def get_path(self, k: int) -> Path:
-        '''Returns the path for the given index.'''
+    def get_polygon(self, k: int) -> LayerData:
+        '''Returns the polygon for the given index.'''
         raise NotImplementedError()
     
     def get_count(self) -> int:
@@ -216,23 +232,26 @@ class ParamtericExtrusionProcessorIf:
 class ParamtericExtrusionProcessorBasic(ParamtericExtrusionProcessorIf):
     
     parametric_extrusion: ParamtericExtrusionIf = dtfield(doc='The parametric extrusion.')
+    
     metadata: core.ModelAttributes = dtfield(None, doc='The metadata to use for the extrusions.')
     
-    mapped_poly: MappedPolygon = dtfield(self_default=lambda s: MappedPolygon(path, meta_data))
-    bevel_path_: Path = dtfield(doc='The bevel path.', init=False)
-    points: List[List[float]] = dtfield(doc='The points of the bevel profile.', init=False)
-    extents: Tuple[float, float] = dtfield(doc='The extents of the bevel profile.', init=False)
+    mapped_poly: MappedPolygon = dtfield(self_default=lambda s: MappedPolygon(s.path, s.metadata))
     
-    def __post_init__(self):
-        self.parametric_extrusion = self.parametric_extrusion()
-        self.bevel_path_ = self.parametric_extrusion.bevel_profile.build()
-        self.extents = self.bevel_path_.get_extents()
+    offset_type: OffsetType = dtfield(PathOffsetMaker.OFFSET_ROUND, doc='The type of offset to apply.')
+    path_gen: PathOffsetMaker = dtfield(
+        self_default=lambda s: PathOffsetMaker(mapped_poly=s.mapped_poly, offset_type=s.offset_type))
+    
+    #path: Path = dtfield(doc='The path to extrude.')
+    
+    
+    
+    def get_polygon(self, k: int) -> LayerData:
+        '''Returns the polygon for the given index.'''
         
-    def get_path(self, k: int) -> Path:
-        if k >= len(self.points):
-            raise ValueError(f'Index {k} out of range.')
         
         
+        return LayerData()
+
             
     def get_count(self) -> int:
         return len(self.points)
@@ -246,7 +265,7 @@ class ParamtericExtrusionProcessorBasic(ParamtericExtrusionProcessorIf):
         raise NotImplementedError()
     
 @datatree
-class ParamtericExtrusionBasic(ParamtericExtrusionIf):
+class ParamtericExtrusionOffsetPath(ParamtericExtrusionIf):
     '''A basic flex extrusion implementation.'''
     
     bevel_profile: BevelledProfile = dtfield(doc='The bevel profile.')
@@ -257,6 +276,14 @@ class ParamtericExtrusionBasic(ParamtericExtrusionIf):
     
     def init_processor(self, metadata: core.ModelAttributes) -> ParamtericExtrusionProcessorIf:
         return ParamtericExtrusionProcessorBasic(self, metadata)
+    
+    def get_layer_count(self) -> int:
+        '''Returns the number of layers.'''
+        raise NotImplementedError()
+    
+    def get_layer(self, i: int) -> Tuple[ExtrudeLayerParams, Path, List[List[float]]]:
+        '''Returns the path for the given parameters.'''
+        raise NotImplementedError()
 
 
 @core.shape
