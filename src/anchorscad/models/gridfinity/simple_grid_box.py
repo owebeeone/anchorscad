@@ -136,7 +136,7 @@ class MixGridBox(ad.CompositeShape):
     o: float=ad.dtfield(0.2, doc='Compensation for the printer overhang.')
     
     wx: Tuple[float, ...]=ad.dtfield((1,) * 3, doc='Number of rectangular holes in the x direction')
-    wy: Tuple[float, ...]=ad.dtfield((2, 1), doc='Number of rectangular holes in the y direction')
+    wy: Tuple[float, ...]=ad.dtfield((2., 1.), doc='Number of rectangular holes in the y direction')
     
     count_x: int=ad.dtfield(self_default=lambda s: len(s.wx), doc='Number of holes in the x direction')
     count_y: int=ad.dtfield(self_default=lambda s: len(s.wy), doc='Number of holes in the y direction')
@@ -156,13 +156,7 @@ class MixGridBox(ad.CompositeShape):
         self_default=lambda s: (s.x - s.o, s.y - s.o, s.z))
     box_node: ad.Node=ad.dtfield(ad.ShapeNode(ad.Box), init=False)
     
-    hole_size: tuple=ad.dtfield(
-        doc='The (x,y,z) size of the holes',
-        self_default=lambda s: (
-            (s.size[0] - s.t) / s.nx - s.t, 
-            (s.size[1] - s.t) / s.ny - s.t, 
-            s.size[2] - s.bt + s.eps))
-    hole_node: ad.Node=ad.dtfield(ad.ShapeNode(ad.Box, prefix='hole_'), init=False)
+    hole_node: ad.Node=ad.dtfield(ad.ShapeNode(ad.Box, {}), init=False)
     
     EXAMPLE_SHAPE_ARGS=ad.args()
     
@@ -178,18 +172,21 @@ class MixGridBox(ad.CompositeShape):
         shape = self.box_node()
         maker = shape.solid('box').at('face_centre', 'base', post=ad.ROTX_180)
         
-        hole_shape = self.hole_node()
-        
-        for i in range(self.nx):
-            for j in range(self.ny):
-                hole_shape = self.hole_node(size=self.hole_size(i, j))
+        offx = self.t
+        for i in range(self.count_x):
+            xsize = self.x_size(i)
+            offy = self.t
+            for j in range(self.count_y):
+                ysize = self.y_size(j)
+                hole_size = self.hole_size(i, j)
+                hole_shape = self.hole_node(size=hole_size)
                 box_hole = hole_shape.hole(('hole', i, j )).at('face_corner', 'base', 0)
                 maker = maker.add_at(
                     box_hole,
-                    'face_corner', 'base', 0, post=ad.translate((
-                        self.t + i * (self.hole_size[0] + self.t),
-                        self.t + j * (self.hole_size[1] + self.t),
-                        -self.bt)))
+                    'face_corner', 'base', 0,
+                    post=ad.translate((offx, offy, -self.bt)))
+                offy += ysize + self.t
+            offx += xsize + self.t
 
         return maker
     
@@ -232,7 +229,6 @@ class MixGridBox(ad.CompositeShape):
     def hole_pos(self, col: int, row: int) -> Tuple[float, float, float]:
         '''The position of the hole at (col, row).'''
         return (self.x_pos(col), self.y_pos(row), -self.bt)
-    
 
     
 
