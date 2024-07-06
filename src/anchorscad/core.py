@@ -6,7 +6,7 @@ Created on 5 Jan 2021
 
 import argparse
 import copy
-from dataclasses import dataclass, field, replace
+from dataclasses import replace
 import fnmatch
 import inspect
 import os
@@ -146,7 +146,7 @@ def inner_anchor_renderer(maker, anchor_args):
                  post=xform)
 
 
-@dataclass(frozen=True)
+@datatree(frozen=True)
 class AnchorArgs():
     args_: tuple=args()
     scale_anchor: object=None
@@ -219,7 +219,7 @@ FA_FIELD=fa_field()
 
 DEFAULT_MATERIAL_PRIORITY = 5.0
 
-@dataclass(frozen=True)
+@datatree(frozen=True)
 class MaterialKind:
     '''The type of material. This is used to determine how to render the material.
     If the material is not for physical rendering but is used for support or region
@@ -230,7 +230,7 @@ PHYSICAL_MATERIAL_KIND=MaterialKind(physical=True)
 NON_PHYSICAL_MATERIAL_KIND=MaterialKind(physical=False)
 
 
-@dataclass(frozen=True)
+@datatree(frozen=True)
 class Material:
     name: str = dtfield(doc='The name of the material')
     # A material of higher priority is removed from materials of lower priority.
@@ -269,7 +269,7 @@ COORDINATES_MATERIAL=Material('anchor')
 # a mechanism to reuse models with different materials and have materials mapped
 # for different purposes.
     
-@dataclass(frozen=True)
+@datatree(frozen=True, provide_override_field=False)
 class MaterialMap:
     '''A map for materials to other materials.
     This can be used to map materials to other materials when rendering.
@@ -279,7 +279,7 @@ class MaterialMap:
         '''Returns the mapped material for the given material.'''
         return material  # Default is no mapping.
 
-@dataclass(frozen=True)
+@datatree(frozen=True, provide_override_field=False)
 class MaterialMapDefault(MaterialMap):
     '''Sets the default material if unset.'''
     
@@ -291,7 +291,7 @@ class MaterialMapDefault(MaterialMap):
     
 
 
-@dataclass(frozen=True)
+@datatree(frozen=True, provide_override_field=False)
 class MaterialMapBasic(MaterialMap):
     '''Provides a set of basic mappings for materials.'''
     
@@ -315,7 +315,7 @@ def create_material_map(*args):
     return MaterialMapBasic(frozendict(entries))
 
 
-@dataclass(frozen=True)
+@datatree(frozen=True)
 class MaterialMapStack(MaterialMap):
     '''Combines a collection of material mappings.'''
     
@@ -384,7 +384,7 @@ class ModelAttributes(object):
                     for k in self.__annotations__.keys() if not getattr(self, k) is None)
     
     def _with(self, **kwds):
-        return replace(self, **kwds)  # dataclass replace
+        return replace(self, **kwds)  # datatree replace
     
     def with_colour(self, *colour_args, **colour_kwds):
         return self._with(colour=
@@ -457,11 +457,11 @@ class ModelAttributes(object):
     
 EMPTY_ATTRS = ModelAttributes()
 
-@dataclass(frozen=True)
+@datatree(frozen=True)
 class ShapeDescriptor:
     anchors: tuple
 
-@dataclass(frozen=True)
+@datatree(frozen=True)
 class ShapeFrame(object):
     name: Hashable
     shape: Hashable
@@ -532,7 +532,7 @@ def find_all_intersect(maker, plane_anchor, *line_anchors):
                  for la in line_anchors)
 
 
-@dataclass(frozen=True)
+@datatree(frozen=True)
 class NamedShapeBase(object):
     shape: object  # Shape or Maker or LazyShape
     shape_type: Hashable
@@ -544,7 +544,7 @@ class NamedShapeBase(object):
                     for k in self.__annotations__.keys() if not getattr(self, k) is None)
     
     def _with(self, **kwds):
-        return replace(self, **kwds)  # dataclass replace
+        return replace(self, **kwds)  # datatree replace
         
     def with_attributes(self, attributes: ModelAttributes):
         return self.__class__(**self._with('attributes', attributes))
@@ -765,7 +765,7 @@ def mutable_copy(args):
     return result
         
 
-@dataclass(frozen=True)
+@datatree(frozen=True)
 class LazyShape(ShapeNamer):
     shape_type: type
     field_specifiers: tuple
@@ -789,7 +789,7 @@ class LazyShape(ShapeNamer):
         return LazyNamedShape(self, mode_shape_frame, name)
 
 
-@dataclass(frozen=True)
+@datatree(frozen=True)
 class AtSpecifier:
     '''An 'at' specifier contains the args to call an Shape at() function. This allows 
     lazy evaluation of a Shape a() call.'''
@@ -892,7 +892,7 @@ def lazy_shape(shape_type, *field_specifiers, other_args=args()):
     return LazyShape(shape_type, field_specifiers, other_args)
 
 
-@dataclass()
+@datatree()
 class ExampleParams():
     shape_args: tuple=args()
     anchors: tuple=()
@@ -1054,7 +1054,7 @@ class Shape(ShapeNamer, ShapeMaker):
             target_maker=target_maker)
 
 
-@dataclass(frozen=True)
+@datatree(frozen=True)
 class _Mode():
     mode: str
     has_operator_container: bool=False
@@ -1062,7 +1062,7 @@ class _Mode():
     def make_container(self, model):
         return model.Union()
 
-@dataclass(frozen=True)
+@datatree(frozen=True)
 class SolidMode(_Mode):
     def __init__(self):
         super().__init__('solid')
@@ -1070,7 +1070,7 @@ class SolidMode(_Mode):
     def pick_rendererx(self, renderer):
         return renderer.solid()    
 
-@dataclass(frozen=True)
+@datatree(frozen=True)
 class HoleMode(_Mode):
     def __init__(self):
         super().__init__('hole')
@@ -1078,7 +1078,7 @@ class HoleMode(_Mode):
     def pick_rendererx(self, renderer):
         return renderer.hole()
     
-@dataclass(frozen=True)
+@datatree(frozen=True)
 class CompositeMode(_Mode):
     def __init__(self):
         super().__init__('composite')
@@ -1086,7 +1086,7 @@ class CompositeMode(_Mode):
     def pick_rendererx(self, renderer):
         return renderer.hole()
 
-@dataclass(frozen=True)
+@datatree(frozen=True)
 class CageMode(_Mode):
     def __init__(self):
         super().__init__('cage')
@@ -1094,7 +1094,7 @@ class CageMode(_Mode):
     def pick_rendererx(self, renderer):
         return renderer.null()
 
-@dataclass(frozen=True)
+@datatree(frozen=True)
 class IntersectMode(_Mode):
     def __init__(self):
         super().__init__('intersect', True)
@@ -1105,7 +1105,7 @@ class IntersectMode(_Mode):
     def make_container(self, model):
         return model.Intersection()
 
-@dataclass(frozen=True)
+@datatree(frozen=True)
 class HullMode(_Mode):
     def __init__(self):
         super().__init__('hull', True)
@@ -1116,7 +1116,7 @@ class HullMode(_Mode):
     def make_container(self, model):
         return model.Hull()
 
-@dataclass(frozen=True)
+@datatree(frozen=True)
 class MinkowskiMode(_Mode):
     def __init__(self):
         super().__init__('minkowski', True)
@@ -1152,7 +1152,7 @@ class Renderer:
         pass
     
     
-@dataclass(frozen=True)
+@datatree(frozen=True)
 class ModeShapeFrame():
     SOLID=SolidMode()
     HOLE=HoleMode()
@@ -1215,7 +1215,7 @@ class ModeShapeFrame():
             )
         return ''.join(parts + attr_parts + projectopm_parts)
     
-@dataclass(frozen=True)
+@datatree(frozen=True)
 class CageOfProperties:
     '''Properties used by
       shape: Shape to be made a cage.
@@ -1266,13 +1266,13 @@ class CageOfNode(Node):
     def __init__(self, *args_, **kwds_):
         super().__init__(cageof, 'hide_cage', *args_, **kwds_)
 
-@dataclass(frozen=True)
+@datatree(frozen=True)
 class AbsoluteReference:
     pass
 
 ABSOLUTE=AbsoluteReference()
 
-@dataclass
+@datatree
 class Maker(Shape):
     '''The builder of composite shapes. Provides the ability to anchor shapes at various other
     frames (anchors) associated with Shapes already added.
@@ -1466,7 +1466,7 @@ class Maker(Shape):
                 renderer.pop()
 
 
-@dataclass(frozen=True)
+@datatree(frozen=True)
 class AnchorSpec():
     '''Associated with @anchor functions.'''
     description: str
@@ -1486,7 +1486,7 @@ VECTOR3_FLOAT_DEFAULT_1 = l.list_of(
     fill_to_min=np.float64(1))
 
 
-@dataclass(frozen=True)
+@datatree(frozen=True)
 class Anchors():
     name: str
     level: int
@@ -1496,7 +1496,7 @@ class Anchors():
         return self.anchors.get(name)
     
     
-@dataclass()
+@datatree()
 class AnchorsBuilder():
     '''\
     name: is the shape class name to use
@@ -1582,7 +1582,7 @@ def shape(clazz_or_name=None, /, *, name=None, level=10):
     return decorator(clazz_or_name)
 
 
-@dataclass
+@datatree
 class FabricatorParams:
     level: float
 
@@ -1608,7 +1608,7 @@ def fabricator(clazz=None, /, *, level=10):
 
 
 @shape
-@dataclass(frozen=True)
+@datatree(frozen=True)
 class Box(Shape):
     '''Generates rectangular prisms (cubes where x=y=z).
     Anchor functions have a 'face' parameter which are 'front', 'back',
@@ -1816,7 +1816,7 @@ class Text(Shape):
     fn: int=FN_FIELD
     fs: float=FS_FIELD
     fa: float=FA_FIELD
-    text_node: Node=field(default=Node(posc.Text, 
+    text_node: Node=dtfield(default=Node(posc.Text, 
                                        ARGS_REV_XLATION_TABLE, 
                                        expose_all=True), 
                           init=False)
@@ -1846,7 +1846,7 @@ class Text(Shape):
 
 ANGLES_TYPE = l.list_of(l.strict_float, len_min_max=(3, 3), fill_to_min=0.0)
 @shape
-@dataclass(frozen=True)
+@datatree(frozen=True)
 class Sphere(Shape):
     '''Generates a Sphere.'''
     r: float=dtfield(1.0, 'Radius of sphere')
@@ -1904,7 +1904,7 @@ class Sphere(Shape):
 
 CONE_ARGS_XLATION_TABLE={'r_base': 'r1', 'r_top': 'r2'}
 @shape
-@dataclass(frozen=True)
+@datatree(frozen=True)
 class Cone(Shape):
     '''Generates cones or horizontal conical slices and cylinders.'''
     h: float=dtfield(1.0, 'Height of cone') 
@@ -2062,17 +2062,15 @@ class CompositeShape(Shape):
 class Arrow(CompositeShape):
     ''''arrow' shape with two end to end cones.'''
     r_stem_top: float=1.0
-    r_stem_base: float=dtfield(self_default=lambda s : s.r_stem_top)
+    r_stem_base: float=dtfield(self_default=lambda s : s.r_stem_top, init=True)
     l_stem: float=6.0
     l_head: float=3
     r_head_base: float=2
     r_head_top: float=0.0
     
-    head_cone: Node=field(
-        init=False, 
+    head_cone: Node=dtfield(
         default=ShapeNode(Cone, {'h':'l_head', 'r_base':'r_head_base', 'r_top':'r_head_top'}))
-    stem_cone: Node=field(
-        init=False, 
+    stem_cone: Node=dtfield(
         default=ShapeNode(Cone, {'h':'l_stem', 'r_base':'r_stem_base', 'r_top':'r_stem_top'}))
 
     EXAMPLE_ANCHORS=(
@@ -2103,7 +2101,7 @@ class Arrow(CompositeShape):
 
 
 @shape
-@dataclass
+@datatree
 class CoordinatesCage(Shape):
     base_frame: l.GMatrix=l.IDENTITY
 
@@ -2144,7 +2142,7 @@ class Coordinates(CompositeShape):
     l_head: float=3
     r_head_base: float=1.5
     r_head_top: float=0.0
-    arrow_node: Node=field(init=False, default=ShapeNode(Arrow))
+    arrow_node: Node=dtfield(init=False, default=ShapeNode(Arrow))
     
     def build(self) -> Maker:
         if self.r_stem_base is None:
@@ -2277,7 +2275,7 @@ def find_all_shape_classes(module):
     return shape_classes
 
 
-@dataclass
+@datatree
 class RenderOptions:
     render_attributes: ModelAttributes
     level: int
@@ -2347,7 +2345,7 @@ def render_examples(module,
                         end_example(clz, e)
     return shape_count, example_count, error_count
 
-@dataclass
+@datatree(provide_override_field=False)
 class ModuleDefault():
     '''Default anchorscad_main command line default values.
     
@@ -2400,12 +2398,12 @@ class ArgumentParserWithReconstruct(argparse.ArgumentParser):
     values.'''
     MISSING_VALUE=object()
     
-    @dataclass
+    @datatree
     class ParameterDef:
         dest: str
         option_strings: str=None
-        actions: dict=field(default_factory=dict)
-        param_args: tuple=field(default=None, init=False)
+        actions: dict=dtfield(default_factory=dict)
+        param_args: tuple=dtfield(default=None, init=False)
         
         def get_value(self, name):
             if name in self.param_args[1]:
@@ -2807,6 +2805,7 @@ class ExampleCommandLineRenderer():
             if self.do_exit_on_completion:
                 sys.stderr.write(f'{str(ex)}\nAnchorscad example renderer exiting with errors.')
                 self.status= 3
+                traceback.print_exception(*sys.exc_info(), limit=20)
             raise
         finally:
             self.fix_status()
