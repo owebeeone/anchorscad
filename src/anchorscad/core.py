@@ -1995,8 +1995,8 @@ class Cylinder(Cone):
     
     EXAMPLE_SHAPE_ARGS=args(h=50, r=30, fn=30)
     
-    def __post_init__(self):
-        Cone.__post_init__(self)
+    # def __post_init__(self):
+    #     Cone.__post_init__(self)
 
 class CompositeShape(Shape):
     '''Provides functionality for composite shapes. Subclasses must set 'maker' in
