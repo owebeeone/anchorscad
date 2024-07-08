@@ -28,10 +28,8 @@ GVector([0.4999999999999999, -0.4999999999999999, 0.7071067811865476, 1.0])
 
 '''
 
-from dataclasses import dataclass
-
 import numpy as np
-
+from typing import Callable, Tuple, Any, Union, List
 
 # Exceptions for dealing with argument checking.
 class BaseException(Exception):
@@ -56,15 +54,16 @@ class VectorInvalidError(BaseException):
     '''Failed consistency check for GVector.'''
     
 
-def to_radians(degs):
+def to_radians(degs: float) -> float:
     '''Convert degrees to radians.'''
     return degs * np.pi / 180.0
 
-def to_degrees(radians):
+def to_degrees(radians: float) -> float:
     '''Convert radians to degrees.'''
     return radians * 180.0 / np.pi
 
-def list_of(typ, len_min_max=(3, 3), fill_to_min=None):
+
+def list_of(typ: Callable[[Any], Any], len_min_max: Tuple[int, int] = (3, 3), fill_to_min: Any = None) -> Callable[[Any], list]:
     '''Defines a converter for an iterable to a list of elements of a given type.
     Args:
         typ: The type of list elements.
@@ -76,7 +75,7 @@ def list_of(typ, len_min_max=(3, 3), fill_to_min=None):
     description = 'list_of(%s, len_min_max=%r, fill_to_min=%r)' % (
         typ.__name__, len_min_max, fill_to_min)
 
-    def list_converter(value):
+    def list_converter(value: Any) -> list:
         '''Converts provided value as a list of the given type.
         value: The value to be converted
         '''
@@ -100,7 +99,7 @@ def list_of(typ, len_min_max=(3, 3), fill_to_min=None):
     return list_converter
 
 
-def strict_float(v):
+def strict_float(v: Union[int, float]) -> np.float64:
     '''Converter for a floating point value. Specifically does not allow str.
     Returns a numpy.float64 value.
     '''
@@ -335,16 +334,16 @@ class GVector(object):
 
 
 # GVector for the X axis.
-X_AXIS = GVector([1, 0, 0])
+X_AXIS: GVector = GVector([1, 0, 0])
 
 # GVector for the y axis.
-Y_AXIS = GVector([0, 1, 0])
+Y_AXIS: GVector = GVector([0, 1, 0])
 
 # GVector for the z axis.
-Z_AXIS = GVector([0, 0, 1])
+Z_AXIS: GVector = GVector([0, 0, 1])
 
 # GVector for the z axis.
-ZERO_VEC = GVector([0, 0, 0])
+ZERO_VEC: GVector = GVector([0, 0, 0])
 
 
 class GMatrix(object):
@@ -370,7 +369,7 @@ class GMatrix(object):
                 self.m.A[3].tolist())
 
     @classmethod
-    def from_zyx_axis(cls, x, y, z):
+    def from_zyx_axis(cls, x, y, z) -> 'GMatrix':
         '''Returns rotation only matrix from an x, y and z axis vector.'''
         v3A = [GVector(x).N.A[:3], 
                GVector(y).N.A[:3],
@@ -430,47 +429,47 @@ class GMatrix(object):
     def __repr__(self):
         return self.__class__.__name__ + '(' + str(self) + ')'
 
-    def __mul__(self, other):
+    def __mul__(self, other) -> 'GMatrix':
         if isinstance(other, GMatrix):
             return GMatrix(self.m * other.m)
         if isinstance(other, GVector):
             return GVector(self.m * other.v.T)
         return GMatrix(self.m[0:3] * other)
 
-    def __rmul__(self, other):
+    def __rmul__(self, other) -> 'GMatrix':
         if isinstance(other, GMatrix):
             return GMatrix(other.m * self.m)
         if isinstance(other, GVector):
             return GVector(other.v * self.m)
         return GMatrix(other * self.m)
 
-    def __add__(self, other):
+    def __add__(self, other) -> 'GMatrix':
         if isinstance(other, GMatrix):
             return GMatrix(self.m[0:3] + other.m[0:3])
         return GMatrix(self.m[0:3] + GMatrix(other).m[0:3])
 
-    def __radd__(self, other):
+    def __radd__(self, other) -> 'GMatrix':
         if isinstance(other, GMatrix):
             return GMatrix(self.m[0:3] + other.m[0:3])
         return GMatrix(self.m[0:3] + GMatrix(other).m[0:3])
 
-    def __sub__(self, other):
+    def __sub__(self, other) -> 'GMatrix':
         if isinstance(other, GMatrix):
             return GMatrix(self.m[0:3] - other.m[0:3])
         return GMatrix(self.m[0:3] - GMatrix(other).m[0:3])
 
-    def __rsub__(self, other):
+    def __rsub__(self, other) -> 'GMatrix':
         if isinstance(other, GMatrix):
             return GMatrix(other.m[0:3] - self.m[0:3])
         return GMatrix(GMatrix(other).m[0:3] - self.m[0:3])
 
-    def __neg__(self):
+    def __neg__(self) -> 'GMatrix':
         return GMatrix(-self.m[0:3])
 
-    def __pos__(self):
+    def __pos__(self) -> 'GMatrix':
         return GMatrix(self.m.copy())
 
-    def __invert__(self):
+    def __invert__(self) -> 'GMatrix':
         return GMatrix(self.m.I)
 
     def __getitem__(self, index):
@@ -485,7 +484,7 @@ class GMatrix(object):
     def __ne__(self, other):
         return not self == other
     
-    def descale(self):
+    def descale(self) -> 'GMatrix':
         '''Returns a matrix with a scale of 1 but unchanged rotation and translation.'''
         vecs = tuple(GVector(self.A[i][0:3]).N for i in range(3))
         return translate(self.A[0:3, -1]) * self.from_zyx_axis(*vecs)
@@ -498,21 +497,21 @@ class GMatrix(object):
     def is_approx_equal(self, other, error=1.e-12):
         return (self - other).length() < error
 
-    def copy(self):
+    def copy(self) -> 'GMatrix':
         return GMatrix(self)
     
-    def get_translation(self):
+    def get_translation(self) -> 'GMatrix':
         return GVector(self.m.T.A[3])
     
-    def get_rotation(self):
+    def get_rotation(self) -> 'GMatrix':
         return GMatrix(self.A[0:3,0:3])
     
-    def get_axis(self, index):
+    def get_axis(self, index) -> GVector:
         v = self.A[index]
         return GVector(v[0:3])
 
     @property
-    def I(self):
+    def I(self) -> 'GMatrix':
         '''Returns the inverted matrix.
         i.e.
            M.I * M == IDENTITY
@@ -520,59 +519,68 @@ class GMatrix(object):
         return GMatrix(self.m.I)
 
     @property
-    def L(self):
+    def L(self) -> List:
         '''Returns the Python list equivalent of this matrix.'''
         return self.m.tolist()
 
     @property
-    def A(self):
+    def A(self) -> np.array:
         '''Returns the numpy.array equivalent of this matrix.'''
         return self.m.A
     
     @property
-    def N(self):
+    def N(self) -> 'GMatrix':
         '''Returns a de-scaled (normalized) matrix.'''
         return self.descale()
     
-    def __hash__(self):
+    def __hash__(self) -> int:
         return hash(tuple(tuple(x) for x in self.A))
 
 
 # The identity matrix.
-IDENTITY = GMatrix([
+IDENTITY: GMatrix = GMatrix([
     [1.0, 0.0, 0.0, 0.0],
     [0.0, 1.0, 0.0, 0.0],
     [0.0, 0.0, 1.0, 0.0],
     [0.0, 0.0, 0.0, 1.0]])
 
 # Mirrors the X axis.
-MIRROR_X = GMatrix([
+MIRROR_X: GMatrix = GMatrix([
     [-1.0, 0.0, 0.0, 0.0],
     [0.0, 1.0, 0.0, 0.0],
     [0.0, 0.0, 1.0, 0.0],
     [0.0, 0.0, 0.0, 1.0]])
 
 # Mirrors the Y axis.
-MIRROR_Y = GMatrix([
+MIRROR_Y: GMatrix = GMatrix([
     [1.0, 0.0, 0.0, 0.0],
     [0.0, -1.0, 0.0, 0.0],
     [0.0, 0.0, 1.0, 0.0],
     [0.0, 0.0, 0.0, 1.0]])
 
 # Mirrors the Z axis.
-MIRROR_Z = GMatrix([
+MIRROR_Z: GMatrix = GMatrix([
     [1.0, 0.0, 0.0, 0.0],
     [0.0, 1.0, 0.0, 0.0],
     [0.0, 0.0, -1.0, 0.0],
     [0.0, 0.0, 0.0, 1.0]])
 
-def clean(v, epsilon=1.e-13):
+def clean(v: float, epsilon: float=1.e-13) -> float:
     '''Clean rounding errors for zeros.'''
     if np.abs(v) < epsilon:
-        return 0
+        return 0.
     return v
 
-def rotZ(degrees=90, radians=None, sinr_cosr=None):
+def rotation_to_str(degrees, radians, sinr_cosr, prefix: str='') -> str:
+    '''Returns a string indicating the selected rotation method. This is used
+    for logging and debugging.'''
+    if sinr_cosr:
+        return f'{prefix}sinr_cosr={sinr_cosr}'
+    if radians is None:
+        return f'{prefix}degrees={degrees}'
+    return f'{prefix}radians={radians}'
+
+def rotZ(degrees=90, radians=None, sinr_cosr=None) -> GMatrix:
     '''Returns a GMatrix that causes a rotation about Z given an angle
     either in degrees, radians or a sin/cos pair.
     Only one of sinr_cosr or radians or degrees is used in the order
@@ -585,18 +593,17 @@ def rotZ(degrees=90, radians=None, sinr_cosr=None):
     sinr = clean(np.sin(radians))
     return rotZSinCos(sinr, cosr)
 
-def rotZSinCos(sinr, cosr):
+def rotZSinCos(sinr, cosr) -> GMatrix:
     '''Returns a GMatrix that causes a rotation about Z for the given sin/cos pair.'''
     return GMatrix(np.matrix([[cosr, -sinr, 0.0, 0], 
                               [sinr, cosr, 0, 0], 
                               [0, 0, 1, 0], 
                               [0, 0, 0, 1]]))
-ROTZ_90 = rotZ(90)
-ROTZ_90 = rotZ(90)
-ROTZ_180 = rotZ(180)
-ROTZ_270 = rotZ(-90)
+ROTZ_90: GMatrix = rotZ(90)
+ROTZ_180: GMatrix = rotZ(180)
+ROTZ_270: GMatrix = rotZ(-90)
 
-def rotX(degrees=90, radians=None, sinr_cosr=None):
+def rotX(degrees=90, radians=None, sinr_cosr=None) -> GMatrix:
     '''Returns a GMatrix that causes a rotation about X given an angle
     either in degrees, radians or a sin/cos pair.
     Only one of sinr_cosr or radians or degrees is used in the order
@@ -610,17 +617,17 @@ def rotX(degrees=90, radians=None, sinr_cosr=None):
     sinr = clean(np.sin(radians))
     return rotXSinCos(sinr, cosr)
     
-def rotXSinCos(sinr, cosr):
+def rotXSinCos(sinr, cosr) -> GMatrix:
     '''Returns a Gmatrix for a rotation about the X axis given a sin/cos pair.'''
     return GMatrix(np.matrix([[1.0, 0, 0, 0], 
                               [0, cosr, -sinr, 0], 
                               [0, sinr, cosr, 0], 
                               [0, 0, 0, 1]]))
-ROTX_90 = rotX(90)
-ROTX_180 = rotX(180)
-ROTX_270 = rotX(-90)
+ROTX_90: GMatrix = rotX(90)
+ROTX_180: GMatrix = rotX(180)
+ROTX_270: GMatrix = rotX(-90)
     
-def rotY(degrees=90, radians=None, sinr_cosr=None):
+def rotY(degrees=90, radians=None, sinr_cosr=None) -> GMatrix:
     '''Returns a GMatrix that causes a rotation about Y given an angle
     either in degrees, radians or a sin/cos pair.
     Only one of sinr_cosr or radians or degrees is used in the order
@@ -634,14 +641,14 @@ def rotY(degrees=90, radians=None, sinr_cosr=None):
     sinr = clean(np.sin(radians))
     return rotYSinCos(sinr, cosr)
     
-def rotYSinCos(sinr, cosr):
+def rotYSinCos(sinr, cosr) -> GMatrix:
     return GMatrix(np.matrix([[cosr, 0.0, sinr, 0], 
                               [0, 1, 0, 0],
                               [-sinr, 0, cosr, 0], 
                               [0, 0, 0, 1]]))
-ROTY_90 = rotY(90)
-ROTY_180 = rotY(180)
-ROTY_270 = rotY(-90)
+ROTY_90: GMatrix = rotY(90)
+ROTY_180: GMatrix = rotY(180)
+ROTY_270: GMatrix = rotY(-90)
     
 
 def normalize(v):
@@ -650,7 +657,7 @@ def normalize(v):
         v = GVector(v)
     return v.N
 
-def rotVSinCos(v, sinr, cosr):
+def rotVSinCos(v, sinr, cosr) -> GMatrix:
     '''Returns a GMatrix that causes a rotation about an axis vector v the 
     given sin and cos of the rotation angle.'''
     u = normalize(v)
@@ -671,7 +678,8 @@ def rotVSinCos(v, sinr, cosr):
          [uxz * lcosr - uy * sinr, uyz * lcosr + ux * sinr, cosr + uz2 * lcosr, 0],
          [0.0, 0, 0, 1]]))
 
-def rotV(v, degrees=90, radians=None, sinr_cosr=None):
+
+def rotV(v, degrees: float=90, radians: float=None, sinr_cosr: Tuple[float, float]=None) -> GMatrix:
     '''Returns a GMatrix that causes a rotation about the vector v given 
     an angle either in degrees, radians or a sin/cos pair.
     Only one of sinr_cosr or radians or degrees is used in the order
@@ -684,19 +692,19 @@ def rotV(v, degrees=90, radians=None, sinr_cosr=None):
     sinr = clean(np.sin(radians))
     return rotVSinCos(v, sinr, cosr)
 
-ROTV111_240=GMatrix([
+ROTV111_240: GMatrix =GMatrix([
     [0.0, 1.0, 0.0, 0.0],
     [0.0, 0.0, 1.0, 0.0],
     [1.0, 0.0, 0.0, 0.0],
     [0.0, 0.0, 0.0, 1.0]])
 
-ROTV111_120=GMatrix([
+ROTV111_120: GMatrix =GMatrix([
     [0.0, 0.0, 1.0, 0.0],
     [1.0, 0.0, 0.0, 0.0],
     [0.0, 1.0, 0.0, 0.0],
     [0.0, 0.0, 0.0, 1.0]])
 
-def scale(s):
+def scale(s) -> GMatrix:
     '''Returns a GMatrix that scales by a vector [x,y,z] scalars or [s,s,s].'''
     try:
         v = LIST_3_FLOAT(s)
@@ -706,23 +714,23 @@ def scale(s):
     return GMatrix(
         np.matrix([[v[0], 0.0, 0, 0], [0, v[1], 0, 0], [0, 0, v[2], 0], [0, 0, 0, 1]]))
 
-def translate(v):
+def translate(v: GVector) -> GMatrix:
     '''Returns GMatrix that translates by the given vector.'''
     if not isinstance(v, GVector):
         v = GVector(v)
     return GMatrix(np.matrix(
         [[1., 0, 0, v.x], [0, 1, 0, v.y], [0, 0, 1, v.z], [0, 0, 0, 1]]))
     
-def tranX(v):
+def tranX(v: float) -> GMatrix:
     return translate([v, 0, 0])
 
-def tranY(v):
+def tranY(v: float) -> GMatrix:
     return translate([0, v, 0])
 
-def tranZ(v):
+def tranZ(v: float) -> GMatrix:
     return translate([0, 0, v])
 
-def rot_to_V(from_v, to_v):
+def rot_to_V(from_v: GVector, to_v: GVector) -> GMatrix:
     '''Computes the rotation so that transformation from from_v becomes 
     parallel to to_v'''
     if not isinstance(from_v, GVector):
@@ -742,7 +750,7 @@ def rot_to_V(from_v, to_v):
     
     return rotVSinCos(cross, sinr, cosr)
 
-def rotAlign(preserve_axis, align_preserve_axis, plane_axis):
+def rotAlign(preserve_axis: GVector, align_preserve_axis: GVector, plane_axis: GVector) -> GMatrix:
     '''Returns a GMatrix that rotates around the preserve_axis in order to align
     the align_preserve_axis with the plane described by plane_axis.
     '''
@@ -767,7 +775,7 @@ def rotAlign(preserve_axis, align_preserve_axis, plane_axis):
 
     return result
 
-def rotToPlane(v, plane_normal):
+def rotToPlane(v, plane_normal) -> GMatrix:
     '''Find the transform that rotates v onto the plane described by plane_normal and going
     through the origin.
     '''
@@ -779,7 +787,7 @@ def rotToPlane(v, plane_normal):
     angle = np.arctan2(cross.length(), dot)
     return rotV(cross, radians=np.pi/2 - angle)
 
-def mirror(axis):
+def mirror(axis) -> GMatrix:
     '''Mirror at the origin about any plane. The axis provided is the normal to the mirror plane.
     '''
     axis = normalize(axis)
@@ -800,7 +808,7 @@ def mirror(axis):
     # then rotate back to the original frame of reference.
     return m.I * mm * m
 
-def _get_plane_normal(plane_mat, plane_mat_I=None):
+def _get_plane_normal(plane_mat, plane_mat_I=None) -> GMatrix:
     '''Returns a GMatrix representing the vector from the origin to the
     translation point normal to the projected X-Y plane.'''
     if not plane_mat_I:
@@ -811,7 +819,7 @@ def _get_plane_normal(plane_mat, plane_mat_I=None):
     p_tran_len = -p_z.dot3D(p_trans)
     return p_trans_dir * translate([0, 0, p_tran_len])
 
-def plane_intersect(planeA, planeB):
+def plane_intersect(planeA: GMatrix, planeB: GMatrix) -> GMatrix:
     '''Find the intersecting line of 2 planes represented as the GMatrix x-y
     plane. i.e. The Z vector of the plane matrix parameters are the normal
     to the plane. The result is another GMatrix whose Z axis is the line
@@ -864,7 +872,7 @@ def plane_intersect(planeA, planeB):
     # Put this back in the original/common frame of reference.
     return planeA * interesct_line.I
     
-def plane_line_intersect(plane_in, line_in):
+def plane_line_intersect(plane_in: GMatrix, line_in: GMatrix) -> GMatrix:
     '''Find the interesting point between a plane and a line.
     The plane is represented as by the GMatrix x-y plane (Z is normal). The
     line is also a GMatrix whose Z direction is the direction of the line and
@@ -892,7 +900,7 @@ def plane_line_intersect(plane_in, line_in):
     
     return result.I
 
-def distance_between(pointA: GMatrix, pointB: GMatrix):
+def distance_between(pointA: GMatrix, pointB: GMatrix) -> float:
     '''Returns the distance from between 2 points.'''
     diff = pointA.get_translation() - pointB.get_translation()
     return clean(diff.length(), epsilon=1.e-20)

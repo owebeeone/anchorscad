@@ -17,7 +17,7 @@ from anchorscad.path_utils import remove_colinear_points
 import numpy as np
 import traceback as tb
 import numbers
-import manifold3d
+import math
 
 
 class DuplicateNameException(Exception):
@@ -46,6 +46,9 @@ class MultiplePathPolygonBuilderNotImplemented(Exception):
     
 class PathElelementNotFound(Exception):
     '''The requested path element was not found.'''
+
+class AzimuthNotPossibleOnSegment(Exception):
+    '''The requested azimuth is not possible for given segment.'''
 
 
 EPSILON=1e-6
@@ -121,9 +124,6 @@ class CubicSpline():
     
     def _dcoeffs(self, deivative_order):
         return self.DERIVATIVE_COEFFS[self.dimensions - 1][deivative_order]
-    
-    class InvalidTypeForP(Exception):
-        '''The parameter p must be a numpy.ndarray.'''
         
     def __post_init__(self):
         object.__setattr__(self, 'coefs', np.matmul(self.COEFFICIENTS, self.p))
@@ -141,7 +141,6 @@ class CubicSpline():
     
     def evaluate(self, t):
         return np.sum(np.multiply(self.coefs, self._make_ta3(t)), axis=0)
-    
   
     @classmethod
     def find_roots(cls, a, b, c, *, t_range=(0.0, 1.0)):
@@ -211,6 +210,26 @@ class CubicSpline():
     def extents(self):
         extr = self.extremes()
         return extentsof(extr)
+    
+    def transform(self, m: l.GMatrix) -> 'CubicSpline':
+        '''Returns a new spline transformed by the matrix m.'''
+        new_p = list((m * to_gvector(p)).A[0:self.dimensions] for p in self.p)
+        return CubicSpline(np.array(new_p), self.dimensions)
+    
+    def azimuth_t(self, 
+            degrees: float=0, radians: float=None, sinr_cosr: Tuple[float]=None,
+            t_range=(0.0, 1.0)) -> Tuple[float, ...]:
+        '''Returns the list of t where the tangent is at the given angle from the beginning of the
+        given t_range. The angle is in degrees or radians or as sin and cos values.'''
+        
+        start_slope = self.normal2d(t_range[0])
+        start_rot: l.GMatrix = l.rotZ(sinr_cosr=(start_slope[0], -start_slope[1]))
+        
+        qs: CubicSpline = self.transform(l.rotZ(degrees, radians, sinr_cosr).I * start_rot)
+        
+        roots = qs.curve_maxima_minima_t(t_range)
+
+        return sorted(roots[0])
 
 
 @datatree(frozen=True)
@@ -241,9 +260,6 @@ class QuadraticSpline():
     
     def _dcoeffs(self, deivative_order):
         return self.DERIVATIVE_COEFFS[self.dimensions - 1][deivative_order]
-    
-    class InvalidTypeForP(Exception):
-        '''The parameter p must be a numpy.ndarray.'''
         
     def __post_init__(self):
         object.__setattr__(self, 'coefs', np.matmul(self.COEFFICIENTS, self.p))
@@ -315,6 +331,26 @@ class QuadraticSpline():
     def extents(self):
         extr = self.extremes()
         return extentsof(extr)
+    
+    def transform(self, m: l.GMatrix) -> 'QuadraticSpline':
+        '''Returns a new spline transformed by the matrix m.'''
+        new_p = list((m * to_gvector(p)).A[0:self.dimensions] for p in self.p)
+        return QuadraticSpline(np.array(new_p), self.dimensions)
+    
+    def azimuth_t(self, 
+            degrees: float=0, radians: float=None, sinr_cosr: Tuple[float]=None,
+            t_range=(0.0, 1.0)) -> Tuple[float, ...]:
+        '''Returns the list of t where the tangent is at the given angle from the beginning of the
+        given t_range. The angle is in degrees or radians or as sin and cos values.'''
+        
+        start_slope = self.normal2d(t_range[0])
+        start_rot: l.GMatrix = l.rotZ(sinr_cosr=(start_slope[0], -start_slope[1]))
+        
+        qs: QuadraticSpline = self.transform(l.rotZ(degrees, radians, sinr_cosr) * start_rot.I)
+        
+        roots = qs.curve_maxima_minima_t(t_range)
+
+        return sorted(roots[0])
 
 
 def _normal_of_2d(v1, v2, dims=[0, 1]):
@@ -361,6 +397,12 @@ class OpBase:
     
     def get_centre(self):
         '''Returns the centre of the operation, if the operation has a centre.'''
+        return None
+    
+    def azimuth_t(self,
+        degrees: float=0, radians: float=None, sinr_cosr: Tuple[float]=None,
+        t_range=(0.0, 1.0)) -> Tuple[float, ...]:
+        
         return None
     
 
@@ -596,6 +638,17 @@ class Path():
         if not node:
             raise PathElelementNotFound(f'Unable to find path element: {name}')
         return node.get_centre()
+    
+    def azimuth_t(self, name,
+        degrees: float=0, radians: float=None, sinr_cosr: Tuple[float]=None,
+        t_range=(0.0, 1.0)) -> Tuple[float, ...]:
+        '''Returns the list of t where the tangent is at the given angle changed
+        from the beginning of the given t_range.'''
+        
+        node = self.get_node(name)
+        if not node:
+            raise PathElelementNotFound(f'Unable to find path element named: "{name}"')
+        return node.azimuth_t(degrees, radians, sinr_cosr, t_range)
     
     def extents(self):
         itr = iter(self.ops)
@@ -1137,6 +1190,12 @@ class PathBuilder():
             params = self._as_non_defaults_dict()
             params['points'] = points
             return (self.__class__, params)
+        
+        def azimuth_t(self,
+            degrees: float=0, radians: float=None, sinr_cosr: Tuple[float]=None,
+            t_range=(0.0, 1.0)) -> Tuple[float, ...]:
+            
+            return self.spline.azimuth_t(degrees, radians, sinr_cosr, t_range)
             
         def __eq__(self, other):
             if self.__class__ != other.__class__:
@@ -1243,6 +1302,13 @@ class PathBuilder():
             
         def get_centre(self):
             return self.centre
+        
+        
+        def azimuth_t(self,
+            degrees: float=0, radians: float=None, sinr_cosr: Tuple[float]=None,
+            t_range=(0.0, 1.0)) -> Tuple[float, ...]:
+            
+            return ()
             
         def lastPosition(self):
             return self.end_point
@@ -2191,6 +2257,7 @@ class LinearExtrude(ExtrudedShape):
                 core.surface_args('curve', 0.8, 40, None, True, True),
                 core.surface_args('curve', 0.9, 40, None, True, True),
                 core.surface_args('curve', 1, 40, None, True, True),
+                core.surface_args('azimuth', 'curve', adegrees=45, rh=0.05),
                 core.surface_args('linear2', 0.1, rh=0.9),
                 core.surface_args('linear2', 0.5, 0.9, True, True),
                 core.surface_args('linear2', 1.0, rh=0.9),
@@ -2243,9 +2310,9 @@ class LinearExtrude(ExtrudedShape):
         'example4': core.ExampleParams(
             shape_args=core.args(
                 PathBuilder()
-                    .move([0, _SCALE * 50])
-                    .qspline([(100 * _SCALE, 100 * _SCALE), (_SCALE * 50, 0)], name='curve')
-                    .line([0, _SCALE * 50], 'linear1')
+                    .move([_SCALE * 50, 0])
+                    .qspline([(100 * _SCALE, 100 * _SCALE), (0, _SCALE * 50)], name='curve')
+                    .line([_SCALE * 50, 0], 'linear1')
                     .build(),
                 h=50,
                 fn=80,
@@ -2282,6 +2349,39 @@ class LinearExtrude(ExtrudedShape):
                 core.surface_args('centre_of', 'curve2', 0),
                 core.surface_args('centre_of', 'curve3', 0),
                 core.surface_args('centre_of', 'curve4', 0)
+                )),
+        'example7': core.ExampleParams(
+            shape_args=core.args(
+                PathBuilder()
+                    .move([_SCALE * 50, 0])
+                    .spline([
+                        (100 * _SCALE, 100 * _SCALE), 
+                        (100 * _SCALE, 100 * _SCALE), 
+                        (0, _SCALE * 50)], name='curve')
+                    .line([_SCALE * 50, 0], 'linear1')
+                    .build(),
+                h=40 * _SCALE,
+                fn=80,
+                use_polyhedrons=False
+                ),
+            anchors=(
+                core.surface_args('linear1', 0.5, 0),
+                # core.surface_args('linear1', 0.5, 25 * _SCALE),
+                core.surface_args('curve', 0, 0),
+                core.surface_args('curve', 0.1, 0),
+                core.surface_args('curve', 0.2, 0),
+                core.surface_args('curve', 0.3, 0),
+                core.surface_args('curve', 0.4, 0),
+                core.surface_args('curve', 0.5, 0),
+                core.surface_args('curve', 0.6, 0),
+                core.surface_args('curve', 1, 0),
+                core.surface_args('curve', 1, 120),
+                core.surface_args('azimuth', 'curve', adegrees=0, rh=1),
+                core.surface_args('azimuth', 'curve', adegrees=2, rh=1 ),
+                core.surface_args('azimuth', 'curve', adegrees=20, rh=1),
+                core.surface_args('azimuth', 'curve', adegrees=30, rh=1),
+                core.surface_args('azimuth', 'curve', adegrees=40, rh=1),
+                core.surface_args('azimuth', 'curve', adegrees=140, rh=1),
                 )),
         }
 
@@ -2434,6 +2534,30 @@ class LinearExtrude(ExtrudedShape):
                 * l.rotZSinCos(-normal[1], -normal[0])
                 * l.ROTY_180
                 * l.ROTZ_90)
+        
+    @core.anchor('Azimuth to segment start.')
+    def azimuth(self, segment_name, adegrees: float=0, aradians: float=None, 
+                asinr_cosr: Tuple[float]=None, t_index: int=0, h=0, rh=None, 
+                align_twist=False, align_scale=False, t_range=(0.0, 1.0)) -> l.GMatrix:
+        '''Returns a transformation to the point on the given curve segment (cubic, quadratic, 
+        or arc) where the normal forms the specified azimuth from the start of the given t_range.
+        This allows anchors to be located by angle along the curve segment.'''
+        
+        azimuth_t = self.path.azimuth_t(segment_name, adegrees, aradians, asinr_cosr, t_range)
+
+        if not azimuth_t or len(azimuth_t) < t_index + 1:
+            params_str = f'{l.rotation_to_str(adegrees, aradians, asinr_cosr, "a")}' \
+                f't_index={t_index} t_range={t_range}'
+            if azimuth_t:
+                # Requesting the second root but it's not there.
+                raise AzimuthNotPossibleOnSegment(
+                    f'Requested t_index not available for "{segment_name}" with {params_str}')
+            raise AzimuthNotPossibleOnSegment(
+                f'Azimuth not possible for segment "{segment_name}" with {params_str}')
+            
+        t = azimuth_t[t_index]
+        return self.edge(segment_name, t, h, rh, align_twist, align_scale)
+        
 
 @core.shape
 @datatree
@@ -2509,7 +2633,69 @@ class RotateExtrude(ExtrudedShape):
                 core.surface_args('linear1', 0.5),
                 core.surface_args('linear1', 1),
                 core.surface_args('curve', 0.2),
-                core.surface_args('curve', 1),))
+                core.surface_args('curve', 1),)),
+        'example4': core.ExampleParams(
+            shape_args=core.args(
+                PathBuilder()
+                    .move([_SCALE * 50, 0])
+                    .qspline([(100 * _SCALE, 100 * _SCALE), (0, _SCALE * 50)], name='curve')
+                    .line([_SCALE * 50, 0], 'linear1')
+                    .build(),
+                degrees=120,
+                fn=80,
+                use_polyhedrons=False
+                ),
+            anchors=(
+                core.surface_args('linear1', 0.5, 0),
+                # core.surface_args('linear1', 0.5, 25 * _SCALE),
+                core.surface_args('curve', 0, 0),
+                core.surface_args('curve', 0.1, 0),
+                core.surface_args('curve', 0.2, 0),
+                core.surface_args('curve', 0.3, 0),
+                core.surface_args('curve', 0.4, 0),
+                core.surface_args('curve', 0.5, 0),
+                core.surface_args('curve', 0.6, 0),
+                core.surface_args('curve', 1, 0),
+                core.surface_args('curve', 1, 120),
+                core.surface_args('azimuth', 'curve', adegrees=10, degrees=120),
+                core.surface_args('azimuth', 'curve', adegrees=20, degrees=120),
+                core.surface_args('azimuth', 'curve', adegrees=30, degrees=120),
+                core.surface_args('azimuth', 'curve', adegrees=40, degrees=120),
+                core.surface_args('azimuth', 'curve', adegrees=50, degrees=120),
+                )),
+        'example7': core.ExampleParams(
+            shape_args=core.args(
+                PathBuilder()
+                    .move([_SCALE * 50, 0])
+                    .spline([
+                        (100 * _SCALE, 100 * _SCALE), 
+                        (100 * _SCALE, 100 * _SCALE), 
+                        (0, _SCALE * 50)], name='curve')
+                    .line([_SCALE * 50, 0], 'linear1')
+                    .build(),
+                degrees=120,
+                fn=80,
+                use_polyhedrons=False
+                ),
+            anchors=(
+                core.surface_args('linear1', 0.5, 0),
+                # core.surface_args('linear1', 0.5, 25 * _SCALE),
+                core.surface_args('curve', 0, 0),
+                core.surface_args('curve', 0.1, 0),
+                core.surface_args('curve', 0.2, 0),
+                core.surface_args('curve', 0.3, 0),
+                core.surface_args('curve', 0.4, 0),
+                core.surface_args('curve', 0.5, 0),
+                core.surface_args('curve', 0.6, 0),
+                core.surface_args('curve', 1, 0),
+                core.surface_args('curve', 1, 120),
+                core.surface_args('azimuth', 'curve', adegrees=0, degrees=120),
+                core.surface_args('azimuth', 'curve', adegrees=2, degrees=120),
+                core.surface_args('azimuth', 'curve', adegrees=20, degrees=120),
+                core.surface_args('azimuth', 'curve', adegrees=30, degrees=120),
+                core.surface_args('azimuth', 'curve', adegrees=40, degrees=120),
+                core.surface_args('azimuth', 'curve', adegrees=140, degrees=120),
+                )),
         }
     
     def select_attrs(self, renderer):
@@ -2619,8 +2805,8 @@ class RotateExtrude(ExtrudedShape):
         return (l.rotZ(degrees=degrees, radians=radians)
                      * l.ROTX_90  # Projection from 2D Path to 3D space
                      * l.translate([pos[0], pos[1], 0])
-                     * l.ROTY_90  
-                     * l.rotXSinCos(normal[1], -normal[0]))
+                     * l.rotZSinCos(-normal[1], normal[0])
+                     )
 
     @core.anchor('Centre of the extrusion arc.')
     def centre(self):
@@ -2644,6 +2830,30 @@ class RotateExtrude(ExtrudedShape):
                 * l.ROTX_90  # Projection from 2D Path to 3D space
                 * l.translate([centre_2d[0], centre_2d[1], 0])
                 * l.rotZSinCos(-normal[1], -normal[0]))
+        
+    @core.anchor('Azimuth to segment start.')
+    def azimuth(self, segment_name, adegrees: float=0, aradians: float=None, 
+                asinr_cosr: Tuple[float]=None, t_index: int=0, degrees: float=0, radians: float=None, 
+                t_range=(0.0, 1.0)) -> l.GMatrix:
+        '''Returns a transformation to the point on the given curve segment (cubic, quadratic, 
+        or arc) where the normal forms the specified azimuth from the start of the given t_range.
+        This allows anchors to be located by angle along the curve segment.'''
+        
+        azimuth_t = self.path.azimuth_t(segment_name, adegrees, aradians, asinr_cosr, t_range)
+
+        if not azimuth_t or len(azimuth_t) < t_index + 1:
+            params_str = f'{l.rotation_to_str(adegrees, aradians, asinr_cosr, "a")}' \
+                f' t_index={t_index} t_range={t_range}'
+            if azimuth_t:
+                # Requesting the second root but it's not there.
+                raise AzimuthNotPossibleOnSegment(
+                    f'Requested t_index not available for "{segment_name}" with {params_str}')
+            raise AzimuthNotPossibleOnSegment(
+                f'Azimuth not possible for segment "{segment_name}" with {params_str}')
+            
+        t = azimuth_t[t_index]
+        return self.edge(segment_name, t, degrees, radians)
+        
 
 # Uncomment the line below to default to writing OpenSCAD files
 # when anchorscad_main is run with no --write or --no-write options.

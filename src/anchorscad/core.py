@@ -1941,7 +1941,7 @@ class Cone(Shape):
         renderer.add(renderer.model.Cylinder(r=None, **params))
         return renderer
     
-    @anchor('The base of the cylinder')
+    @anchor('The base of the cone/cylinder.')
     def base(self, h=0, rh=None):
         if rh:
             h = h + rh * self.h
@@ -1950,13 +1950,13 @@ class Cone(Shape):
             return transform
         return l.tranZ(h) * transform
     
-    @anchor('The top of the cylinder')
+    @anchor('The top of the cone/cylinder')
     def top(self, h=0, rh=None):
         if rh:
             h = h + rh * self.h
         return l.translate([0, 0, self.h - h])
     
-    @anchor('The centre of the cylinder')
+    @anchor('The centre of the cone/cylinder')
     def centre(self):
         return l.translate([0, 0, self.h / 2]) * l.ROTX_180
     
@@ -1994,9 +1994,7 @@ class Cylinder(Cone):
     fs: float=FS_FIELD
     
     EXAMPLE_SHAPE_ARGS=args(h=50, r=30, fn=30)
-    
-    # def __post_init__(self):
-    #     Cone.__post_init__(self)
+
 
 class CompositeShape(Shape):
     '''Provides functionality for composite shapes. Subclasses must set 'maker' in

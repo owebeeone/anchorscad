@@ -60,6 +60,7 @@ class CountersunkScrew(ad.CompositeShape):
         tap_shaft_dia_delta=6 - 2.6,
         as_solid=False,
         hide_cage=False,
+        screw_hide_cage=False,
         fn=36)
     
     EXAMPLE_ANCHORS=(

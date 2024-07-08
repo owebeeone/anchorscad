@@ -105,7 +105,7 @@ class DoorHolderRing(ad.CompositeShape):
     screw_angle: float=ad.dtfield(20, doc='The angle of the screw hole.')
     screw_offset: float=ad.dtfield(8, doc='The X offsets of the screw holes.')
 
-    EXAMPLE_SHAPE_ARGS=ad.args(hide_cage=False, fn=128)
+    EXAMPLE_SHAPE_ARGS=ad.args(hide_cage=False, fn=128, screw_hide_cage=False)
     
     EXAMPLE_ANCHORS=(
         #ad.surface_args('scaffold', 'base_plate', 'centre'),
