@@ -571,6 +571,26 @@ def clean(v: float, epsilon: float=1.e-13) -> float:
         return 0.
     return v
 
+def inv_rot(rot_func: Callable[..., GMatrix], 
+            degrees: float=None, 
+            radians: float=None, 
+            sinr_cosr: Tuple[float, float]=None) -> GMatrix:
+    '''Returns the result of calling the rotation function, rot_func, with the
+    inverse of the rotation angle.
+    
+    Args:
+        rot_func: A function that returns a GMatrix for a given rotation.
+        degrees: The rotation angle in degrees.
+        radians: The rotation angle in radians.
+        sinr_cosr: A tuple containing the sine and cosine of the rotation angle.
+    '''
+    if sinr_cosr:
+        return rot_func(sinr_cosr=(-sinr_cosr[0], sinr_cosr[1]))
+    if radians is None:
+        return rot_func(degrees=-degrees)
+    return rot_func(radians=-radians)
+
+
 def rotation_to_str(degrees, radians, sinr_cosr, prefix: str='') -> str:
     '''Returns a string indicating the selected rotation method. This is used
     for logging and debugging.'''

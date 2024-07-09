@@ -143,7 +143,7 @@ class CubicSpline():
         return np.sum(np.multiply(self.coefs, self._make_ta3(t)), axis=0)
   
     @classmethod
-    def find_roots(cls, a, b, c, *, t_range=(0.0, 1.0)):
+    def find_roots(cls, a, b, c, *, t_range: Tuple[float, float]=(0.0, 1.0)):
         '''Find roots of quadratic polynomial that are between t_range.'''
         # a, b, c are quadratic coefficients i.e. at^2 + bt + c
         if a == 0:
@@ -169,7 +169,7 @@ class CubicSpline():
     # Solve for minima and maxima over t. There are two possible locations 
     # for each axis. The results for t outside of the bounds 0-1 are ignored
     # since the cubic spline is only interpolated in those bounds.
-    def curve_maxima_minima_t(self, t_range=(0.0, 1.0)):
+    def curve_maxima_minima_t(self, t_range: Tuple[float, float]=(0.0, 1.0)):
         '''Returns a dict with an entry for each dimension containing a list of
         t for each minima or maxima found.'''
         # Splines are defined only for t in the range [0..1] however the curve may
@@ -178,7 +178,7 @@ class CubicSpline():
         return dict((i, self.find_roots(*(d_coefs[0:3, i]), t_range=t_range)) 
                     for i in range(self.dimensions))
 
-    def curve_inflexion_t(self, t_range=(0.0, 1.0)):
+    def curve_inflexion_t(self, t_range: Tuple[float, float]=(0.0, 1.0)):
         '''Returns a dict with an entry for each dimension containing a list of
         t for each inflection point found.'''
         # Splines are defined only for t in the range [0..1] however the curve may
@@ -218,14 +218,14 @@ class CubicSpline():
     
     def azimuth_t(self, 
             degrees: float=0, radians: float=None, sinr_cosr: Tuple[float]=None,
-            t_range=(0.0, 1.0)) -> Tuple[float, ...]:
+            t_end: bool=False, t_range: Tuple[float, float]=(0.0, 1.0)) -> Tuple[float, ...]:
         '''Returns the list of t where the tangent is at the given angle from the beginning of the
         given t_range. The angle is in degrees or radians or as sin and cos values.'''
         
-        start_slope = self.normal2d(t_range[0])
+        start_slope = self.normal2d(t_range[1 if t_end else 0])
         start_rot: l.GMatrix = l.rotZ(sinr_cosr=(start_slope[1], -start_slope[0]))
         
-        qs: CubicSpline = self.transform(l.rotZ(degrees, radians, sinr_cosr).I * start_rot)
+        qs: CubicSpline = self.transform(l.inv_rot(l.rotZ, degrees, radians, sinr_cosr) * start_rot)
         
         roots = qs.curve_maxima_minima_t(t_range)
 
@@ -276,7 +276,7 @@ class QuadraticSpline():
         return np.sum(np.multiply(self.coefs, self._qmake_ta2(t)), axis=0)
     
     @classmethod
-    def find_roots(cls, a, b, *, t_range=(0.0, 1.0)):
+    def find_roots(cls, a, b, *, t_range: Tuple[float, float]=(0.0, 1.0)):
         '''Find roots of linear equation that are between t_range.'''
         # There either 1 or no roots.
         if a == 0:
@@ -291,7 +291,7 @@ class QuadraticSpline():
     # Solve for minima and maxima over t. There are two possible locations 
     # for each axis. The results for t outside of the bounds 0-1 are ignored
     # since the cubic spline is only interpolated in those bounds.
-    def curve_maxima_minima_t(self, t_range=(0.0, 1.0)):
+    def curve_maxima_minima_t(self, t_range: Tuple[float, float]=(0.0, 1.0)):
         '''Returns a dict with an entry for each dimension containing a list of
         t for each minima or maxima found.'''
         # Splines are defined only for t in the range [0..1] however the curve may
@@ -300,7 +300,7 @@ class QuadraticSpline():
         return dict((i, self.find_roots(*(d_coefs[0:2, i]), t_range=t_range)) 
                     for i in range(self.dimensions))
 
-    def curve_inflexion_t(self, t_range=(0.0, 1.0)):
+    def curve_inflexion_t(self, t_range: Tuple[float, float]=(0.0, 1.0)):
         '''Returns a dict with an entry for each dimension containing a list of
         t for each inflection point found.'''
         
@@ -338,15 +338,15 @@ class QuadraticSpline():
         return QuadraticSpline(np.array(new_p), self.dimensions)
     
     def azimuth_t(self, 
-            degrees: float=0, radians: float=None, sinr_cosr: Tuple[float]=None,
-            t_range=(0.0, 1.0)) -> Tuple[float, ...]:
+            degrees: float=0, radians: float=None, sinr_cosr: Tuple[float]=None, 
+            t_end: bool=False, t_range: Tuple[float, float]=(0.0, 1.0)) -> Tuple[float, float]:
         '''Returns the list of t where the tangent is at the given angle from the beginning of the
         given t_range. The angle is in degrees or radians or as sin and cos values.'''
         
-        start_slope = self.normal2d(t_range[0])
-        start_rot: l.GMatrix = l.rotZ(sinr_cosr=(start_slope[1], -start_slope[0]))
+        start_slope = self.normal2d(t_range[1 if t_end else 0])
+        start_rot: l.GMatrix = l.rotZ(sinr_cosr=(-start_slope[1], start_slope[0]))
         
-        qs: QuadraticSpline = self.transform(l.rotZ(degrees, radians, sinr_cosr) * start_rot.I)
+        qs: QuadraticSpline = self.transform(l.rotZ(degrees, radians, sinr_cosr).I * start_rot)
         
         roots = qs.curve_maxima_minima_t(t_range)
 
@@ -400,8 +400,8 @@ class OpBase:
         return None
     
     def azimuth_t(self,
-        degrees: float=0, radians: float=None, sinr_cosr: Tuple[float]=None,
-        t_range=(0.0, 1.0)) -> Tuple[float, ...]:
+        degrees: float=0, radians: float=None, sinr_cosr: Tuple[float]=None, 
+        t_end: bool=False, t_range: Tuple[float, float]=(0.0, 1.0)) -> Tuple[float, ...]:
         
         return None
     
@@ -640,15 +640,21 @@ class Path():
         return node.get_centre()
     
     def azimuth_t(self, name,
-        degrees: float=0, radians: float=None, sinr_cosr: Tuple[float]=None,
-        t_range=(0.0, 1.0)) -> Tuple[float, ...]:
+        degrees: float=0, radians: float=None, sinr_cosr: Tuple[float]=None, 
+        t_end: bool=False, t_range: Tuple[float, float]=(0.0, 1.0)) -> Tuple[float, ...]:
         '''Returns the list of t where the tangent is at the given angle changed
-        from the beginning of the given t_range.'''
+        from the beginning of the given t_range.
+        Args:
+            name: The name of the path element.
+            degrees, randians or sinr_cosr: The angle which it is desired to find the t.
+            t_end: If True then the angle is measured from the end of the segment.
+            t_range: The range of t to search for the t value that matches the angle.
+        '''
         
         node = self.get_node(name)
         if not node:
             raise PathElelementNotFound(f'Unable to find path element named: "{name}"')
-        return node.azimuth_t(degrees, radians, sinr_cosr, t_range)
+        return node.azimuth_t(degrees, radians, sinr_cosr, t_end, t_range)
     
     def extents(self):
         itr = iter(self.ops)
@@ -1193,9 +1199,9 @@ class PathBuilder():
         
         def azimuth_t(self,
             degrees: float=0, radians: float=None, sinr_cosr: Tuple[float]=None,
-            t_range=(0.0, 1.0)) -> Tuple[float, ...]:
+            t_end: bool=False, t_range: Tuple[float, float]=(0.0, 1.0)) -> Tuple[float, ...]:
             
-            return self.spline.azimuth_t(degrees, radians, sinr_cosr, t_range)
+            return self.spline.azimuth_t(degrees, radians, sinr_cosr, t_end, t_range)
             
         def __eq__(self, other):
             if self.__class__ != other.__class__:
@@ -1305,8 +1311,8 @@ class PathBuilder():
         
         
         def azimuth_t(self,
-            degrees: float=0, radians: float=None, sinr_cosr: Tuple[float]=None,
-            t_range=(0.0, 1.0)) -> Tuple[float, ...]:
+            degrees: float=0, radians: float=None, sinr_cosr: Tuple[float]=None, t_end: bool=False,
+            t_range: Tuple[float, float]=(0.0, 1.0)) -> Tuple[float, ...]:
             
             return ()
             
@@ -2537,17 +2543,17 @@ class LinearExtrude(ExtrudedShape):
         
     @core.anchor('Azimuth to segment start.')
     def azimuth(self, segment_name, adegrees: float=0, aradians: float=None, 
-                asinr_cosr: Tuple[float]=None, t_index: int=0, h=0, rh=None, 
-                align_twist=False, align_scale=False, t_range=(0.0, 1.0)) -> l.GMatrix:
+                asinr_cosr: Tuple[float]=None, t_index: int=0, t_end: bool=False, h=0, rh=None, 
+                align_twist=False, align_scale=False, t_range: Tuple[float, float]=(0.0, 1.0)) -> l.GMatrix:
         '''Returns a transformation to the point on the given curve segment (cubic, quadratic, 
         or arc) where the normal forms the specified azimuth from the start of the given t_range.
         This allows anchors to be located by angle along the curve segment.'''
         
-        azimuth_t = self.path.azimuth_t(segment_name, adegrees, aradians, asinr_cosr, t_range)
+        azimuth_t = self.path.azimuth_t(segment_name, adegrees, aradians, asinr_cosr, t_end, t_range)
 
         if not azimuth_t or len(azimuth_t) < t_index + 1:
             params_str = f'{l.rotation_to_str(adegrees, aradians, asinr_cosr, "a")}' \
-                f't_index={t_index} t_range={t_range}'
+                f' t_index={t_index} t_end={t_end} t_range={t_range}'
             if azimuth_t:
                 # Requesting the second root but it's not there.
                 raise AzimuthNotPossibleOnSegment(
@@ -2662,6 +2668,8 @@ class RotateExtrude(ExtrudedShape):
                 core.surface_args('azimuth', 'curve', adegrees=30, degrees=120),
                 core.surface_args('azimuth', 'curve', adegrees=40, degrees=120),
                 core.surface_args('azimuth', 'curve', adegrees=50, degrees=120),
+                core.surface_args('azimuth', 'curve', adegrees=0, degrees=121),
+                core.surface_args('azimuth', 'curve', adegrees=-5, t_end=True, degrees=120),
                 )),
         'example7': core.ExampleParams(
             shape_args=core.args(
@@ -2695,6 +2703,7 @@ class RotateExtrude(ExtrudedShape):
                 core.surface_args('azimuth', 'curve', adegrees=30, degrees=120),
                 core.surface_args('azimuth', 'curve', adegrees=40, degrees=120),
                 core.surface_args('azimuth', 'curve', adegrees=140, degrees=120),
+                core.surface_args('azimuth', 'curve', adegrees=-1, t_end=True, degrees=120),
                 )),
         }
     
@@ -2839,13 +2848,13 @@ class RotateExtrude(ExtrudedShape):
         
     @core.anchor('Azimuth to segment start.')
     def azimuth(self, segment_name, adegrees: float=0, aradians: float=None, 
-                asinr_cosr: Tuple[float]=None, t_index: int=0, degrees: float=0, radians: float=None, 
-                t_range=(0.0, 1.0)) -> l.GMatrix:
+                asinr_cosr: Tuple[float]=None, t_index: int=0, t_end: bool=False, 
+                degrees: float=0, radians: float=None, t_range: Tuple[float, float]=(0.0, 1.0)) -> l.GMatrix:
         '''Returns a transformation to the point on the given curve segment (cubic, quadratic, 
         or arc) where the normal forms the specified azimuth from the start of the given t_range.
         This allows anchors to be located by angle along the curve segment.'''
         
-        azimuth_t = self.path.azimuth_t(segment_name, adegrees, aradians, asinr_cosr, t_range)
+        azimuth_t = self.path.azimuth_t(segment_name, adegrees, aradians, asinr_cosr, t_end, t_range)
 
         if not azimuth_t or len(azimuth_t) < t_index + 1:
             params_str = f'{l.rotation_to_str(adegrees, aradians, asinr_cosr, "a")}' \
