@@ -195,7 +195,7 @@ class CubicSpline():
     def normal2d(self, t, dims=[0, 1]):
         '''Returns the normal to the curve at t for the 2 given dimensions.'''
         d = self.derivative(t)
-        vr = np.array([d[dims[0]], -d[dims[1]]])
+        vr = np.array([d[dims[1]], -d[dims[0]]])
         l = np.sqrt(np.sum(vr**2))
         return vr / l
     
@@ -223,7 +223,7 @@ class CubicSpline():
         given t_range. The angle is in degrees or radians or as sin and cos values.'''
         
         start_slope = self.normal2d(t_range[0])
-        start_rot: l.GMatrix = l.rotZ(sinr_cosr=(start_slope[0], -start_slope[1]))
+        start_rot: l.GMatrix = l.rotZ(sinr_cosr=(start_slope[1], -start_slope[0]))
         
         qs: CubicSpline = self.transform(l.rotZ(degrees, radians, sinr_cosr).I * start_rot)
         
@@ -316,7 +316,7 @@ class QuadraticSpline():
     def normal2d(self, t, dims=[0, 1]):
         '''Returns the normal to the curve at t for the 2 given dimensions.'''
         d = self.derivative(t)
-        vr = np.array([d[dims[0]], -d[dims[1]]])
+        vr = np.array([d[dims[1]], -d[dims[0]]])
         l = np.sqrt(np.sum(vr**2))
         return vr / l
     
@@ -344,7 +344,7 @@ class QuadraticSpline():
         given t_range. The angle is in degrees or radians or as sin and cos values.'''
         
         start_slope = self.normal2d(t_range[0])
-        start_rot: l.GMatrix = l.rotZ(sinr_cosr=(start_slope[0], -start_slope[1]))
+        start_rot: l.GMatrix = l.rotZ(sinr_cosr=(start_slope[1], -start_slope[0]))
         
         qs: QuadraticSpline = self.transform(l.rotZ(degrees, radians, sinr_cosr) * start_rot.I)
         
@@ -2801,12 +2801,18 @@ class RotateExtrude(ExtrudedShape):
             raise PathElelementNotFound(f'Could not find {path_node_name}')
         normal = op.normal2d(t)
         pos = op.position(t)
-
+        
         return (l.rotZ(degrees=degrees, radians=radians)
                      * l.ROTX_90  # Projection from 2D Path to 3D space
                      * l.translate([pos[0], pos[1], 0])
-                     * l.rotZSinCos(-normal[1], normal[0])
-                     )
+                     * l.ROTY_90  
+                     * l.rotXSinCos(normal[1], -normal[0]))
+        
+        # return (l.rotZ(degrees=degrees, radians=radians)
+        #              * l.ROTX_90  # Projection from 2D Path to 3D space
+        #              * l.translate([pos[0], pos[1], 0])
+        #              * l.rotZSinCos(-normal[1], normal[0])
+        #              )
 
     @core.anchor('Centre of the extrusion arc.')
     def centre(self):

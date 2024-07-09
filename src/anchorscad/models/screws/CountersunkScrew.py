@@ -58,7 +58,7 @@ class CountersunkScrew(ad.CompositeShape):
         size_name="BUGLE_14g-10",
         include_thru_shaft=True,
         tap_shaft_dia_delta=6 - 2.6,
-        as_solid=False,
+        as_solid=True,
         hide_cage=False,
         fn=36)
     
