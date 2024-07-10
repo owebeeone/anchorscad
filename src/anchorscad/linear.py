@@ -575,7 +575,7 @@ def clean(v: float, epsilon: float=1.e-13) -> float:
 @dataclass(frozen=True)
 class Angle:
     '''Abstract class for angles.'''
-    
+
     def radians(self) -> float:
         '''Returns the angle in radians.'''
         raise NotImplementedError('radians() must be implemented by a subclass.')
@@ -618,8 +618,8 @@ class AngleDegrees(Angle):
     def inv(self) -> 'AngleDegrees':
         return AngleDegrees(-self.degrees_v)
     
-    def __str__(self) -> str:
-        return f'angle(degrees={self.degrees_v})'
+    def __repr__(self) -> str:
+        return f'angle({self.degrees_v})'
 
 
 @dataclass(frozen=True)
@@ -638,7 +638,7 @@ class AngleRadians(Angle):
     def inv(self) -> 'AngleRadians':
         return AngleRadians(-self.radians_v)
     
-    def __str__(self) -> str:
+    def __repr__(self) -> str:
         return f'angle(radians={self.radians_v})'
     
 
@@ -658,7 +658,7 @@ class AngleSinCos(Angle):
     def inv(self) -> 'AngleSinCos':
         return AngleSinCos((-self.sinr_cosr_v[0], self.sinr_cosr_v[1]))
     
-    def __str__(self) -> str:
+    def __repr__(self) -> str:
         return f'angle(sinr_cosr={self.sinr_cosr_v})'
     
     
