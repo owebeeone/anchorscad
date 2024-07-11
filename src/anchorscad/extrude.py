@@ -62,7 +62,6 @@ def strict_t_or_none(v, t):
             'Was provided a string value but expecting a numeric value or None.')
     return t(v)
 
-
 def strict_int_or_none(v):
     return strict_t_or_none(v, int)
 
@@ -289,7 +288,6 @@ class QuadraticSpline():
         t = -b / a
         return (t,) if  t >= t_range[0] and t <= t_range[1] else ()
 
-    
     # Solve for minima and maxima over t. There are two possible locations 
     # for each axis. The results for t outside of the bounds 0-1 are ignored
     # since the cubic spline is only interpolated in those bounds.
@@ -338,7 +336,6 @@ class QuadraticSpline():
         '''Returns a new spline transformed by the matrix m.'''
         new_p = list((m * to_gvector(p)).A[0:self.dimensions] for p in self.p)
         return QuadraticSpline(np.array(new_p), self.dimensions)
-    
     
     def azimuth_t(self, angle: Union[float, l.Angle]=0, t_end: bool=False, 
                 t_range: Tuple[float, float]=(0.0, 1.0)) -> Tuple[float, ...]:
@@ -402,7 +399,6 @@ class OpBase:
     def get_centre(self):
         '''Returns the centre of the operation, if the operation has a centre.'''
         return None
-    
 
     def azimuth_t(self, angle: Union[float, l.Angle]=0, t_end: bool=False, 
                 t_range: Tuple[float, float]=(0.0, 1.0)) -> Tuple[float, ...]:
@@ -436,6 +432,7 @@ class NullMapBuilder:
     
     def append(self, op: OpBase, point: tuple, count: int=None, t: float=None):
         pass
+
 
 def _eval_overlapping_range(a, b, tolerance=EPSILON):
     '''Returns the range of a that overlaps with b. The ranges may be directional,
@@ -1212,7 +1209,6 @@ class PathBuilder():
             params = self._as_non_defaults_dict()
             params['points'] = points
             return (self.__class__, params)
-        
 
         def azimuth_t(self, angle: Union[float, l.Angle]=0, t_end: bool=False, 
                     t_range: Tuple[float, float]=(0.0, 1.0)) -> Tuple[float, ...]:
@@ -1427,8 +1423,6 @@ class PathBuilder():
             radius_start = _vlen(r_start)
             r_end = self.end_point - self.centre
             radius_end = _vlen(r_end)
-            
-            
             
             s_normal = r_start / radius_start
             e_normal = r_end / radius_start
@@ -2466,7 +2460,6 @@ class LinearExtrude(ExtrudedShape):
         circle_angle = np.arctan2(twist_vector.y, twist_vector.x)
         return eliplse_angle - circle_angle
         
-    
     @core.anchor('Anchor to the path edge and surface.')
     def edge(self, path_node_name, t=0, h=0, rh=None, align_twist=False, align_scale=False):
         '''Anchors to the edge and surface of the linear extrusion.
@@ -2522,10 +2515,8 @@ class LinearExtrude(ExtrudedShape):
             scale_xalign = l.rotZ(radians=-np.arctan2(
                 twist_vector.length() - scaled_vector.length(), rel_h * self.h)) 
                       
-
         twisted = (twist_rot * l.translate(pos) * z_to_centre.I 
                    * twist_align * z_to_centre * orientation * scale_zalign * scale_xalign)
-        
         
         result = scale * twisted 
 
