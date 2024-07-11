@@ -1542,7 +1542,8 @@ class PathBuilder():
         
     def stroke(self,
                length,
-               degrees=0, 
+               angle: Union[float, l.Angle]=0,
+               degrees=None, 
                radians=None, 
                sinr_cosr=None,
                xform=None, 
@@ -1553,11 +1554,10 @@ class PathBuilder():
         by angle or a GMatrix transform.'''
         assert length >= 0, f"Cannot stroke with a negative length of {length}"
         assert len(self.ops) > 0, "Cannot line to without starting point"
+        angle = l.angle(angle=angle, degrees=degrees, radians=radians, sinr_cosr=sinr_cosr)
         d_vector = to_gvector(self.last_op().direction_normalized(1.0))
         if degrees or radians or not (sinr_cosr is None):
-            d_vector = l.rotZ(degrees=degrees, 
-                              radians=radians, 
-                              sinr_cosr=sinr_cosr) * d_vector
+            d_vector = angle.rotZ * d_vector
         if xform:
             d_vector = xform * d_vector
             

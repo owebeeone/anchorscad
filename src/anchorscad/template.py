@@ -26,7 +26,7 @@ class ShapeName(ad.CompositeShape):
     # https://github.com/owebeeone/anchorscad/blob/master/docs/datatrees_docs.md
     box_node: ad.Node=ad.dtfield(ad.ShapeNode(ad.Box, 'size'))
     
-    EXAMPLE_SHAPE_ARGS=ad.args(size=(10, 20, 30))
+    EXAMPLE_SHAPE_ARGS=ad.args(x=10, y=20, z=30)
     EXAMPLE_ANCHORS=(
         ad.surface_args('face_centre', 'top'),)
 

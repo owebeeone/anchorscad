@@ -31,6 +31,7 @@ GVector([0.4999999999999999, -0.4999999999999999, 0.7071067811865476, 1.0])
 import numpy as np
 from typing import Callable, Tuple, Any, Union, List
 from dataclasses import dataclass
+from abc import ABC, abstractmethod
 
 # Exceptions for dealing with argument checking.
 class BaseException(Exception):
@@ -573,28 +574,70 @@ def clean(v: float, epsilon: float=1.e-13) -> float:
     return v
 
 @dataclass(frozen=True)
-class Angle:
+class Angle(ABC):
     '''Abstract class for angles.'''
 
+    @abstractmethod
     def radians(self) -> float:
         '''Returns the angle in radians.'''
-        raise NotImplementedError('radians() must be implemented by a subclass.')
+        pass
     
     def degrees(self) -> float:
         '''Returns the angle in degrees.'''
         return to_degrees(self.radians())
     
+    @abstractmethod
     def sinr_cosr(self) -> Tuple[float, float]:
         '''Returns the sin and cosine of the angle.'''
-        raise NotImplementedError('sinr_cosr() must be implemented by a subclass.')
+        pass
     
+    @abstractmethod
     def inv(self) -> 'Angle':
         '''Returns the inverse of the angle.'''
-        raise NotImplementedError('inv() must be implemented by a subclass.')
+        pass
     
     def pos_radians(self) -> float:
         '''Returns the angle in radians as a positive value.'''
         return self.radians() % np.pi
+    
+    @property
+    def rotX(self) -> GMatrix:
+        '''Returns a GMatrix that causes a rotation about X for the angle.'''
+        sinr_cosr = self.sinr_cosr()
+        return rotXSinCos(clean(sinr_cosr[0]), clean(sinr_cosr[1]))
+    
+    @property
+    def rotY(self) -> GMatrix:
+        '''Returns a GMatrix that causes a rotation about Y for the angle.'''
+        sinr_cosr = self.sinr_cosr()
+        return rotYSinCos(clean(sinr_cosr[0]), clean(sinr_cosr[1]))
+    
+    @property
+    def rotZ(self) -> GMatrix:
+        '''Returns a GMatrix that causes a rotation about Z for the angle.'''
+        sinr_cosr = self.sinr_cosr()
+        return rotZSinCos(clean(sinr_cosr[0]), clean(sinr_cosr[1]))
+    
+    def rotV(self, v: GVector) -> GMatrix:
+        '''Returns a GMatrix that causes a rotation about the given vector for the angle.'''
+        sinr_cosr = self.sinr_cosr()
+        return rotVSinCos(v, clean(sinr_cosr[0]), clean(sinr_cosr[1]))
+    
+    def __add__(self, other: 'Angle') -> 'Angle':
+        '''Adds two angles.'''
+        return AngleRadians(self.radians() + other.radians())
+    
+    def __sub__(self, other: 'Angle') -> 'Angle':
+        '''Subtracts two angles.'''
+        return AngleRadians(self.radians() - other.radians())
+    
+    def __mul__(self, scalar: float) -> 'Angle':
+        '''Multiplies the angle by a scalar.'''
+        return AngleRadians(self.radians() * scalar)
+    
+    def __truediv__(self, scalar: float) -> 'Angle':
+        '''Divides the angle by a scalar.'''
+        return AngleRadians(self.radians() / scalar)
     
 
 @dataclass(frozen=True)
@@ -663,9 +706,10 @@ class AngleSinCos(Angle):
     
     
 def angle(degrees: float=0, radians: float=None, sinr_cosr: Tuple[float, float]=None,
-          angle: Angle=None) -> Angle:
-    '''Returns an Angle object for the given angle in degrees, radians or sin/cos pair.
-    Only one of sinr_cosr or radians or degrees is used in the order
+          angle: Angle=None, direction: Union[GVector, Tuple[float]]=None) -> Angle:
+    '''Returns an Angle object for the given angle in degrees, radians, sin/cos pair,
+    angle or a direction vector.
+    Only one of angle, direction, sinr_cosr or radians, degrees is used in the order
     stated here.
     
     This is the preferred way to pass an angle as it is less verbose than having to
@@ -674,12 +718,23 @@ def angle(degrees: float=0, radians: float=None, sinr_cosr: Tuple[float, float]=
     Passing degrees, radians, sinr_cosr to functions is considered deprecated.
     '''
     if not angle is None:
-        return angle
+        if isinstance(angle, Angle):
+            return angle
+    if not direction is None:
+        if isinstance(direction, GVector):
+            darray = direction.A[:2]
+        else:
+            darray = np.array(direction[:2])
+        darray2 = darray * darray
+        sinr_cosr = darray / np.sqrt(darray2.sum())
+        return AngleSinCos(sinr_cosr)
     if not sinr_cosr is None:
         return AngleSinCos(sinr_cosr)
     if radians is None:
         if isinstance(degrees, Angle):
             return degrees
+        if degrees is None:
+            return AngleDegrees(angle)
         return AngleDegrees(degrees)
     return AngleRadians(radians)
 
