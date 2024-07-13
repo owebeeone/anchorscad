@@ -47,7 +47,6 @@ class StadiumOutline:
         
         if self.offset != 0:
             path = path.transform(ad.tranX(self.offset))
-        
         return path
 
 

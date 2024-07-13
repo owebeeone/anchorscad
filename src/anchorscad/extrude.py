@@ -1556,7 +1556,7 @@ class PathBuilder():
         assert len(self.ops) > 0, "Cannot line to without starting point"
         angle = l.angle(angle=angle, degrees=degrees, radians=radians, sinr_cosr=sinr_cosr)
         d_vector = to_gvector(self.last_op().direction_normalized(1.0))
-        if degrees or radians or not (sinr_cosr is None):
+        if angle:
             d_vector = angle.rotZ * d_vector
         if xform:
             d_vector = xform * d_vector
@@ -1568,7 +1568,7 @@ class PathBuilder():
         else:
             d_vector = d_vector * 0.001
             point = self.last_op().lastPosition()
-            
+
         return self.add_op(self._LineTo(point, 
                                         prev_op=self.last_op(),
                                         name=name,

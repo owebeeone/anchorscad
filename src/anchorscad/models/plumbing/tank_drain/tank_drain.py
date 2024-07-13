@@ -155,7 +155,7 @@ class DrainHolderProfile(DrainProfile):
         drain_y_start = - self.pipe_side_h - self.pipe_offset
         r_diff = self.r_drain_inner - self.inside_r
 
-        angle_radians = ad.to_degrees(np.arctan(
+        angle_degrees = ad.to_degrees(np.arctan(
             (self.drain_side_upper_interference - self.drain_side_lower_interference) 
             / self.h_drain_inner))
         
@@ -167,7 +167,7 @@ class DrainHolderProfile(DrainProfile):
                 .line((self.inside_r - self.pipe_side_lower_interference, -self.pipe_side_h), 'pipe_side')
                 .line((self.r_drain_inner - self.drain_side_upper_interference, drain_y_start), 'wedge')
                 .line((self.r_drain_inner - self.drain_side_lower_interference, drain_y_start - self.h_drain_inner), 'drain_side')
-                .stroke(self.r_holder_thickness + r_diff, degrees=-90 - angle_radians, name='drain_lip')
+                .stroke(self.r_holder_thickness + r_diff, degrees=-90 - angle_degrees, name='drain_lip')
                 .build())
 
         return path

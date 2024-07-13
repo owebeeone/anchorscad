@@ -573,6 +573,12 @@ def clean(v: float, epsilon: float=1.e-13) -> float:
         return 0.
     return v
 
+def clean_equal(v1: float, v2: float, epsilon: float=1.e-13) -> float:
+    '''Clean rounding errors for zeros.'''
+    if np.abs(v1 - v2) < epsilon:
+        return True
+    return False
+
 @dataclass(frozen=True)
 class Angle(ABC):
     '''Abstract class for angles.'''
@@ -639,6 +645,11 @@ class Angle(ABC):
         '''Divides the angle by a scalar.'''
         return AngleRadians(self.radians() / scalar)
     
+    @abstractmethod
+    def __bool__(self) -> bool:
+        '''Returns False if the angle is 0, True otherwise.'''
+        pass
+    
 
 @dataclass(frozen=True)
 class AngleDegrees(Angle):
@@ -664,6 +675,9 @@ class AngleDegrees(Angle):
     def __repr__(self) -> str:
         return f'angle({self.degrees_v})'
 
+    def __bool__(self) -> bool:
+        return not clean_equal(self.degrees_v, 0.0)
+
 
 @dataclass(frozen=True)
 class AngleRadians(Angle):
@@ -684,6 +698,9 @@ class AngleRadians(Angle):
     def __repr__(self) -> str:
         return f'angle(radians={self.radians_v})'
     
+    def __bool__(self) -> bool:
+        return not clean_equal(self.radians_v, 0.0)
+    
 
 @dataclass(frozen=True)
 class AngleSinCos(Angle):
@@ -703,6 +720,9 @@ class AngleSinCos(Angle):
     
     def __repr__(self) -> str:
         return f'angle(sinr_cosr={self.sinr_cosr_v})'
+    
+    def __bool__(self) -> bool:
+        return not (clean_equal(self.sinr_cosr_v[0], 0.0) and clean_equal(self.sinr_cosr_v[1], 1.0))
     
     
 def angle(degrees: float=0, radians: float=None, sinr_cosr: Tuple[float, float]=None,
