@@ -105,7 +105,7 @@ class RendererTest(unittest.TestCase):
         self.assertEqual(
             str(result.rendered_shape),
             '''// Start: lazy_union
-// "pop - Material(name='red_HIPS'):solid"
+// "pop - Material(name='red_HIPS', priority=5.0, kind=MaterialKind(physical=True)):solid"
 union() {
   // 'None : _combine_solids_and_holes'
   union() {
@@ -119,7 +119,7 @@ union() {
     }
   }
 }
-// "pop - Material(name='blue_PETG'):solid"
+// "pop - Material(name='blue_PETG', priority=5.0, kind=MaterialKind(physical=True)):solid"
 union() {
   // 'None : _combine_solids_and_holes'
   union() {

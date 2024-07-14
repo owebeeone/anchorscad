@@ -8,10 +8,7 @@ import anchorscad.extrude as extrude
 from dataclasses import dataclass
 
 
-@dataclass
-class TestMetaData:
-    fn: int = 10
-
+TEST_META_DATA = ad.EMPTY_ATTRS.with_fn(10)
 
 class ExtrudeTest(TestCase):
     
@@ -28,16 +25,15 @@ class ExtrudeTest(TestCase):
         
         #path = path.transform(ad.rotZ(45) * ad.translate([1, 1, 0]))
         
-        poly = path.polygons(TestMetaData())[0]
+        poly = path.polygons(TEST_META_DATA)[0]
 
-        removed = ad.clean_polygons(poly)
+        removed = ad.clean_polygons(poly, colinear_remove=True)
         
         iterable_assert(self.assertAlmostEqual, removed,
                         ([10.,  0.],
                           [10.,  10.],
                           [20.,  10.],
-                          [20.,  0.],
-                          [10.,  0.]))
+                          [20.,  0.]))
     
     def testColinearRemoveal_doubleOverlap(self):
         path = (extrude.PathBuilder()
@@ -53,16 +49,15 @@ class ExtrudeTest(TestCase):
         
         #path = path.transform(ad.rotZ(45) * ad.translate([1, 1, 0]))
         
-        poly = path.polygons(TestMetaData())[0]
+        poly = path.polygons(TEST_META_DATA)[0]
 
-        removed = ad.clean_polygons(poly)
+        removed = ad.clean_polygons(poly, colinear_remove=False)
         
         iterable_assert(self.assertAlmostEqual, removed,
                         ([10.,  0.],
                         [-10.,  0.],
                         [-10.,  10.],
-                        [10.,  10.],
-                        [10.,  0.]))
+                        [10.,  10.]))
 
 
     def testOverlappingRange(self):

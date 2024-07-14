@@ -517,7 +517,7 @@ class Test(unittest.TestCase):
         @datatree
         class A:
             a: int=1
-            c: int=dtfield(self_default=lambda s: s.a + s.b)
+            c: int=dtfield(self_default=lambda s: s.a + s.b, init=True)
             b: int=2
 
         self.assertEqual(A().c, 3)
@@ -529,7 +529,7 @@ class Test(unittest.TestCase):
         @datatree
         class A:
             a: int=1
-            c: int=dtfield(self_default=lambda s: s.a + s.b)
+            c: int=dtfield(self_default=lambda s: s.a + s.b, init=True)
             b: int=2
 
         @datatree
@@ -541,7 +541,7 @@ class Test(unittest.TestCase):
         @datatree
         class A:
             a: int=1
-            c: int=dtfield(self_default=lambda s: s.a + s.b)
+            c: int=dtfield(self_default=lambda s: s.a + s.b, init=True)
             b: int=2
 
         @datatree
@@ -575,7 +575,7 @@ class Test(unittest.TestCase):
         @datatree
         class A:
             a: int=7
-            c: int=dtfield(self_default=lambda s: s.a * 2)
+            c: int=dtfield(self_default=lambda s: s.a * 2, init=True)
             
         @datatree
         class B:

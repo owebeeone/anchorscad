@@ -16,9 +16,7 @@ from tests.test_tools import iterable_assert
 import numpy as np
 
 
-@dataclass
-class TestMetaData:
-    fn: int=10
+TEST_META_DATA = ad.EMPTY_ATTRS.with_fn(10)
 
 
 class ExtrudeTest2(unittest.TestCase):
@@ -43,7 +41,7 @@ class ExtrudeTest2(unittest.TestCase):
         for angles in test_angles:
             path = self.makeArcPointsPath(*angles)
             
-            iterable_assert(self.assertAlmostEqual, path.polygons(TestMetaData()),
+            iterable_assert(self.assertAlmostEqual, path.polygons(TEST_META_DATA),
                             ([[ 5.        ,  5.        ],
                                [-4.84807753,  3.26351822],
                                [-4.51056516,  8.09016994],
@@ -74,7 +72,7 @@ class ExtrudeTest2(unittest.TestCase):
             .line([0, 0], 'edge2')
             .build())
         
-        iterable_assert(self.assertAlmostEqual, path.polygons(TestMetaData()),
+        iterable_assert(self.assertAlmostEqual, path.polygons(TEST_META_DATA),
                         ([[ 0.00000000e+00,  0.00000000e+00],
                            [ 0.00000000e+00, -1.50000000e+01],
                            [ 1.97145374e+00, -1.48698813e+01],
@@ -107,7 +105,7 @@ class ExtrudeTest2(unittest.TestCase):
             .stroke(2, degrees=-120, name='stroke3')
             .build())
 
-        iterable_assert(self.assertAlmostEqual, path.polygons(TestMetaData()),
+        iterable_assert(self.assertAlmostEqual, path.polygons(TEST_META_DATA),
                         ([[ 0.00000000e+00,  0.00000000e+00],
                           [-1.73205081e+00,  1.00000000e+00],
                           [-6.66133815e-16,  2.00000000e+00],
@@ -125,7 +123,7 @@ class ExtrudeTest2(unittest.TestCase):
         
         print(ad.render(ad.LinearExtrude(path, h=10)))
 
-        iterable_assert(self.assertAlmostEqual, path.polygons(TestMetaData()),
+        iterable_assert(self.assertAlmostEqual, path.polygons(TEST_META_DATA),
                         ([
                             [ 0.00000000e+00,  0.00000000e+00],
                             [-1.73205081e+00,  1.00000000e+00],

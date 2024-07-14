@@ -39,7 +39,8 @@ class ExtrudeTest(TestCase):
         iterable_assert(self.assertAlmostEqual, b.extents(),
                         [[0., -0.28], [0.75, 1]])
         minima = b.curve_maxima_minima_t()
-        self.assertAlmostEqual(b.normal2d(minima[0][0])[1], 1, 5)
+        normal = b.normal2d(minima[0][0])
+        self.assertAlmostEqual(normal[0], -1, 5)
 
     def testPathGenerator(self):
         builder = extrude.PathBuilder()
