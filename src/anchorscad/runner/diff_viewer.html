@@ -48,6 +48,10 @@
             border: 1px solid #ccc;
             overflow-x: auto;
         }
+        .error {
+            color: red;
+            font-weight: bold;
+        }
     </style>
     <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
 </head>
@@ -69,7 +73,7 @@
                 <h2>Diff Image</h2>
                 <p>Diff image not available, probably because the images are identical</p>
             </div>
-            <div class="dir1ImageContainer">
+            <div class="dir2ImageContainer">
                 <h2>Directory 2 Image</h2>
                 <img id="dir2Image" src="" alt="Directory 2 Image">
             </div>
@@ -79,41 +83,44 @@
             <pre id="fileDiffText"></pre>
         </div>
     </div>
+    <div id="error-container" class="error"></div>
 
     <script>
-        
         function to_menu_item_id(entry_number) {
             return 'menu_item_' + entry_number.toString();
         }
-        
+
         $(document).ready(function() {
             $.getJSON('diff.json', function(data) {
-                populateList(data);
                 window.jsonData = data;  // Save the data for later use
+                const keyToIndexMap = populateList(data);
+                const urlParams = new URLSearchParams(window.location.search);
+                const modelKey = window.location.hash.substring(1);
+                if (modelKey) {
+                    loadModelFromURL(modelKey, keyToIndexMap);
+                }
             }).fail(function() {
                 console.error('Error loading JSON');
             });
 
             function abbreviateKey(key) {
-                // Keys are of the form <package_path>/anchorcad_<model_name>example
-                // Rearrange the key to place the model name at start and suffix it
-                // with a '-<package_path>' to make it more readable
                 const parts = key.split('/');
                 const packagePath = parts.slice(0, -1).join('/');
                 const modelName = parts.slice(-1)[0].replace('anchorcad_', '').replace('_example', '');
                 return `${modelName}-${packagePath}`;
             }
 
-
             function populateList(data) {
                 const modelDiffList = $("#modelDiffList");
+                const keyToIndexMap = {};
 
-                // Create a list of keys and sort them alphabetically.
-                var ordered_keys = new Array();
+                var ordered_keys = [];
                 var count = 0;
                 $.each(data.model_diffs, function(key, value) {
-                    ordered_keys.push([key, abbreviateKey(key), count++]);
-                })
+                    ordered_keys.push([key, abbreviateKey(key), count]);
+                    keyToIndexMap[key] = count;
+                    count++;
+                });
 
                 ordered_keys.sort(function(a, b) {
                     var cmp = a[1].localeCompare(b[1]);
@@ -128,13 +135,31 @@
 
                     var liEntry = $('<li>', { text: name_key_pair[1] }).click(function() {
                         updateContent(name_key_pair[0], name_key_pair[2]);
+                        updateURL(key);
                     });
 
-                    // Set the ID od the list item to the index of the key.
                     liEntry.attr('id', to_menu_item_id(name_key_pair[2]));
 
                     modelDiffList.append(liEntry);
                 });
+                
+                return keyToIndexMap;
+            }
+
+            function updateURL(modelKey) {
+                window.location.hash = modelKey;
+            }
+
+            function loadModelFromURL(modelKey, keyToIndexMap) {
+                const diff_data = window.jsonData;
+                const entry_number = keyToIndexMap[modelKey];
+                if (entry_number !== undefined) {
+                    updateContent(modelKey, entry_number);
+                } else {
+                    $("#error-container").text(`Model ${modelKey} not found`);
+                    $("#error-container").show();
+                    $(".content-container").hide();
+                }
             }
         });
 
@@ -148,12 +173,16 @@
             const dir2 = diff_data.dirs[1];
             const modelDiff = diff_data.model_diffs[selectedModel];
 
+            $("#error-container").hide();
+            $(".content-container").show();
+
             $(".list-container-selected").removeClass("list-container-selected");
             $("#" + to_menu_item_id(entry_number)).addClass("list-container-selected");
 
+            $("#error-container").text('');  // Clear error message
+
             $("#fileDiffText").text(modelDiff.file_diff_text.join("\n") || "No file diff text available.");
             $("#dir1Image").attr("src", joinPaths(dir1, modelDiff.model_files.png) || "");
-            // The diff image is optional, so show text saying that there is no diff image when unavail.
             if (!modelDiff.png_diff) {
                 $(".diffImageContainer").hide();
                 $(".diffImageNotAvailableContainer").show();

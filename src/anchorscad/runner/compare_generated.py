@@ -8,6 +8,7 @@ This can be used to verify any potential API changes that may have affected mode
 Author: gianni
 '''
 
+import sys
 import os
 import filecmp
 import argparse
@@ -523,9 +524,9 @@ def add_boolean_optional_argument(
 def main():
     parser = argparse.ArgumentParser(
         description='Compare contents of 2 directories for files with given suffix.')
-    parser.add_argument('dir1', type=str, help='First directory')
-    parser.add_argument('dir2', type=str, help='Second directory')
-    parser.add_argument('suffixes', type=str, nargs='+', help='List of file suffixes to compare')
+    parser.add_argument('--dir1', type=str, default=None, help='First directory')
+    parser.add_argument('--dir2', type=str, default=None, help='Second directory')
+    parser.add_argument('--suffixes', type=str, nargs='+', help='List of file suffixes to compare (multiple suffixes can be provided)')
     parser.add_argument(
         '-v', '--verbose', action='store_true', 
         help='Verbose output including files with the same contents')
@@ -557,7 +558,12 @@ def main():
         type=str, 
         default=None,
         help="The local host address to start the server on.")
-    
+        
+    parser.add_argument(
+        '--serve_diff_output_dir', 
+        type=str, 
+        default=None,
+        help="If set, no comparison is performed, only the server is started.")
     
     add_boolean_optional_argument(
         parser,
@@ -566,6 +572,26 @@ def main():
         default=True)
 
     args = parser.parse_args()
+    
+    if args.serve_diff_output_dir:
+        if args.diff_output_dir or args.dir1 or args.dir2 or args.suffixes:
+            print('Error: --serve_diff_output_dir cannot be used with \n'
+                  '--diff_output_dir, --dir1, --dir2, or --suffixes.', file=sys.stderr)
+            return 1
+        
+        json_in_path = os.path.join(args.serve_diff_output_dir, "diff.json")
+        with open(json_in_path, 'r') as f:
+            json_data = f.read()
+        diffResults: DirectoryDiffResults = DirectoryDiffResults.from_json(json_data)
+
+        server_conf: ServerConfig = ServerConfig(
+            diffResults.dirs[0], 
+            diffResults.dirs[1], 
+            args.serve_diff_output_dir, 
+            args.host, 
+            args.port)
+        start_server(server_conf)
+        return 0
     
     if not args.diff_output_dir:
         args.diff_output_dir = make_image_output_dir(args.dir1, args.dir2)
@@ -581,7 +607,7 @@ def main():
 
         if args.start_server:
             start_server(args)
-        return 1
+        return 0
     
 
     if args.start_server:
@@ -589,8 +615,11 @@ def main():
     return 0
 
 if __name__ == '__main__':
-    # args = ['generated.tess1', 
-    #         'generated.master', '.scad', "--epsilon", "1e-8", "--gen-diff-image"]
-    # import sys
+    # args = ['--dir1', 'generated.tess1', 
+    #         '--dir2', 'generated.master',
+    #         '--suffixes', '.scad', 
+    #         '--epsilon', '1e-8', 
+    #         '--gen-diff-image']
+    # args = ['--serve_diff_output_dir', 'generated.master-tess1',]
     # sys.argv = [sys.argv[0]] + args
     exit(main())
