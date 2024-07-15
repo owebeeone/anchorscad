@@ -17,24 +17,22 @@ class RunnerExampleResults(object):
     '''
     example_name: str
     error_str: str='' # '' indicates no error.
-    output_file_name: Optional[str]=None
-    output_file_size: Optional[int]=None
-    error_file_name: Optional[str]=None
-    error_file_size: Optional[int]=None
-    scad_file: Optional[str]=None
-    stl_file: Optional[str]=None
-    f3mf_file: Optional[str]=None
-    png_file: Optional[str]=None
-    openscad_err_file: Optional[str]=None
-    openscad_out_file: Optional[str]=None
-    graph_file: Optional[str]=None
-    graph_svg_dot_file: Optional[str]=None
+    output_file_name: Optional[str]=None # Python stdout of running the example.
+    output_file_size: Optional[int]=None # Size of the output file.
+    error_file_name: Optional[str]=None # Python stderr of running the example.
+    error_file_size: Optional[int]=None # Size of the error file.
+    scad_file: Optional[str]=None # The OpenSCAD file.
+    stl_file: Optional[str]=None # The STL file.
+    f3mf_file: Optional[str]=None # The 3MF file (possibly multi-part/material).
+    png_file: Optional[str]=None # The PNG image file.
+    openscad_err_file: Optional[str]=None # The OpenSCAD stderr file.
+    openscad_out_file: Optional[str]=None # The OpenSCAD stdout file.
+    graph_file: Optional[str]=None # The graphviz .dot file for the model.
+    graph_svg_dot_file: Optional[str]=None # The graphviz .svg file for the model.
     graph_svg_file: Optional[str]=None
-    path_html_file: Optional[str]=None
-    shape_pickle_file: Optional[str]=None
-    stl_file: Optional[str]=None
-    f3mf_file: Optional[str]=None
-    injected_fields_html_file: Optional[str]=None
+    path_html_file: Optional[str]=None # The HTML file for the 2D extrusion paths
+    shape_pickle_file: Optional[str]=None # The pickled shape object.
+    injected_fields_html_file: Optional[str]=None # The datatree field provenance HTML file.
 
 
 @dataclass_json

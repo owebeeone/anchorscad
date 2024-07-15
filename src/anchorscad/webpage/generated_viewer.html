@@ -1,0 +1,373 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Module and Model Viewer</title>
+    <link rel="stylesheet" href="https://ajax.googleapis.com/ajax/libs/jquerymobile/1.4.5/jquery.mobile.min.css">
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+        }
+        .tabs {
+            margin-top: 20px;
+        }
+        .tab-content {
+            display: none;
+        }
+        .tab-content.active {
+            display: block;
+        }
+        .error-list, .module-list {
+            height: 300px;
+            overflow-y: auto;
+            border: 1px solid #ccc;
+            margin-top: 10px;
+        }
+        .model-list {
+            display: flex;
+            overflow-x: auto;
+            border: 1px solid #ccc;
+            margin-top: 10px;
+        }
+        .model-list img {
+            max-width: 100px;
+            max-height: 100px;
+            margin: 10px;
+            cursor: pointer;
+        }
+        .model-details {
+            margin-top: 10px;
+        }
+        .error-message {
+            color: red;
+        }
+        .content-container {
+            max-width: 800px;
+        }
+        .horiz-scrolling {
+            overflow-x: auto;
+            white-space: nowrap;
+        }
+        .menu-element {
+            display: inline-block;
+            padding: 10px;
+            margin: 5px;
+            border: 1px solid #ccc;
+            cursor: pointer;
+        }
+        .menu-element img {
+            max-width: 100px;
+            max-height: 100px;
+            display: inline-block;
+            padding: 10px;
+            margin: 5px;
+            border: 1px solid #ccc;
+            cursor: pointer;
+            user-select: none; /* Prevent text selection */
+        }
+        .modules {
+            max-width: 1000px;
+        }
+        .model-image {
+            max-width: 800px;
+        }
+        .menu-element.selected {
+            border-color: blue;
+        }
+        .menu-element {
+            display: inline-block;
+            cursor: pointer;
+            user-select: none; /* Prevent text selection */
+        }
+        .monospace {
+            font-family: monospace;
+            white-space: pre;
+            overflow: auto;
+            max-height: 200px;
+        }
+        .iframe-container {
+            width: 800px;
+            height: 600px;
+            border: none;
+        }
+        .svg-graph-container {
+            width: 800px;
+            height: 600px;
+        }
+        .threeD-container {
+            width: 800px;
+            height: 400px;
+        }
+        .three-d-container {
+            width: 800px;
+            height: 400px;
+            border: none;
+        }
+        .image-container {
+            max-width: 100%;
+        }
+        .graph-image-container {
+            max-width: 800px;
+        }
+    </style>
+    <script src="https://ajax.googleapis.com/ajax/libs/jquery/3.6.0/jquery.min.js"></script>
+    <script src="https://ajax.googleapis.com/ajax/libs/jquerymobile/1.4.5/jquery.mobile.min.js"></script>
+    <script src="/scripts/animators.js"></script>
+    <script src="/scripts/interpolators.js"></script>
+    <script type="importmap">
+        {
+          "imports": {
+            "three": "https://cdn.jsdelivr.net/npm/three@0.166.1/build/three.module.js",
+            "three/addons/": "https://cdn.jsdelivr.net/npm/three@0.166.1/examples/jsm/"
+          }
+        }
+    </script>
+
+</head>
+<body>
+
+    <div class="tabs">
+        <button class="tab-button" data-tab="modules">Modules</button>
+        <button class="tab-button" data-tab="errors">Models with Errors</button>
+    </div>
+
+
+    <div id="modules" class="tab-content">
+        <h2>Modules</h2>
+        <div style="display: flex;">
+            <div class="module-list" style="flex: 0 0 300px;"></div>
+            <div style="flex: 1;">
+                <div class="model-list-container horiz-scrolling content-container">
+                    <div id="model-list">
+
+                    </div>
+                </div>
+                <div class="model-details"></div>
+            </div>
+        </div>
+    </div>
+    
+    <div id="errors" class="tab-content">
+        <h2>Models with Errors</h2>
+        <div class="error-list"></div>
+    </div>
+
+    <script type="module">
+
+        import * as THREE from 'three';
+
+        //import Stats from 'three/addons/libs/stats.module.js';
+
+        import { STLLoader } from 'three/addons/loaders/STLLoader.js';
+        import { ThreeMFLoader } from 'three/addons/loaders/3MFLoader.js';
+
+        $(document).ready(function() {
+
+            $.getJSON('status.json', function(data) {
+                const runnerStatus = data;
+                renderErrorsTab(runnerStatus.examples_with_error_output);
+                renderModulesTab(runnerStatus.module_status);
+            }).fail(function() {
+                console.error('Error loading JSON');
+            });
+
+            function renderErrorsTab(errors) {
+                const errorList = $(".error-list");
+                errors.forEach(error => {
+                    const errorItem = $("<div>").addClass("error-message").text(`${error.module_name} - ${error.class_name} - ${error.example_name}`);
+                    errorList.append(errorItem);
+                });
+            }
+
+            function renderModulesTab(modules) {
+                const moduleList = $(".module-list");
+
+                // Get only modules with content.
+                var modules_with_content = modules.filter(module => module.shape_results.length > 0);
+
+                // Sort the modules by module_name.
+                modules_with_content.sort((a, b) => a.module_name.localeCompare(b.module_name));
+
+                modules_with_content.forEach(module => {
+                    const moduleItem = $("<div>").addClass("module-item").text(module.module_name).click(() => {
+                        renderModels(module.shape_results);
+                    });
+                    moduleList.append(moduleItem);
+                });
+            }
+
+            function renderModels(shapeResults) {
+                const modelList = $("#model-list");
+                modelList.empty();
+                shapeResults.forEach(shape => {
+                    shape.example_results.forEach(example => {
+                        const modelItem = $("<div>").addClass("menu-element").click(() => {
+                            renderModelDetails(example);
+                        });
+                        if (example.png_file) {
+                            const img = $("<img>").attr("src", example.png_file);
+                            modelItem.append(img);
+                        } else {
+                            modelItem.text(example.example_name);
+                        }
+                        modelList.append(modelItem);
+                    });
+                });
+
+                try {
+                    scroller = new ScrollingElementBuilder()
+                        .setScrollingElement(".model-list-container")
+                        .setMenuItemsContainer($("#model-list"))
+                        .setMenuItems($(".menu-element"))
+                        .setChevronElements($("#bcheveron-left"), $("#bcheveron-right"))
+                        .setOverscrollElements("#left-elastic", $("#right-elastic"), $("#elastic-filler"))
+                        .setParams({inertiaAnimationDurationMillis:1000})
+                        .build();
+                } catch (e) {
+                    console.error("Error creating scroller: " + e, e.stack);
+                }
+            }
+
+            function createContainer(details, name) {
+                const container = $("<div>").addClass(name);
+                container.addClass("content-container");
+                details.append(container);
+                return container;
+            }
+
+            function renderModelDetails(example) {
+                const details = $(".model-details");
+                details.empty();
+                details.append(`<h3>${example.example_name}</h3>`);
+
+                // The fetch calls are synchronous, so we append a structure to the details container.
+                if (example.png_file) {
+                    createContainer(details, "model-image-container")
+                        .append(`<img src="${example.png_file}" class="model-image">`);
+                }
+
+                if (example.error_str) {
+                    details.append(`<p class="error-message">${example.error_str}</p>`);
+                }
+                
+                if (example.path_html_file) {
+                    createContainer(details, "paths-container")
+                        .append(`<iframe src="${example.path_html_file}" class="iframe-container"></iframe>`);
+                }
+                if (example.output_file_size && example.output_file_name) {
+                    fetchAndRenderTextFile(
+                        createContainer(details, "stdout-container"), 
+                        example.output_file_name, "Output File");
+                }
+                if (example.error_file_size && example.error_file_name) {
+                    fetchAndRenderTextFile(
+                        createContainer(details, "stderr-container"), 
+                        example.error_file_name, "Error File");
+                }
+                if (example.scad_file) {
+                    fetchAndRenderTextFile(
+                        createContainer(details, "scad-container"), 
+                        example.scad_file, "SCAD File", true);
+                }
+                if (example.openscad_err_file) {
+                    fetchAndRenderTextFile(
+                        createContainer(details, "openscad-stderr-container"), 
+                        example.openscad_err_file, "OpenSCAD Standard Error Output");
+                }
+                if (example.openscad_out_file) {
+                    fetchAndRenderTextFile(
+                        createContainer(details, "openscad-stderr-container"), 
+                        example.openscad_out_file, "OpenSCAD Standard Output");
+                }
+                if (example.graph_file) {
+                    fetchAndRenderTextFile(
+                        createContainer(details, "graph-container"), 
+                        example.graph_file, "Graph File");
+                }
+                //if (example.graph_svg_dot_file) {
+                //    details.append(`<img src="${example.graph_svg_dot_file}" class="image-container">`);
+                //}
+                if (example.graph_svg_file) {
+                    createContainer(details, "svg-graph-container")
+                        .append(`<img src="${example.graph_svg_file}" class="graph-image-container">`);
+                }
+                if (example.injected_fields_html_file) {
+                    createContainer(details, "injected-fields-container")
+                        .append(`<iframe src="${example.injected_fields_html_file}" class="iframe-container"></iframe>`);
+                }
+                if (example.stl_file) {
+                    const fileToRender = example.stl_file;
+                    render3DModel(createContainer(details, "threeD-container"), fileToRender);
+                }
+            }
+
+            function fetchAndRenderTextFile(container, url, title, isCode = false) {
+                $.get(url, function(data) {
+                    const textContainer = $("<div>").addClass("monospace").text(data);
+                    if (isCode) {
+                        textContainer.addClass("code");
+                    }
+                    container.append(`<h4>${title}</h4>`);
+                    container.append(textContainer);
+                }).fail(function() {
+                    console.error(`Error loading file: ${url}`);
+                    container.append(`<div class="error-message">Error loading file: ${url}</div>`);
+                });
+            }
+
+            function render3DModel(container, modelFile) {
+                const scene = new THREE.Scene();
+                const camera = new THREE.PerspectiveCamera(75, window.innerWidth / window.innerHeight, 0.1, 1000);
+                const renderer = new THREE.WebGLRenderer();
+                renderer.setSize(800, 800);
+                const threeDContainer = $("<div>").addClass("three-d-container");
+                threeDContainer.append(renderer.domElement);
+                container.append(threeDContainer);
+
+                const loader = new STLLoader();
+                loader.load(modelFile, function(geometry) {
+                    const material = new THREE.MeshNormalMaterial();
+                    const mesh = new THREE.Mesh(geometry, material);
+                    scene.add(mesh);
+                    camera.position.z = 5;
+
+                    const animate = function() {
+                        requestAnimationFrame(animate);
+                        //mesh.rotation.x += 0.001;
+                        mesh.rotation.z += 0.0001;
+                        renderer.render(scene, camera);
+                    };
+                    animate();
+                });
+            }
+
+            $(".tab-button").click(function() {
+                const tabId = $(this).data("tab");
+                $(".tab-content").removeClass("active");
+                $("#" + tabId).addClass("active");
+            });
+
+            // Initialize the first tab as active
+            $(".tab-button").first().click();
+
+            
+            var scroller;
+
+
+            /*scroller.jqMenuItems.on("click", function(event) {
+                // If the click was actually a scrolling movement, do nothing.
+                if (!scrollerb.wasClick) {
+                    return;
+                }
+                window.location = "#" + this.id;
+                // Add current-menu-element class to the clicked item.
+                $(".mainb-scrollmenu .current-menu-element").removeClass("current-menu-element");
+                $(this).addClass("current-menu-element");
+            });*/
+
+        });
+    </script>
+
+</body>
+</html>

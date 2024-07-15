@@ -727,7 +727,7 @@ function translateToJqElement(element) {
     }
     // Verify the element is valid jquery object.
     if (jqElement?.length === 0) {
-        throw 'Invalid element';
+        //throw 'Invalid element';
     }
     return jqElement;
 }
