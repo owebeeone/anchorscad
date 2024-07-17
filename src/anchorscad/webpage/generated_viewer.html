@@ -9,6 +9,13 @@
         body {
             font-family: Arial, sans-serif;
         }
+        .align-vertical {
+            display: inline-block;
+            vertical-align: middle;
+            text-align: center;
+            align-items: center;
+            justify-content: space-between;
+        }
         .tabs {
             margin-top: 20px;
         }
@@ -17,6 +24,13 @@
         }
         .tab-content.active {
             display: block;
+        }
+        .elastic-element {
+            background-color: aliceblue;
+            border: none;
+            width: 0%;
+            text-decoration: none;
+            padding: 0px;
         }
         .error-list, .module-list {
             height: 300px;
@@ -35,6 +49,13 @@
             max-height: 100px;
             margin: 10px;
             cursor: pointer;
+            user-select: none; /* Prevent text selection */
+            -webkit-user-drag: none; /* Prevent image dragging in Safari */
+            -webkit-user-select: none; /* Prevent image selection in Safari */
+            -moz-user-select: none; /* Prevent image selection in Firefox */
+            -ms-user-select: none; /* Prevent image selection in IE/Edge */
+            draggable: false; /* Prevent image dragging in modern browsers */
+
         }
         .model-details {
             margin-top: 10px;
@@ -55,6 +76,12 @@
             margin: 5px;
             border: 1px solid #ccc;
             cursor: pointer;
+            user-select: none; /* Prevent text selection */
+            background-size: contain;
+            background-repeat: no-repeat;
+            background-position: center;
+            width: 100px; /* Adjust width as needed */
+            height: 100px; /* Adjust height as needed */
         }
         .menu-element img {
             max-width: 100px;
@@ -164,7 +191,7 @@
 
         $(document).ready(function() {
 
-            $.getJSON('status.json', function(data) {
+            $.getJSON('/status.json', function(data) {
                 const runnerStatus = data;
                 renderErrorsTab(runnerStatus.examples_with_error_output);
                 renderModulesTab(runnerStatus.module_status);
@@ -182,6 +209,7 @@
 
             function renderModulesTab(modules) {
                 const moduleList = $(".module-list");
+                
 
                 // Get only modules with content.
                 var modules_with_content = modules.filter(module => module.shape_results.length > 0);
@@ -198,22 +226,29 @@
             }
 
             function renderModels(shapeResults) {
-                const modelList = $("#model-list");
-                modelList.empty();
+                var modelList = $("#model-list");
+                modelList.remove();
+                $(".model-list-container").append("<div id=\"model-list\">")
+                modelList = $("#model-list");
+                $(".menu-element").remove();
+                modelList.append("<div class=\"elastic-element align-vertical\" id=\"left-elastic\"></div>");
+
                 shapeResults.forEach(shape => {
                     shape.example_results.forEach(example => {
-                        const modelItem = $("<div>").addClass("menu-element").click(() => {
+                        const modelItem = $("<div>").addClass("menu-element").addClass("align-vertical").click(() => {
                             renderModelDetails(example);
                         });
                         if (example.png_file) {
-                            const img = $("<img>").attr("src", example.png_file);
-                            modelItem.append(img);
+                            modelItem.css("background-image", `url(/${example.png_file})`);
                         } else {
                             modelItem.text(example.example_name);
                         }
                         modelList.append(modelItem);
                     });
                 });
+                
+                modelList.append("<div class=\"elastic-filler-element align-vertical\" id=\"elastic-filler\"></div>");
+                modelList.append("<div class=\"elastic-element align-vertical\" id=\"right-elastic\"></div>");
 
                 try {
                     scroller = new ScrollingElementBuilder()
@@ -244,7 +279,7 @@
                 // The fetch calls are synchronous, so we append a structure to the details container.
                 if (example.png_file) {
                     createContainer(details, "model-image-container")
-                        .append(`<img src="${example.png_file}" class="model-image">`);
+                        .append(`<img src="/${example.png_file}" class="model-image">`);
                 }
 
                 if (example.error_str) {
@@ -253,7 +288,7 @@
                 
                 if (example.path_html_file) {
                     createContainer(details, "paths-container")
-                        .append(`<iframe src="${example.path_html_file}" class="iframe-container"></iframe>`);
+                        .append(`<iframe src="/${example.path_html_file}" class="iframe-container"></iframe>`);
                 }
                 if (example.output_file_size && example.output_file_name) {
                     fetchAndRenderTextFile(
@@ -290,20 +325,20 @@
                 //}
                 if (example.graph_svg_file) {
                     createContainer(details, "svg-graph-container")
-                        .append(`<img src="${example.graph_svg_file}" class="graph-image-container">`);
+                        .append(`<img src="/${example.graph_svg_file}" class="graph-image-container">`);
                 }
                 if (example.injected_fields_html_file) {
                     createContainer(details, "injected-fields-container")
-                        .append(`<iframe src="${example.injected_fields_html_file}" class="iframe-container"></iframe>`);
+                        .append(`<iframe src="/${example.injected_fields_html_file}" class="iframe-container"></iframe>`);
                 }
                 if (example.stl_file) {
-                    const fileToRender = example.stl_file;
+                    const fileToRender = "/" + example.stl_file;
                     render3DModel(createContainer(details, "threeD-container"), fileToRender);
                 }
             }
 
             function fetchAndRenderTextFile(container, url, title, isCode = false) {
-                $.get(url, function(data) {
+                $.get("/" + url, function(data) {
                     const textContainer = $("<div>").addClass("monospace").text(data);
                     if (isCode) {
                         textContainer.addClass("code");
