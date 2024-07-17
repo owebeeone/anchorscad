@@ -60,6 +60,9 @@
         .model-details {
             margin-top: 10px;
         }
+        .model-error-details {
+            margin-top: 10px;
+        }
         .error-message {
             color: red;
         }
@@ -178,6 +181,8 @@
     <div id="errors" class="tab-content">
         <h2>Models with Errors</h2>
         <div class="error-list"></div>
+        
+        <div class="model-error-details"></div>
     </div>
 
     <script type="module">
@@ -189,33 +194,65 @@
         import { STLLoader } from 'three/addons/loaders/STLLoader.js';
         import { ThreeMFLoader } from 'three/addons/loaders/3MFLoader.js';
 
+        var runnerStatus = null
+
         $(document).ready(function() {
 
             $.getJSON('/status.json', function(data) {
-                const runnerStatus = data;
-                renderErrorsTab(runnerStatus.examples_with_error_output);
-                renderModulesTab(runnerStatus.module_status);
+                runnerStatus = data;
+                const modules_with_content = filterModules(runnerStatus.module_status);
+
+                renderErrorsTab(modules_with_content);
+                renderModulesTab(modules_with_content);
             }).fail(function() {
                 console.error('Error loading JSON');
             });
 
-            function renderErrorsTab(errors) {
+            function renderErrorsTab(modules_with_content) {
+
+                var shapes_with_errors = [];
+                modules_with_content.forEach(module => {
+                    module.shape_results.forEach(shape => {
+                        shape.example_results.forEach(example => {
+                            if (example.error_file_size > 0) {
+                                shapes_with_errors.push(
+                                    {
+                                        "module_name": module.module_name,
+                                        "class_name": shape.class_name,
+                                        "example": example
+                                    }
+                                    );
+                            }
+                        });
+                    });
+                });
+
                 const errorList = $(".error-list");
-                errors.forEach(error => {
-                    const errorItem = $("<div>").addClass("error-message").text(`${error.module_name} - ${error.class_name} - ${error.example_name}`);
+                shapes_with_errors.forEach(error => {
+                    const errorItem = $("<div>")
+                        .addClass("error-message")
+                        .text(`${error.module_name} - ${error.class_name} - ${error.example.example_name}`);
+                    errorItem.click(() => {
+                        renderModelDetails(error.example, $(".model-error-details"));
+                    });
                     errorList.append(errorItem);
                 });
             }
 
-            function renderModulesTab(modules) {
-                const moduleList = $(".module-list");
+            function filterModules(modules) {
                 
-
                 // Get only modules with content.
                 var modules_with_content = modules.filter(module => module.shape_results.length > 0);
 
                 // Sort the modules by module_name.
                 modules_with_content.sort((a, b) => a.module_name.localeCompare(b.module_name));
+            
+                return modules_with_content;
+            }
+
+            function renderModulesTab(modules_with_content) {
+                const moduleList = $(".module-list");
+                
 
                 modules_with_content.forEach(module => {
                     const moduleItem = $("<div>").addClass("module-item").text(module.module_name).click(() => {
@@ -237,7 +274,7 @@
                 shapeResults.forEach(shape => {
                     shape.example_results.forEach(example => {
                         const modelItem = $("<div>").addClass("menu-element").addClass("align-vertical").click(() => {
-                            renderModelDetails(example);
+                            renderModelDetails(example, $(".model-details"));
                         });
                         if (example.png_file) {
                             modelItem.css("background-image", `url(/${example.png_file})`);
@@ -276,8 +313,7 @@
                 $(".model-details").empty();
             }
 
-            function renderModelDetails(example) {
-                const details = $(".model-details");
+            function renderModelDetails(example, details) {
                 details.empty();
                 details.append(`<h3>${example.example_name}</h3>`);
 
