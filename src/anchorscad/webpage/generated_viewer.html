@@ -226,6 +226,7 @@
             }
 
             function renderModels(shapeResults) {
+                clearModelDetails();
                 var modelList = $("#model-list");
                 modelList.remove();
                 $(".model-list-container").append("<div id=\"model-list\">")
@@ -269,6 +270,10 @@
                 container.addClass("content-container");
                 details.append(container);
                 return container;
+            }
+
+            function clearModelDetails() {
+                $(".model-details").empty();
             }
 
             function renderModelDetails(example) {
