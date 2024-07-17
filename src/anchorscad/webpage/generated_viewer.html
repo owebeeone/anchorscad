@@ -96,6 +96,12 @@
             cursor: pointer;
             user-select: none; /* Prevent text selection */
         }
+        .text-wrap {
+            /* Ensure text wraps within the div */
+            white-space: normal;
+            word-break: break-all; /* Ensure text breaks at spaces */
+            overflow-wrap: break-word; /* For modern browsers */
+        }
         .modules {
             max-width: 1000px;
         }
@@ -217,11 +223,10 @@
                             if (example.error_file_size > 0) {
                                 shapes_with_errors.push(
                                     {
-                                        "module_name": module.module_name,
-                                        "class_name": shape.class_name,
+                                        "module": module,
+                                        "shape": shape,
                                         "example": example
-                                    }
-                                    );
+                                    });
                             }
                         });
                     });
@@ -231,9 +236,9 @@
                 shapes_with_errors.forEach(error => {
                     const errorItem = $("<div>")
                         .addClass("error-message")
-                        .text(`${error.module_name} - ${error.class_name} - ${error.example.example_name}`);
+                        .text(`${error.module.module_name} - ${error.shape.class_name} - ${error.example.example_name}`);
                     errorItem.click(() => {
-                        renderModelDetails(error.example, $(".model-error-details"));
+                        renderModelDetails(error.module, error.shape, error.example, $(".model-error-details"));
                     });
                     errorList.append(errorItem);
                 });
@@ -256,13 +261,14 @@
 
                 modules_with_content.forEach(module => {
                     const moduleItem = $("<div>").addClass("module-item").text(module.module_name).click(() => {
-                        renderModels(module.shape_results);
+                        renderModels(module);
                     });
                     moduleList.append(moduleItem);
                 });
             }
 
-            function renderModels(shapeResults) {
+            function renderModels(module) {
+                const shapeResults = module.shape_results;
                 clearModelDetails();
                 var modelList = $("#model-list");
                 modelList.remove();
@@ -274,12 +280,13 @@
                 shapeResults.forEach(shape => {
                     shape.example_results.forEach(example => {
                         const modelItem = $("<div>").addClass("menu-element").addClass("align-vertical").click(() => {
-                            renderModelDetails(example, $(".model-details"));
+                            renderModelDetails(module, shape, example, $(".model-details"));
                         });
                         if (example.png_file) {
                             modelItem.css("background-image", `url(/${example.png_file})`);
                         } else {
-                            modelItem.text(example.example_name);
+                            modelItem.addClass("text-wrap");
+                            modelItem.text(shape.class_name + '\n' + example.example_name);
                         }
                         modelList.append(modelItem);
                     });
@@ -313,9 +320,9 @@
                 $(".model-details").empty();
             }
 
-            function renderModelDetails(example, details) {
+            function renderModelDetails(module, shape, example, details) {
                 details.empty();
-                details.append(`<h3>${example.example_name}</h3>`);
+                details.append(`<h3>${module.module_name}.${shape.class_name}.${example.example_name}</h3>`);
 
                 // The fetch calls are synchronous, so we append a structure to the details container.
                 if (example.png_file) {

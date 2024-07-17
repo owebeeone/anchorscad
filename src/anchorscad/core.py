@@ -2101,6 +2101,7 @@ class Arrow(CompositeShape):
 @shape
 @datatree
 class CoordinatesCage(Shape):
+    '''Provides anchor functions as a cage for the Coordinates shape.'''
     base_frame: l.GMatrix=l.IDENTITY
 
     def render(self, renderer):
