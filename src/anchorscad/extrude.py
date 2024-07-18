@@ -6,7 +6,7 @@ Created on 7 Jan 2021
 
 from collections.abc import Iterable
 from types import FunctionType
-from typing import Dict, List, Tuple, Union
+from typing import Callable, Dict, List, Tuple, Union
 
 from frozendict import frozendict
 
@@ -978,13 +978,12 @@ def optional_arrayeq(ary1, ary2):
     return np.array_equal(ary1, ary2)
 
 
-@datatree()
+@datatree(provide_override_field=False)
 class PathBuilder():
     '''Builds a Path from a series of points, lines, splines and arcs.'''
-    ops: list
-    name_map: dict
+    ops: List[OpBase]=dtfield(default_factory=list, init=False)
+    name_map: dict=dtfield(default_factory=dict, init=False)
     multi: bool=False
-
 
     @datatree(frozen=True)
     class _LineTo(OpBase):
@@ -999,6 +998,7 @@ class PathBuilder():
         direction_override: np.array=None
         direction_norm: np.array=None
         meta_data: object=None
+        
         
         def __post_init__(self):
             if self.direction_override is None:
@@ -1496,11 +1496,6 @@ class PathBuilder():
                 'path_direction': self.path_direction}
             return (self.__class__, params)
     
-    
-    def __init__(self, multi=False):
-        self.ops = []
-        self.name_map = {}
-        self.multi = multi
         
     def add_op(self, op):
         if op.name:
@@ -1530,7 +1525,14 @@ class PathBuilder():
                                         prev_op=self.last_op(), name=name))
                         
     def line(self, point, name=None, metadata=None, direction_override=None):
-        '''A line from the current point to the given point is added.'''
+        '''A line from the current point to the given point is added.
+        Args:
+            point: The absolute end point of this line.
+            name: The name of this node. Naming a node will make it an anchor.
+            metadata: Provides parameters for rendering that override the renderer metadata.
+            direction_override: The reported direction of the line. If None, the direction is
+                calculated from the previous point.
+        '''
         assert len(self.ops) > 0, "Cannot line to without starting point"
         if not (direction_override is None):
             direction_override = np.array(LIST_2_FLOAT(point))
@@ -1539,6 +1541,22 @@ class PathBuilder():
                                         prev_op=self.last_op(), name=name,
                                         meta_data=metadata,
                                         direction_override=direction_override))
+    
+    def line_wop(self, prev_op_func: Callable[[OpBase], Tuple[float, float]], 
+                 name=None, metadata=None, direction_override=None):
+        '''A line from the current point to the point returned by calling prev_op_func
+        with the most recent.
+        Args:
+            prev_op_func: A function that takes the last operation and returns a point.
+            name: The name of this node. Naming a node will make it an anchor.
+            metadata: Provides parameters for rendering that override the renderer metadata.
+            direction_override: The reported direction of the line. If None, the direction is
+                calculated from the previous point.
+        '''
+        
+        point = prev_op_func(self.last_op())
+        return self.line(point, name, metadata, direction_override)
+
         
     def stroke(self,
                length,
@@ -1547,27 +1565,40 @@ class PathBuilder():
                radians=None, 
                sinr_cosr=None,
                xform=None, 
+               abs_angle: Union[float, l.Angle]=None,
                name=None,
                metadata=None):
         '''A line from the current point to a length away given
         by following the tangent from the previous op transformed by rotating
-        by angle or a GMatrix transform.'''
+        by angle or a GMatrix transform.
+        Args:
+            length: The length of the line.
+            angle: The angle to rotate the tangent by.
+            xfom: A GMatrix transform to apply to the tangent.
+            abs_angle: The absolute angle to rotate the tangent by (overrides angle and xform)
+            name: The name of this node. Naming a node will make it an anchor.
+            metadata: Provides parameters for rendering that override the renderer metadata.
+        '''
         assert length >= 0, f"Cannot stroke with a negative length of {length}"
         assert len(self.ops) > 0, "Cannot line to without starting point"
         angle = l.angle(angle=angle, degrees=degrees, radians=radians, sinr_cosr=sinr_cosr)
+        abs_angle = None if abs_angle is None else l.angle(angle=abs_angle) 
         d_vector = to_gvector(self.last_op().direction_normalized(1.0))
-        if angle:
-            d_vector = angle.rotZ * d_vector
-        if xform:
-            d_vector = xform * d_vector
-            
-        if length > 0:
-            d_vector = d_vector * length
-            point = d_vector + to_gvector(self.last_op().lastPosition())
-            point = point.A[:2]
+        if abs_angle:
+            d_vector = abs_angle.rotZ * d_vector
         else:
-            d_vector = d_vector * 0.001
-            point = self.last_op().lastPosition()
+            if angle:
+                d_vector = angle.rotZ * d_vector
+            if xform:
+                d_vector = xform * d_vector
+                
+            if length > 0:
+                d_vector = d_vector * length
+                point = d_vector + to_gvector(self.last_op().lastPosition())
+                point = point.A[:2]
+            else:
+                d_vector = d_vector * 0.001
+                point = self.last_op().lastPosition()
 
         return self.add_op(self._LineTo(point, 
                                         prev_op=self.last_op(),
