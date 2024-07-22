@@ -897,6 +897,7 @@ class ExampleParams():
     shape_args: tuple=args()
     anchors: tuple=()
     base_anchor: AnchorArgs=surface_args()
+    description: str=None
     
     def args_str(self):
         return f'(*{self.shape_args[0]!r}, **{self.shape_args[1]!r})'

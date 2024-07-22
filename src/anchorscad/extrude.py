@@ -5,6 +5,7 @@ Created on 7 Jan 2021
 '''
 
 from collections.abc import Iterable
+from abc import ABC, abstractmethod
 from types import FunctionType
 from typing import Callable, Dict, List, Tuple, Union
 
@@ -12,12 +13,14 @@ from frozendict import frozendict
 
 import anchorscad.core as core
 from anchorscad.datatrees import datatree, dtfield
+from dataclasses import replace
 import anchorscad.linear as l
 from anchorscad.path_utils import remove_colinear_points
 import numpy as np
 import traceback as tb
 import numbers
 import math
+import manifold3d as m3d
 
 
 class DuplicateNameException(Exception):
@@ -49,6 +52,9 @@ class PathElelementNotFound(Exception):
 
 class AzimuthNotPossibleOnSegment(Exception):
     '''The requested azimuth is not possible for given segment.'''
+    
+class OffsetOutOfRange(Exception):
+    '''Path segment position with the offset is not possible for the geometry.'''
 
 
 EPSILON=1e-6
@@ -370,7 +376,7 @@ def adder(a, b):
 
 
 @datatree(frozen=True, provide_override_field=False)
-class OpBase:
+class OpBase(ABC):
     '''Base class for path operations (move, line, arc and spline).
     '''
     # Implementation state should consist of control points that can be easily 
@@ -405,6 +411,41 @@ class OpBase:
         # Base implementation defaults to not having an azimuth.
         return None
     
+    def position(self, t):
+        '''Returns the position of the operation at t with the offset applied.'''
+        offset: float = self.get_offset()
+        if not offset:
+            return self.base_position(t)
+        d = self.direction_normalized(t)
+        n = np.array([d[1], -d[0]])
+        return self.base_position(t) + n * offset
+    
+    @abstractmethod
+    def base_position(self, t: float) -> np.ndarray:
+        '''Returns the pre offset position of the operation at t.'''
+        pass
+    
+    @abstractmethod
+    def direction_normalized(self, t: float) -> np.ndarray:
+        '''Returns the direction of the operation at t.'''
+        pass
+    
+    @abstractmethod
+    def transform(self, m : l.GMatrix) -> 'OpBase':
+        '''Returns a new operation transformed by the matrix m.'''
+        pass
+    
+    def apply_modifier(self, path_modifier: 'PathModifier', next_op: 'OpBase') -> 'OpBase':
+        '''Returns a new operation with the modifier applied.'''
+        
+        return replace(self, path_modifier=path_modifier)
+    
+    def get_offset(self):
+        '''Returns the offset of the operation.'''
+        if self.path_modifier is None:
+            return 0.0
+        return self.path_modifier.offset
+    
 
 @datatree
 class OpMetaData():
@@ -432,6 +473,50 @@ class NullMapBuilder:
     
     def append(self, op: OpBase, point: tuple, count: int=None, t: float=None):
         pass
+
+
+@datatree(frozen=True)
+class JoinType:
+    '''The type of offset to apply.'''
+    join_type: int
+
+
+@datatree(frozen=True)
+class PathModifier:
+    '''A modifier for a path. This is used to provide an calculate anchors.'''
+    
+    OFFSET_ROUND=JoinType(m3d.JoinType.Round)
+    OFFSET_MITER=JoinType(m3d.JoinType.Miter)
+    OFFSET_SQUARE=JoinType(m3d.JoinType.Square)
+    
+    offset: float=0.0
+    join_type: JoinType=dtfield(OFFSET_ROUND, doc='The type of joins to apply.')
+    mitre_limit: float=dtfield(2, doc='The miter limit for the offset.')
+    circular_segments: int=dtfield(
+        None, 
+        doc='The number of circular segments to use for the offset. meta_data.fn is used if None.')
+    
+    def add_offset(self, offset: float) -> 'PathModifier':
+        return replace(self, offset=self.offset + offset)
+    
+    @classmethod
+    def with_offset(cls, offset: float) -> 'PathModifier':
+        return PathModifier(offset=offset)
+    
+    @classmethod
+    def as_round(cls) -> 'PathModifier':
+        return PathModifier(join_type=cls.OFFSET_ROUND)
+    
+    @classmethod
+    def as_mitre(cls) -> 'PathModifier':
+        return PathModifier(join_type=cls.OFFSET_MITRE)
+    
+    @classmethod
+    def as_square(cls) -> 'PathModifier':
+        return PathModifier(join_type=cls.OFFSET_SQUARE)
+
+
+MISSING_PATH_MODIFIER = object()
 
 
 def _eval_overlapping_range(a, b, tolerance=EPSILON):
@@ -630,6 +715,7 @@ class Path():
     '''
     ops: Tuple[OpBase, ...]
     name_map: Dict[str, OpBase]  # frozendict
+    path_modifier: PathModifier=dtfield(default=None)
 
     def get_node(self, name):
         return self.name_map.get(name, None)
@@ -718,7 +804,38 @@ class Path():
         colinear_remove = not meta_data.segment_lines
         
         points = clean_polygons(points, colinear_remove)
-
+        
+        if self.path_modifier:
+            
+            cs = m3d.CrossSection([points])
+            offset = self.path_modifier.offset
+            
+            if cs.is_empty():
+                # AnchorSCAD Paths may be incorrectly ordered. Manifold3D requires a correct order
+                # otherise it will return an empty cross section since it is deemed to be a hole.
+                # TODO: Fix AnchorSCAD to handle multiple paths correctly.
+                cs = m3d.CrossSection([points[0][::-1]])
+                assert not cs.is_empty(), f'Empty cross section should not happen.'
+                order_reversed = True
+            else:
+                order_reversed = False
+            
+            num_segments = meta_data.fn \
+                if self.path_modifier.circular_segments is None \
+                else self.path_modifier.circular_segments
+                
+            # This is where we call the manifold/clipper2 offset function.
+            offsed_cs = cs.offset(
+                offset, 
+                self.path_modifier.join_type.join_type, 
+                miter_limit=self.path_modifier.mitre_limit, 
+                circular_segments=num_segments)
+            
+            points = offsed_cs.to_polygons()
+            if order_reversed:
+                return (points[0][::-1])
+            return points
+            
         return (points,)
     
     def svg_path_render(self, svg_model):
@@ -730,7 +847,8 @@ class Path():
                              builder=None, 
                              suffix=None, 
                              appender=adder,
-                             skip_first_move=None):
+                             skip_first_move=None,
+                             offset: float=None) -> 'PathBuilder':
         '''Returns a PathBuilder with the new transformed path.
         Args:
           m: A GMatrix to transform the points.
@@ -741,9 +859,16 @@ class Path():
         '''
         if not builder:
             skip_first_move = False if skip_first_move is None else skip_first_move
-            builder = PathBuilder()
-        else:
-            skip_first_move = True if skip_first_move is None else skip_first_move
+            path_modifier = None
+            if self.path_modifier:
+                if offset:
+                    path_modifier = self.path_modifier.add_offset(offset)
+            elif offset:
+                path_modifier = PathModifier.with_offset(offset)
+            else:
+                skip_first_move = True if skip_first_move is None else skip_first_move
+            
+            builder = PathBuilder(path_modifier=path_modifier)
         
         # Perform skip on first op if it is a move.
         iterops = iter(self.ops)
@@ -955,9 +1080,15 @@ class CircularArc:
     def extents(self):
         return extentsof(self.extremes())
 
-    def evaluate(self, t):
+    def evaluate(self, t: float, offset: float=0.0) -> np.array:
+        radius = self.radius + offset
+        if radius < 0: 
+            # Negative radius is invalid. This segment shrank away and no longer provides
+            # a point in the path.
+            raise OffsetOutOfRange(
+                f'Arc radius={self.radius} offset={offset} new radius={radius} is negative.')
         angle = t * self.sweep_angle + self.start_angle
-        return np.array([np.cos(angle), np.sin(angle)]) * self.radius + self.centre
+        return np.array([np.cos(angle), np.sin(angle)]) * radius + self.centre
     
     def azimuth_t(self, angle: Union[float, l.Angle]=0, t_end: bool=False, 
                   t_range: Tuple[float, float]=(0.0, 1.0)) -> Tuple[float, ...]:
@@ -984,6 +1115,7 @@ class PathBuilder():
     ops: List[OpBase]=dtfield(default_factory=list, init=False)
     name_map: dict=dtfield(default_factory=dict, init=False)
     multi: bool=False
+    path_modifier: PathModifier=None
 
     @datatree(frozen=True)
     class _LineTo(OpBase):
@@ -998,9 +1130,10 @@ class PathBuilder():
         direction_override: np.array=None
         direction_norm: np.array=None
         meta_data: object=None
-        
+        path_modifier: 'PathModifier'=dtfield(default=MISSING_PATH_MODIFIER)
         
         def __post_init__(self):
+            assert self.path_modifier is not MISSING_PATH_MODIFIER, 'path_modifier must be set.'
             if self.direction_override is None:
                 d = self.point - self.prev_op.lastPosition()
                 if _vlen2(d) > EPSILON:
@@ -1035,7 +1168,7 @@ class PathBuilder():
             
             for i in range(1, n + 1):
                 t = i / n
-                point = self.position(t)
+                point = self.base_position(t)
                 path_builder.append(point)
                 map_builder.append(self, point, n, t)
             
@@ -1057,7 +1190,7 @@ class PathBuilder():
         def extents(self):
             return extentsof(self.extremes())
             
-        def position(self, t):
+        def base_position(self, t):
             return self.point + (t - 1) * self.direction(0)
         
         def transform(self, m):
@@ -1089,8 +1222,10 @@ class PathBuilder():
             hash=False, 
             compare=False)
         name: str=None
+        path_modifier: 'PathModifier'=dtfield(default=MISSING_PATH_MODIFIER)
         
         def __post_init__(self):
+            assert self.path_modifier is not MISSING_PATH_MODIFIER, 'path_modifier must be set.'
             self.point.setflags(write=False)
             if not (self.dir is None):
                 self.dir.setflags(write=False)
@@ -1119,13 +1254,20 @@ class PathBuilder():
         def extents(self):
             return np.array([self.point, self.point])
         
-        def position(self, t):
+        def base_position(self, t):
             return self.point  # Move is associated only with the move point. 
 
         def transform(self, m):
             params = self._as_non_defaults_dict()
             params['point'] = (m * to_gvector(self.point)).A[0:len(self.point)]
             return (self.__class__, params)
+        
+        def apply_modifier(self, path_modifier: 'PathModifier', next_op: 'OpBase') -> 'OpBase':
+            '''Returns a new operation with the modifier applied.'''
+            if self.dir is not None:
+                return replace(self, path_modifier=path_modifier)
+            dir = next_op.direction_normalized(0)
+            return replace(self, dir=dir, path_modifier=path_modifier)
         
         def is_move(self):
             return True
@@ -1158,10 +1300,12 @@ class PathBuilder():
             compare=False)
         name: str=None
         meta_data: object=None
+        path_modifier: 'PathModifier'=dtfield(default=MISSING_PATH_MODIFIER)
         
         SPLINE_CLASS=None # Derived class must set this.
         
         def __post_init__(self):
+            assert self.path_modifier is not MISSING_PATH_MODIFIER, 'path_modifier must be set.'
             self.points.setflags(write=False)
             to_cat = [[self.prev_op.lastPosition()],  self.points]
             spline_points = np.concatenate(to_cat)
@@ -1196,14 +1340,14 @@ class PathBuilder():
         def extents(self):
             return self.spline.extents()
         
-        def position(self, t):
+        def base_position(self, t):
             if t < 0:
                 return self.direction(0) * t + self.prev_op.lastPosition()
             elif t > 1:
-                return self.direction(1) * t + self.lastPosition()
+                return self.direction(1) * (t - 1) + self.lastPosition()
             return self.spline.evaluate(t)
         
-        def transform(self, m):
+        def transform(self, m: l.GMatrix):
             points = list((m * to_gvector(p)).A[0:len(p)] for p in self.points)
             points = np.array(LIST_23X2_FLOAT(points))
             params = self._as_non_defaults_dict()
@@ -1283,8 +1427,10 @@ class PathBuilder():
             compare=False)
         name: str=None
         meta_data: object=None
+        path_modifier: 'PathModifier'=dtfield(default=MISSING_PATH_MODIFIER)
         
         def __post_init__(self):
+            assert self.path_modifier is not MISSING_PATH_MODIFIER, 'path_modifier must be set.'
             self.centre.setflags(write=False)
             self.end_point.setflags(write=False)
             start_point = self.prev_op.lastPosition()
@@ -1328,6 +1474,13 @@ class PathBuilder():
             
         def lastPosition(self):
             return self.end_point
+        
+        def _sweep_away(self):
+            '''Returns true if the arc sweeps away from the previous point.'''
+            d = self.direction(0)
+            radial = self.prev_op.lastPosition() - self.centre
+            cross = d[0] * radial[1] - d[1] * radial[0]
+            return cross > 0
             
         def populate(self, path_builder, start_indexes, map_builder, meta_data):
             if self.meta_data and self.meta_data.fn:
@@ -1339,7 +1492,9 @@ class PathBuilder():
                 
             for i in range(1, count + 1):
                 t = float(i) / float(count)
-                point = self.arcto.evaluate(t)
+                # The offset is only applied to anchors. Offset to the path
+                # is applied by against the polygon.
+                point = self.arcto.evaluate(t, offset=0)
                 path_builder.append(point)
                 map_builder.append(self, point, count, t)
     
@@ -1358,12 +1513,21 @@ class PathBuilder():
         def extents(self):
             return self.arcto.extents()
         
-        def position(self, t):
+        def base_position(self, t):
             if t < 0:
                 return self.direction(0) * t + self.prev_op.lastPosition()
             elif t > 1:
-                return self.direction(1) * t + self.end_point
+                return self.direction(1) * (t - 1) + self.end_point
             return self.arcto.evaluate(t)
+        
+        def position(self, t):
+            '''Returns the position of the operation at t with the offset applied.'''
+            offset = self.get_offset()
+            if offset is None:
+                return self.base_position(t)
+            d = self.direction_normalized(t)
+            n = np.array([d[1], -d[0]])
+            return self.base_position(t) + n * offset
         
         def transform(self, m):
             end_point = (m * to_gvector(self.end_point)).A[0:len(self.end_point)]
@@ -1401,101 +1565,6 @@ class PathBuilder():
                  self.name, 
                  self.meta_data))
 
-
-    @datatree(frozen=True)
-    class _LinearSprialTo(OpBase):
-        '''Draw a linear sprial.'''
-        end_point: np.array
-        centre: np.array
-        path_direction: bool
-        prev_op: object=dtfield(
-            default=None,
-            repr=False, 
-            hash=False, 
-            compare=False)
-        name: str=None
-        meta_data: object=None
-        
-        def __post_init__(self):
-            
-            start_point = self.prev_op.lastPosition()
-            r_start = start_point - self.centre
-            radius_start = _vlen(r_start)
-            r_end = self.end_point - self.centre
-            radius_end = _vlen(r_end)
-            
-            s_normal = r_start / radius_start
-            e_normal = r_end / radius_start
-            cos_s = s_normal[0]
-            sin_s = s_normal[1]
-            start_angle = np.arctan2(sin_s, cos_s)
-            
-            cos_e = e_normal[0]
-            sin_e = e_normal[1]
-            end_angle = np.arctan2(sin_e, cos_e)
-           
-            end_delta = end_angle - start_angle
- 
-            if self.path_direction:
-                # Should be clockwise.
-                if end_delta < 0:
-                    end_delta = 2 * np.pi + end_delta
-            else:
-                # Should be anti-clockwise
-                if end_delta > 0:
-                    end_delta = -2 * np.pi + end_delta
-                    
-            object.__setattr__(self, 'arcto', CircularArc(
-                start_angle, end_delta, radius_start, self.centre))
-            
-        def lastPosition(self):
-            return self.end_point
-            
-        def populate(self, path_builder, start_indexes, map_builder, meta_data):
-            if self.meta_data and self.meta_data.fn:
-                meta_data = self.meta_data
-    
-            count = meta_data.fn
-            if not count:
-                count = 10
-                
-            for i in range(1, count + 1):
-                t = float(i) / float(count)
-                point = self.arcto.evaluate(t)
-                path_builder.append(point)
-                map_builder.append(self, point, count, t)
-    
-        def direction(self, t):
-            return self.arcto.derivative(t)
-        
-        def direction_normalized(self, t):
-            return _normalize(self.direction(t))
-        
-        def normal2d(self, t, dims=[0, 1]):
-            return self.arcto.normal2d(t)
-        
-        def extremes(self):
-            return self.arcto.extremes()
-        
-        def extents(self):
-            return self.arcto.extents()
-        
-        def position(self, t):
-            if t < 0:
-                return self.direction(0) * t + self.prev_op.lastPosition()
-            elif t > 1:
-                return self.direction(1) * t + self.end_point
-            return self.arcto.evaluate(t)
-        
-        def transform(self, m):
-            end_point = (m * to_gvector(self.end_point)).A[0:len(self.end_point)]
-            centre = (m * to_gvector(self.centre)).A[0:len(self.centre)]
-            params = {
-                'end_point': end_point,
-                'centre': centre,
-                'path_direction': self.path_direction}
-            return (self.__class__, params)
-    
         
     def add_op(self, op):
         if op.name:
@@ -1522,7 +1591,8 @@ class PathBuilder():
             direction = np.array(LIST_2_FLOAT(direction))
         return self.add_op(self._MoveTo(np.array(LIST_2_FLOAT(point)),
                                         dir=direction,
-                                        prev_op=self.last_op(), name=name))
+                                        prev_op=self.last_op(), name=name,
+                                        path_modifier=self.path_modifier))
                         
     def line(self, point, name=None, metadata=None, direction_override=None):
         '''A line from the current point to the given point is added.
@@ -1540,7 +1610,8 @@ class PathBuilder():
         return self.add_op(self._LineTo(np.array(LIST_2_FLOAT(point)), 
                                         prev_op=self.last_op(), name=name,
                                         meta_data=metadata,
-                                        direction_override=direction_override))
+                                        direction_override=direction_override,
+                                        path_modifier=self.path_modifier))
     
     def line_wop(self, prev_op_func: Callable[[OpBase], Tuple[float, float]], 
                  name=None, metadata=None, direction_override=None):
@@ -1604,7 +1675,8 @@ class PathBuilder():
                                         prev_op=self.last_op(),
                                         name=name,
                                         direction_override=d_vector.A[:2],
-                                        meta_data=metadata))
+                                        meta_data=metadata,
+                                        path_modifier=self.path_modifier))
             
     def relative_line(self,
                relative_pos,
@@ -1615,7 +1687,8 @@ class PathBuilder():
                  + self.last_op().lastPosition())
         return self.add_op(self._LineTo(point[:2], 
                                         prev_op=self.last_op(), name=name,
-                                        meta_data=metadata))
+                                        meta_data=metadata,
+                                        path_modifier=self.path_modifier))
         
     def _rotate(self, direction: l.GVector, degrees: float, radians: float, sinr_cosr:float, 
                 xform: l.GMatrix) -> l.GVector:
@@ -1726,7 +1799,12 @@ class PathBuilder():
         assert len(self.ops) > 0, "Cannot line to without starting point"
         points = np.array(LIST_2X2_FLOAT(points))
         return self.add_op(
-            self._QuadraticSplineTo(points, prev_op=self.last_op(), name=name, meta_data=metadata))
+            self._QuadraticSplineTo(
+                points, 
+                prev_op=self.last_op(), 
+                name=name, 
+                meta_data=metadata,
+                path_modifier=self.path_modifier))
         
     
     def spline(self, points, name=None, metadata=None, 
@@ -1777,8 +1855,11 @@ class PathBuilder():
         cv2 = self.squeeze_and_rot(cv3, cv2, cv_len[1], degrees[1], radians[1])
         
         points = np.array(LIST_3X2_FLOAT([cv1, cv2, cv3]))
-        return self.add_op(
-            self._SplineTo(points, prev_op=self.last_op(), name=name, meta_data=metadata))
+        return self.add_op(self._SplineTo(points,
+                                          prev_op=self.last_op(), 
+                                          name=name, 
+                                          meta_data=metadata,
+                                          path_modifier=self.path_modifier))
         
     def arc_tangent_radius_sweep(self,
                                  radius,
@@ -1862,8 +1943,13 @@ class PathBuilder():
         
         path_direction = sweep_angle_degrees >= 0
 
-        return self.add_op(self._ArcTo(
-            last, centre, path_direction, prev_op=self.last_op(), name=name, meta_data=metadata))
+        return self.add_op(self._ArcTo(last, 
+                                       centre, 
+                                       path_direction, 
+                                       prev_op=self.last_op(), 
+                                       name=name, 
+                                       meta_data=metadata,
+                                       path_modifier=self.path_modifier))
         
         
     def arc_points_radius(self, last, radius, is_left=True, direction=None, name=None, metadata=None):
@@ -1877,8 +1963,13 @@ class PathBuilder():
                 f'Unable to fit circle, radius={radius}, start={start} last={last}.')
         if direction == None:
             direction = not is_left
-        return self.add_op(self._ArcTo(
-            last, centre, direction, prev_op=self.last_op(), name=name, meta_data=metadata))
+        return self.add_op(self._ArcTo(last,
+                                       centre,
+                                       direction,
+                                       prev_op=self.last_op(), 
+                                       name=name,
+                                       meta_data=metadata,
+                                       path_modifier=self.path_modifier))
     
     def arc_points(self, middle, last, name=None, direction=None, metadata=None):
         '''Defines a circular arc starting at the previous operator's end point
@@ -1915,8 +2006,13 @@ class PathBuilder():
                 if middle_delta > end_delta:
                     path_direction = False
         
-        return self.add_op(self._ArcTo(
-            last, centre, path_direction, prev_op=self.last_op(), name=name, meta_data=metadata))
+        return self.add_op(self._ArcTo(last, 
+                                       centre,
+                                       path_direction,
+                                       prev_op=self.last_op(),
+                                       name=name,
+                                       meta_data=metadata,
+                                       path_modifier=self.path_modifier))
     
     def arc_tangent_point(self, last, degrees=0, radians=None, direction=None, 
                           name=None, metadata=None):
@@ -1947,7 +2043,8 @@ class PathBuilder():
         
         return self.add_op(self._ArcTo(
             last, centre, path_direction, 
-            prev_op=self.last_op(), name=name, meta_data=metadata))
+            prev_op=self.last_op(), name=name, meta_data=metadata,
+            path_modifier=self.path_modifier))
     
     def squeeze_and_rot(self, point, control, cv_len, degrees, radians):
         if cv_len is None and not degrees and not radians:
@@ -1970,7 +2067,7 @@ class PathBuilder():
         return self.name_map.get(name, None)
     
     def build(self):
-        return Path(tuple(self.ops), frozendict(self.name_map))
+        return Path(tuple(self.ops), frozendict(self.name_map), path_modifier=self.path_modifier)
     
 
 class ExtrudedShape(core.Shape):
@@ -2783,6 +2880,55 @@ class RotateExtrude(ExtrudedShape):
                 # core.surface_args('azimuth', 'curve1', az_angle=-45, t_end=True, degrees=120),
                 # core.surface_args('azimuth', 'curve2', az_angle=-45, degrees=120),
                 # core.surface_args('azimuth', 'curve2', az_angle=45, t_end=True, degrees=120),
+                )),
+        'arc_azimuth2': core.ExampleParams(
+            shape_args=core.args(
+                PathBuilder()
+                    .move([0, _SCALE * 25])
+                    .line([_SCALE * 25, _SCALE * 25], 'linear1')
+                    .arc_tangent_point([_SCALE * 25, _SCALE * 50], name='curve1')
+                    .arc_tangent_point([_SCALE * 25, _SCALE * -50], degrees=180, name='curve2')
+                    .arc_tangent_point([_SCALE * 25, _SCALE * -25], degrees=180, name='curve3')
+                    .line([0, _SCALE * -25], 'linear2')
+                    .line([0, _SCALE * 25], 'linear3')
+                    .build(),
+                degrees=120,
+                fn=80,
+                use_polyhedrons=False
+                ),
+            anchors=(
+                core.surface_args('linear1', 0.5, 0),
+                # core.surface_args('azimuth', 'curve1', az_angle=45, degrees=120),
+                # core.surface_args('azimuth', 'curve1', az_angle=-45, t_end=True, degrees=120),
+                # core.surface_args('azimuth', 'curve2', az_angle=-45, degrees=120),
+                # core.surface_args('azimuth', 'curve2', az_angle=45, t_end=True, degrees=120),
+                )),
+        'offset_ex': core.ExampleParams(
+            description='An example of using the offset modifier with a Path containing a '
+                        'variety of primitive segments.',
+            shape_args=core.args(
+                PathBuilder(path_modifier=PathModifier.as_round().add_offset(_SCALE * 3))
+                    .move([5 * _SCALE, _SCALE * -25])
+                    .line([_SCALE * 25, _SCALE * -25], 'linear1')
+                    .arc_tangent_point([_SCALE * 25, _SCALE * -50], name='curve1')
+                    .spline(
+                        ([_SCALE * 50, _SCALE * -50], [_SCALE * 5, _SCALE * 50], [_SCALE * 25, _SCALE * 50]), 
+                        degrees=(0, 180), rel_len=0.5, name='curve2')
+                    .qspline(([_SCALE * 55, _SCALE * 45], [_SCALE * 25, _SCALE * 25]), name='curve3')
+                    .line([5 * _SCALE, _SCALE * 25], 'linear2')
+                    .line([5 * _SCALE, _SCALE * -25], 'linear3')
+                    .build(),
+                degrees=120,
+                fn=80,
+                use_polyhedrons=False
+                ),
+            anchors=(
+                core.surface_args('linear1', 0.5, 0),
+                core.surface_args('azimuth', 'curve1', az_angle=l.angle(-45), degrees=120),
+                core.surface_args('azimuth', 'curve1', az_angle=45, t_end=True, degrees=120),
+                core.surface_args('azimuth', 'curve2', az_angle=45, degrees=120),
+                core.surface_args('azimuth', 'curve2', az_angle=-45, t_end=True, degrees=120),
+                core.surface_args('curve3', 0.5),
                 )),
         }
     
