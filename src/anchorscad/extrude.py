@@ -1993,7 +1993,10 @@ class PathBuilder():
         
         return self.add_op(self._ArcTo(
             last, centre, path_direction, 
-            prev_op=self.last_op(), name=name, meta_data=metadata))
+            prev_op=self.last_op(), 
+            name=name, 
+            meta_data=metadata, 
+            path_modifier=self.path_modifier))
 
     def arc_centre_sweep(self,
                          centre, 
