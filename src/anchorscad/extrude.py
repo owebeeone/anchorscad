@@ -964,7 +964,7 @@ class Path():
         
         for op in iterops:
             builder.add_op_with_params(
-                op.transform(m), appender(op.name, suffix))
+                op.transform(m), appender(op.name, suffix), path_modifier=builder.path_modifier)
 
         return builder
             
@@ -1655,9 +1655,11 @@ class PathBuilder():
         self.ops.append(op)
         return self
     
-    def add_op_with_params(self, op_parts, op_name=None):
+    def add_op_with_params(self, op_parts, op_name=None, path_modifier=None):
         params_dict = op_parts[1]
         params_dict['prev_op'] = self.last_op()
+        params_dict['path_modifier'] = path_modifier
+        
         if op_name:
             params_dict['name'] = op_name
         return self.add_op((op_parts[0])(**params_dict))
