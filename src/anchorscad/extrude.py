@@ -55,6 +55,9 @@ class AzimuthNotPossibleOnSegment(Exception):
     
 class OffsetOutOfRange(Exception):
     '''Path segment position with the offset is not possible for the geometry.'''
+    
+class CutCausedMultiplePathsUnimplemented(Exception):
+    '''Cutting a path at the Y axis caused the path to split into more than 1.'''
 
 
 EPSILON=1e-6
@@ -486,7 +489,7 @@ class PathModifier:
     '''A modifier for a path. This is used to provide an calculate anchors.'''
     
     OFFSET_ROUND=JoinType(m3d.JoinType.Round)
-    OFFSET_MITER=JoinType(m3d.JoinType.Miter)
+    OFFSET_MITRE=JoinType(m3d.JoinType.Miter)
     OFFSET_SQUARE=JoinType(m3d.JoinType.Square)
     
     offset: float=0.0
@@ -495,9 +498,19 @@ class PathModifier:
     circular_segments: int=dtfield(
         None, 
         doc='The number of circular segments to use for the offset. meta_data.fn is used if None.')
+    trim_negx: bool=dtfield(False, doc='Trim the parts of the path that have negative X.')
     
     def add_offset(self, offset: float) -> 'PathModifier':
         return replace(self, offset=self.offset + offset)
+    
+    def round(self) -> 'PathModifier':
+        return replace(self, join_type=self.OFFSET_ROUND)
+    
+    def mitre(self) -> 'PathModifier':
+        return replace(self, join_type=self.OFFSET_MITRE)
+    
+    def square(self) -> 'PathModifier':
+        return replace(self, join_type=self.OFFSET_SQUARE)
     
     @classmethod
     def with_offset(cls, offset: float) -> 'PathModifier':
@@ -702,7 +715,50 @@ class MappedPolygon:
             return self.cleaned_polygons
         
         return self.points
+
+
+@datatree
+class _Segment:
+    points: List[np.ndarray]  # 2D points
+    start_idx: int = -1
+    end_idx: int= -1
+
+    IS_START = True
     
+    def val(self):
+        return self.points[0]
+    
+    def other_end_val(self):
+        return self.points[-1]
+    
+    def set_idx(self, idx):
+        self.start_idx = idx
+        
+    def set_end_idx(self, idx):
+        self.end_idx = idx
+        
+    def segment(self) -> '_Segment':
+        return self
+
+
+@datatree
+class _EndSegment:
+    segment: Segment
+    
+    IS_START = False 
+    
+    def val(self):
+        return self.segment.other_end_val()       
+    
+    def other_end_val(self):
+        return self.segment.val()
+    
+    def set_idx(self, idx):
+        self.segment.set_end_idx(idx)
+        
+    def segment(self) -> _Segment:
+        return self.segment
+        
 
 @datatree(frozen=True)
 class Path():
@@ -805,7 +861,7 @@ class Path():
         
         points = clean_polygons(points, colinear_remove)
         
-        if self.path_modifier:
+        if self.path_modifier and self.path_modifier.offset != 0:
             
             cs = m3d.CrossSection([points])
             offset = self.path_modifier.offset
@@ -825,18 +881,43 @@ class Path():
                 else self.path_modifier.circular_segments
                 
             # This is where we call the manifold/clipper2 offset function.
-            offsed_cs = cs.offset(
+            offset_cs = cs.offset(
                 offset, 
                 self.path_modifier.join_type.join_type, 
                 miter_limit=self.path_modifier.mitre_limit, 
                 circular_segments=num_segments)
             
-            points = offsed_cs.to_polygons()
-            if order_reversed:
-                return (points[0][::-1])
-            return points
+            # Remove the negative parts of the offset. This is a workaround for the
+            # when doing a RotateExtrude and the offset caused the path to cross the
+            # Y axis.
+            if self.path_modifier.trim_negx:
+                offset_cs = self._trim_negx(offset_cs)
             
+            points = offset_cs.to_polygons()
+            
+            return points
+        
+        if self.path_modifier and self.path_modifier.trim_negx:
+            cs = m3d.CrossSection([points])
+            if cs.is_empty():
+                cs = m3d.CrossSection([points[::-1]])
+            cs = self._trim_negx(cs)
+                
+            return cs.to_polygons()
+
         return (points,)
+    
+    def _trim_negx(self, cs: m3d.CrossSection):
+        min_x, min_y, max_x, max_y = cs.bounds()
+        
+        if min_x < 0:
+            sq = m3d.CrossSection.square([-min_x + EPSILON, max_y - min_y + EPSILON])
+            sqt = sq.translate([min_x - EPSILON, min_y - EPSILON / 2])
+            result_cs = cs - sqt
+            
+            return result_cs
+        
+        return cs
     
     def svg_path_render(self, svg_model):
         for op in self.ops:
@@ -2907,7 +2988,7 @@ class RotateExtrude(ExtrudedShape):
             description='An example of using the offset modifier with a Path containing a '
                         'variety of primitive segments.',
             shape_args=core.args(
-                PathBuilder(path_modifier=PathModifier.as_round().add_offset(_SCALE * 3))
+                PathBuilder(path_modifier=PathModifier(trim_negx=True).round().add_offset(_SCALE * 8))
                     .move([5 * _SCALE, _SCALE * -25])
                     .line([_SCALE * 25, _SCALE * -25], 'linear1')
                     .arc_tangent_point([_SCALE * 25, _SCALE * -50], name='curve1')
@@ -2955,8 +3036,27 @@ class RotateExtrude(ExtrudedShape):
             return self.render_rotate_extrude(renderer)
 
     def render_rotate_extrude(self, renderer):
-        polygon = renderer.model.Polygon(
-            *self.path.cleaned_polygons(self.select_path_attrs(renderer)))
+        points = self.path.cleaned_polygons(self.select_path_attrs(renderer))
+        if len(points) > 1:
+            cpoints = np.concatenate(points)
+            indexes = []
+            count = 0
+            for p in points:
+                indexes.append([range(count, count + len(p))])
+                count += len(p)
+            polygon = renderer.model.Polygon(*cpoints, paths=indexes)
+        else:
+            polygon = renderer.model.Polygon(*points)
+        # min_x, min_y, max_x, max_y = self.bounding_box(points)
+        # if min_x < 0 and max_x > 0:
+        #     # The path is can't be rotated around because it crosses the Y axis.
+        #     # Create a bounding box around the part that crosses the Y axis
+        #     # and difference that.
+        #     if not self.path.path_modifier.trim_negx:
+        #         raise ValueError('Path crosses Y axis and trim_negx is False.')
+        #     sq = renderer.model.square([-min_x + EPSILON, max_y - min_y + EPSILON])
+        #     tsq = renderer.model.translate([min_x - EPSILON, min_y - EPSILON / 2])(sq)
+        #     polygon = renderer.model.difference()(polygon, tsq)
         params = core.fill_params(
             self, 
             renderer, 
@@ -2968,6 +3068,12 @@ class RotateExtrude(ExtrudedShape):
         params['angle'] = angle
         
         return renderer.add(renderer.model.rotate_extrude(**params)(polygon))
+    
+    # def bounding_box(self, points: np.array):
+    #     '''Returns the bounding box of the given set of points.'''
+    #     min_v = np.min(points, axis=1)[0]
+    #     max_v = np.max(points, axis=1)[0]
+    #     return (min_v[0], min_v[1], max_v[0], max_v[1])
     
     def generate_transforms(self, renderer):
         '''Generates a list of transforms for the given set of parameters.'''
