@@ -414,14 +414,17 @@ class OpBase(ABC):
         # Base implementation defaults to not having an azimuth.
         return None
     
-    def position(self, t):
+    def position(self, t: float, apply_offset: bool=True):
         '''Returns the position of the operation at t with the offset applied.'''
-        offset: float = self.get_offset()
-        if not offset:
-            return self.base_position(t)
-        d = self.direction_normalized(t)
-        n = np.array([d[1], -d[0]])
-        return self.base_position(t) + n * offset
+        base_pos = self.base_position(t)
+        if apply_offset:
+            offset: float = self.get_offset()
+            if not offset:
+                return self.base_position(t)
+            d = self.direction_normalized(t)
+            n = np.array([d[1], -d[0]])
+            return base_pos + n * offset
+        return base_pos
     
     @abstractmethod
     def base_position(self, t: float) -> np.ndarray:
@@ -496,7 +499,7 @@ class PathModifier:
     join_type: JoinType=dtfield(OFFSET_ROUND, doc='The type of joins to apply.')
     mitre_limit: float=dtfield(2, doc='The miter limit for the offset.')
     circular_segments: int=dtfield(
-        None, 
+        8, 
         doc='The number of circular segments to use for the offset. meta_data.fn is used if None.')
     trim_negx: bool=dtfield(False, doc='Trim the parts of the path that have negative X.')
     
@@ -880,6 +883,9 @@ class Path():
                 if self.path_modifier.circular_segments is None \
                 else self.path_modifier.circular_segments
                 
+            if not num_segments:
+                num_segments = 8
+                
             # This is where we call the manifold/clipper2 offset function.
             offset_cs = cs.offset(
                 offset, 
@@ -968,9 +974,9 @@ class Path():
 
         return builder
             
-    def transform(self, m):
-        '''Returns a new Path but transformed by m.'''
-        return self.transform_to_builder(m).build()
+    def transform(self, m: l.GMatrix=l.IDENTITY, offset: float=None):
+        '''Returns a new Path but transformed by m with offset path modifier.'''
+        return self.transform_to_builder(m=m, offset=offset).build()
 
 
 def to_gvector(np_array):
@@ -1295,7 +1301,7 @@ class PathBuilder():
     @datatree(frozen=True)
     class _MoveTo(OpBase):
         '''Move to position.'''
-        point: np.array
+        point: np.array=dtfield(compare=False)
         dir: np.array=None
         prev_op: object=dtfield(
             default=None,
@@ -1392,6 +1398,15 @@ class PathBuilder():
             spline_points = np.concatenate(to_cat)
             object.__setattr__(self, 'spline', self.SPLINE_CLASS(spline_points))
             
+        def __eq__(self, other):
+            if self.__class__ != other.__class__:
+                return False
+            return (
+                (self.points == other.points).all()
+                and self.name == other.name
+                and self.meta_data == other.meta_data
+                and self.path_modifier == other.path_modifier)
+            
         def populate(self, path_builder, start_indexes, map_builder, meta_data):
             if self.meta_data and self.meta_data.fn:
                 meta_data = self.meta_data
@@ -1439,14 +1454,6 @@ class PathBuilder():
                     t_range: Tuple[float, float]=(0.0, 1.0)) -> Tuple[float, ...]:
             
             return self.spline.azimuth_t(angle, t_end, t_range)
-            
-        def __eq__(self, other):
-            if self.__class__ != other.__class__:
-                return False
-            return (
-                (self.points == other.points).all()
-                and self.name == other.name
-                and self.meta_data == other.meta_data)
 
         def __hash__(self):
             return hash((tuple(self.points.flatten()), self.name, self.meta_data))
@@ -1458,6 +1465,9 @@ class PathBuilder():
 
         def __hash__(self):
             return super().__hash__()
+        
+        def __eq__(self, other):
+            return super().__eq__(other)
         
         def lastPosition(self):
             return self.points[2]
@@ -1472,6 +1482,9 @@ class PathBuilder():
 
         def __hash__(self):
             return super().__hash__()
+        
+        def __eq__(self, other):
+            return super().__eq__(other)
         
         def lastPosition(self):
             return self.points[1]
@@ -1600,15 +1613,6 @@ class PathBuilder():
             elif t > 1:
                 return self.direction(1) * (t - 1) + self.end_point
             return self.arcto.evaluate(t)
-        
-        def position(self, t):
-            '''Returns the position of the operation at t with the offset applied.'''
-            offset = self.get_offset()
-            if offset is None:
-                return self.base_position(t)
-            d = self.direction_normalized(t)
-            n = np.array([d[1], -d[0]])
-            return self.base_position(t) + n * offset
         
         def transform(self, m):
             end_point = (m * to_gvector(self.end_point)).A[0:len(self.end_point)]
@@ -2675,7 +2679,7 @@ class LinearExtrude(ExtrudedShape):
         return eliplse_angle - circle_angle
         
     @core.anchor('Anchor to the path edge and surface.')
-    def edge(self, path_node_name, t=0, h=0, rh=None, align_twist=False, align_scale=False):
+    def edge(self, path_node_name, t=0, h=0, rh=None, align_twist=False, align_scale=False, apply_offset=True):
         '''Anchors to the edge and surface of the linear extrusion.
         Args:
             path_node_name: The path node name to attach to.
@@ -2684,6 +2688,9 @@ class LinearExtrude(ExtrudedShape):
             h: The absolute height of the anchor location.
             rh: The relative height (0-1).
             align_twist: Align the anchor for the twist factor.
+            apply_offset: If True and the Path has an offset, then the offset will be
+                           applied to the position. This provides an easy way to align
+                           the anchor to the base Path of the extrusion.
         '''
         if not rh is None:
             h = h + rh * self.h
@@ -2692,7 +2699,7 @@ class LinearExtrude(ExtrudedShape):
             raise UnknownOperationException(f'Could not find {path_node_name}')
         pos = self.to_3d_from_2d(op.position(t), h)
         normal_t = 0 if t < 0 else 1 if t > 1 else t 
-        twist_vector = self.to_3d_from_2d(op.position(normal_t), 0)
+        twist_vector = self.to_3d_from_2d(op.position(normal_t, apply_offset=apply_offset), 0)
         twist_radius = twist_vector.length()
         plane_dir = op.direction_normalized(normal_t)
         x_direction = self.to_3d_from_2d([plane_dir[0], -plane_dir[1]])
@@ -2763,7 +2770,7 @@ class LinearExtrude(ExtrudedShape):
     @core.anchor('Azimuth to segment start.')
     def azimuth(self, segment_name, az_angle: Union[float, l.Angle]=0, t_index: int=0, 
                 t_end: bool=False, h=0, rh=None, align_twist=False, align_scale=False, 
-                t_range: Tuple[float, float]=(0.0, 1.0)) -> l.GMatrix:
+                t_range: Tuple[float, float]=(0.0, 1.0), apply_offset=True) -> l.GMatrix:
         '''Returns a transformation to the point on the given curve segment (cubic, quadratic, 
         or arc) where the normal forms the specified azimuth from the start of the given t_range.
         This allows anchors to be located by angle along the curve segment.'''
@@ -2780,7 +2787,7 @@ class LinearExtrude(ExtrudedShape):
                 f'Azimuth not possible for segment "{segment_name}" with {params_str}')
             
         t = azimuth_t[t_index]
-        return self.edge(segment_name, t, h, rh, align_twist, align_scale)
+        return self.edge(segment_name, t, h, rh, align_twist, align_scale, apply_offset=apply_offset)
         
 
 @core.shape
@@ -3131,13 +3138,16 @@ class RotateExtrude(ExtrudedShape):
         return eliplse_angle - circle_angle
 
     @core.anchor('Anchor to the path edge projected to surface.')
-    def edge(self, path_node_name, t=0, degrees=0, radians=None):
+    def edge(self, path_node_name, t=0, degrees=0, radians=None, apply_offset=True):
         '''Anchors to the edge projected to the surface of the rotated extrusion.
         Args:
             path_node_name: The path node name to attach to.
             t: 0 to 1 being the beginning and end of the segment. Numbers out of 0-1
                range will depart the path linearly.
             degrees or radians: The angle along the rotated extrusion.
+            apply_offset: If True and the Path has an offset, then the offset will be
+                    applied to the position. This provides an easy way to align
+                    the anchor to the base Path of the extrusion.
         '''
         if path_node_name not in self.path.name_map:
             raise PathElelementNotFound(f'Could not find {path_node_name}')
@@ -3145,7 +3155,7 @@ class RotateExtrude(ExtrudedShape):
         if op is None:
             raise PathElelementNotFound(f'Could not find {path_node_name}')
         normal = op.normal2d(t)
-        pos = op.position(t)
+        pos = op.position(t, apply_offset=apply_offset)
         
         return (l.rotZ(degrees=degrees, radians=radians)
                      * l.ROTX_90  # Projection from 2D Path to 3D space
@@ -3179,7 +3189,7 @@ class RotateExtrude(ExtrudedShape):
     @core.anchor('Azimuth to segment start.')
     def azimuth(self, segment_name, az_angle: Union[float, l.Angle]=0,  t_index: int=0,
                 t_end: bool=False, degrees: float=0, radians: float=None, 
-                t_range: Tuple[float, float]=(0.0, 1.0)) -> l.GMatrix:
+                t_range: Tuple[float, float]=(0.0, 1.0), apply_offset=True) -> l.GMatrix:
         '''Returns a transformation to the point on the given curve segment (cubic, quadratic, 
         or arc) where the normal forms the specified azimuth from the start of the given t_range.
         This allows anchors to be located by angle along the curve segment.'''
@@ -3197,7 +3207,7 @@ class RotateExtrude(ExtrudedShape):
                 f'Azimuth not possible for segment "{segment_name}" with {params_str}')
             
         t = azimuth_t[t_index]
-        return self.edge(segment_name, t, degrees, radians)
+        return self.edge(segment_name, t, degrees, radians, apply_offset=apply_offset)
         
 
 # Uncomment the line below to default to writing OpenSCAD files
