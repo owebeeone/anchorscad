@@ -11,6 +11,40 @@ import anchorscad as ad
 
 @ad.shape
 @ad.datatree
+class Pie(ad.CompositeShape):
+    
+    pie_cage_node: ad.Node=ad.ShapeNode(ad.Cylinder)
+    sweep_angle: float=ad.dtfield(360, doc='Angle of the pie slice')
+    
+    rot_extrude_node: ad.Node=ad.ShapeNode(ad.RotateExtrude, {'degrees': 'sweep_angle'})
+    
+    EXAMPLE_SHAPE_ARGS=ad.args(sweep_angle=120, h=20, fn=64, r=30)
+    EXAMPLE_ANCHORS=(
+        ad.surface_args('base'),
+        ad.surface_args('surface', degrees=0),
+        )
+
+    def build(self) -> ad.Maker:
+        
+        shape = self.pie_cage_node()
+        
+        maker = shape.cage('pie_cage').at()
+        
+        path = (ad.PathBuilder()
+                .move((0, 0))
+                .line((self.r, 0), 'pie_base')
+                .line((self.r, self.h), 'pie_outer')
+                .line((0, self.h), 'pie_top')
+                .line((0, 0), 'pie_inner')
+                .build())
+        pie_shape = self.rot_extrude_node(path=path)
+        
+        maker.add_at(pie_shape.solid('pie').at('pie_base', 0), 'base', post=ad.ROTZ_270)
+
+        return maker
+
+@ad.shape
+@ad.datatree
 class Pipe(ad.CompositeShape):
     '''
     A pipe. Inner hollow part is a hole.
@@ -18,8 +52,8 @@ class Pipe(ad.CompositeShape):
     h: float
     inside_r: float
     outside_r: float
-    inside_cyl_node: ad.Node=ad.ShapeNode(ad.Cylinder, {'r': 'inside_r'})
-    outside_cyl_node: ad.Node=ad.ShapeNode(ad.Cylinder, 'h', {'r': 'outside_r'})
+    inside_cyl_node: ad.Node=ad.ShapeNode(Pie, {'r': 'inside_r',}, 'sweep_angle')
+    outside_cyl_node: ad.Node=ad.ShapeNode(Pie, 'h', {'r': 'outside_r'}, 'sweep_angle')
     hole_h_delta: float=0.01  # Prevents tearing in preview mode.
     
     EXAMPLE_SHAPE_ARGS=ad.args(h=50, inside_r=6, outside_r=10)
