@@ -72,7 +72,7 @@ class DrainAdapterBoltHole(ad.CompositeShape):
     '''A hole for a fastener for the drain adapter. Includes optional hex head
     or flat head.'''
 
-    r: float=ad.dtfield(6.1 / 2, doc='Radius of bolt hole')
+    bolt_r: float=ad.dtfield(6.1 / 2, doc='Radius of bolt hole')
     h: float=ad.dtfield(35, doc='Height of bolt hole')
     
     head_r: float=ad.dtfield(12 / 2, doc='Radius of head of bolt')
@@ -81,7 +81,7 @@ class DrainAdapterBoltHole(ad.CompositeShape):
     hex_h: float=ad.dtfield(20, doc='Radius of hex part of bolt')
     hex_nsides: int=ad.dtfield(6, doc='Number of sides of hex part of bolt')
     
-    cyl_node: ad.Node=ad.ShapeNode(ad.Cylinder)
+    cyl_node: ad.Node=ad.ShapeNode(ad.Cylinder, 'h', {'r': 'bolt_r'})
     
     head_node: ad.Node=ad.ShapeNode(ad.Cylinder, prefix='head_')
     
@@ -117,8 +117,6 @@ class DrainAdapterBoltHole(ad.CompositeShape):
         
         return maker
     
-    
-
 @ad.shape
 @ad.datatree
 class DrainAdapterPort(ad.CompositeShape):
