@@ -1,7 +1,21 @@
 '''
-Created on ${date}
+Created on 27-Jul-2024
 
-@author: ${user}
+@author: gianni
+
+A drain adapter for providing a small drain port for a reverse osmosis 
+system. Reverse osmosis systems are often installed under a sink, and
+they require a waste water drain. The drain pipe from the reverse osmosis
+system is typically 1/4" OD tubing, and the drain adapter allows the 
+connection of this tubing to a standard 2" sink drain pipe. 
+
+The design is fully parametric so it will work for various pipe, bolt and
+pipe sizes. 
+
+These types of adapters are often have an dual sided adhesive pad on drain
+port interfacing between the inner surface of the adapter and the outer
+surface of the sink drain pipe.
+
 '''
 
 import anchorscad as ad
@@ -11,8 +25,8 @@ from anchorscad.models.basic.regular_prism import RegularPrism
 
 
 @ad.datatree
-class DrainAdapterProfileBuilder:
-    '''A simple example of a path builder.'''
+class DrainAdapterTabProfileBuilder:
+    '''Builds one tab, 4 of these are used in the final design.'''
     
     thickness: float=ad.dtfield(5, doc='Width of block')
     inside_r: float=ad.dtfield(51 / 2, doc='Radius of inner pipe')
@@ -35,10 +49,8 @@ class DrainAdapterProfileBuilder:
 @ad.shape
 @ad.datatree
 class DrainAdapterTab(ad.CompositeShape):
-    '''
-    One tab of the drain adapter.
-    '''
-    path_builder: ad.Node = ad.ShapeNode(DrainAdapterProfileBuilder)
+    '''One tab of the drain adapter.'''
+    path_builder: ad.Node = ad.ShapeNode(DrainAdapterTabProfileBuilder)
     path: ad.Path=ad.dtfield(self_default=lambda s: s.path_builder().build())
     
     h: float=ad.dtfield(15, doc='Height of the shape')
@@ -57,7 +69,8 @@ class DrainAdapterTab(ad.CompositeShape):
 @ad.shape
 @ad.datatree
 class DrainAdapterBoltHole(ad.CompositeShape):
-    '''A hole for a fastener in the drain adapter.'''
+    '''A hole for a fastener for the drain adapter. Includes optional hex head
+    or flat head.'''
 
     r: float=ad.dtfield(6.1 / 2, doc='Radius of bolt hole')
     h: float=ad.dtfield(35, doc='Height of bolt hole')
@@ -74,7 +87,7 @@ class DrainAdapterBoltHole(ad.CompositeShape):
     
     hex_node: ad.Node=ad.ShapeNode(RegularPrism, prefix='hex_')
     
-    is_nut: bool=ad.dtfield(True, doc='Is this a nut?')
+    is_nut: bool=ad.dtfield(True, doc='Is this hole for a hex nut?')
     
     epsilon: float=ad.dtfield(0.01, doc='Offset of nut from bolt')
     
@@ -83,7 +96,6 @@ class DrainAdapterBoltHole(ad.CompositeShape):
         'as_bolt': ad.ExampleParams(shape_args=ad.args(is_nut=False, fn=64))
     }
     
-
     def build(self) -> Maker:
         
         shape = self.cyl_node()
@@ -110,10 +122,10 @@ class DrainAdapterBoltHole(ad.CompositeShape):
 @ad.shape
 @ad.datatree
 class DrainAdapterPort(ad.CompositeShape):
-    '''
-    The port for the drain adapter.
-    '''
+    '''The port for the drain adapter. This is just a tab for a press fit 
+    pipe. Some adhesive will likely be needed to keep pipe water proof.'''
     
+    # Shared with all the other components.
     h: float=ad.dtfield(10, doc='Height of port')
     
     port_w: float=ad.dtfield(15, doc='Width of port')
@@ -152,13 +164,14 @@ class DrainAdapterPort(ad.CompositeShape):
             'face_centre', 'top', post=ad.tranZ(self.port_hole_overlap / 2 + self.epsilon))
                 
         return maker
-    
+
+
 @ad.shape
 @ad.datatree
 class DrainAdapter(ad.CompositeShape):
-    '''
-    One tab of the drain adapter.
-    '''
+    '''One side of the drain adapter. Can be configured to have a drain port or
+    hex nut hole vs a flat head bolt hole.'''
+    
     tab_node: ad.Node = ad.ShapeNode(DrainAdapterTab)
     
     sweep_angle: float=ad.dtfield(179, doc='Angle of the pie slice')
