@@ -2746,13 +2746,14 @@ class LinearExtrude(ExtrudedShape):
         return result
     
     @core.anchor('Centre of segment.')
-    def centre_of(self, segment_name, t=0, rh=0, normal_segment=None) -> l.GMatrix:
+    def centre_of(self, segment_name, t=0, rh=0, normal_segment=None, angle=0) -> l.GMatrix:
         '''Returns a transformation to the centre of the given segment (arc) with the
         direction aligned to the coordinate system. The rh parameter is the 
         relative height (0-1) of the arc centre. The normal_segment is the name of the
         segment to align the normal to. If not given the normal will be aligned to the
         segment given by segment_name at the given t value.'''
 
+        angle = l.angle(angle)
         centre_2d = self.path.get_centre_of(segment_name)
         if centre_2d is None:
             raise UnknownOperationException(f'Segment has no "centre" property: {segment_name}')
@@ -2765,7 +2766,8 @@ class LinearExtrude(ExtrudedShape):
         return (l.translate([centre_2d[0], centre_2d[1], rh * self.h])
                 * l.rotZSinCos(-normal[1], -normal[0])
                 * l.ROTY_180
-                * l.ROTZ_90)
+                * l.ROTZ_90
+                * angle.rotZ)
         
     @core.anchor('Azimuth to segment start.')
     def azimuth(self, segment_name, az_angle: Union[float, l.Angle]=0, t_index: int=0, 

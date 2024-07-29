@@ -10,12 +10,12 @@ import anchorscad as ad
 @ad.datatree
 class StadiumOutline:
     
-    r: float=10
-    w: float=20
-    t: float=0
-    offset: float=0
-    square_left: bool=False
-    square_right: bool=False
+    r: float=ad.dtfield(10, doc='Radius of the stadium')
+    w: float=ad.dtfield(20, doc='Width of the stadium')
+    t: float=ad.dtfield(0, doc='Top width of the stadium')
+    offset: float=ad.dtfield(0, doc='Offset of the stadium path')
+    square_left: bool=ad.dtfield(False, doc='Square the left side of the stadium')
+    square_right: bool=ad.dtfield(False, doc='Square the right side of the stadium')
     
     def build(self) -> ad.Path:
         builder = (ad.PathBuilder()
@@ -97,12 +97,14 @@ class StadiumPrism(ad.CompositeShape):
         return maker
     
     @ad.anchor('The "top" of the stadium prism.')
-    def top(self) -> ad.GMatrix:
-        return self.maker.at('face_centre', 'top')
+    def top(self, h=0, rh=0) -> ad.GMatrix:
+        h = h + self.h * rh
+        return self.maker.at('face_centre', 'top') * ad.tranZ(-h)
     
     @ad.anchor('The "base" of the stadium prism.')
-    def base(self) -> ad.GMatrix:
-        return self.maker.at('face_centre', 'base')
+    def base(self, h=0, rh=0) -> ad.GMatrix:
+        h = h + self.h * rh
+        return self.maker.at('face_centre', 'base') * ad.tranZ(-h)
     
     @ad.anchor('Arc centres.')
     def arc_centre(self, side_horiz: str='left', side_vert: str='upper', rh=0) -> ad.GMatrix:

@@ -263,7 +263,7 @@ def compare_material_priority(materials):
 DEFAULT_EXAMPLE_MATERIAL=Material('default')
 
 # Material applied to coordinates in example renders.
-COORDINATES_MATERIAL=Material('anchor')
+COORDINATES_MATERIAL=Material('anchor', kind=NON_PHYSICAL_MATERIAL_KIND)
     
 # MaterialMaps are used to map materials to other materials in order to provide
 # a mechanism to reuse models with different materials and have materials mapped
@@ -1472,11 +1472,53 @@ class AnchorSpec():
     '''Associated with @anchor functions.'''
     description: str
 
+@datatree
+class DeprecatedAnchorAnnouncer:
+    '''Announces deprecated anchor functions. This is used to provide a warning when
+    deprecated anchors are used. The announcer can be silenced using the anchorscad_main()
+    '--no_warn_deprecated_anchors_use' flag.
+    
+    Warnings are only issued once per anchor function called (per run).
+    '''
+    announce_warning: bool=dtfield(False, 
+        doc='If true, a warning is issued when the anchor is used.')
+    announcements: dict=dtfield(
+        default_factory=dict, 
+        doc='A dictionary of anchor functions that have been announced.')
+    
+    def announce(self, fself, func):
+        '''Announces the deprecated anchor function. Only called when the anchor function is used and
+        is deprecated.'''
+        if func in self.announcements:
+            self.announcements[func] += 1
+            return
+        self.announcements[func] = 1
+        if self.announce_warning:
+            spec: AnchorSpec = func.__anchor_spec__
+            print(
+                f'WARNING: Deprecated anchor: {func.__qualname__}, class: {fself.__class__}, '
+                f'package: {func.__module__}, '
+                f'source: {func.__code__.co_filename}, '
+                f'description: \'{spec.description}',
+                file=sys.stderr)
+            
+    def warn_deprecated_anchors_use(self, announce_warning: bool):
+        '''Silences or enables the warning for deprecated anchor use.'''
+        self.announce_warning = announce_warning
 
-def anchor(description):
+DEPRECATED_ANCHOR_ANNOUNCER: DeprecatedAnchorAnnouncer=DeprecatedAnchorAnnouncer()
+
+def anchor(description, deprecated=False):
     '''Decorator for anchor functions.'''
     def decorator(func):
         func.__anchor_spec__ = AnchorSpec(description)
+        if deprecated:
+            # Return a function that announces the deprecation.
+            def anchor_func(fself, *args, **kwds):
+                DEPRECATED_ANCHOR_ANNOUNCER.announce(fself, func)
+                return func(fself, *args, **kwds)
+            anchor_func.__anchor_spec__ = func.__anchor_spec__
+            return anchor_func
         return func
     return decorator
 
@@ -2630,6 +2672,19 @@ class ExampleCommandLineRenderer():
             default='*',
             nargs='*',
             help='The name/s of the shape classes to render.')
+        
+        self.argq.add_argument(
+            '--warn_deprecated_anchors_use', 
+            dest='warn_deprecated_anchors_use',
+            action='store_true',
+            help='Turn on warnings of deprecated anchor usage.')
+        self.argq.set_defaults(warn_deprecated_anchors_use=False)
+        
+        self.argq.add_argument(
+            '--no_warn_deprecated_anchors_use', 
+            dest='warn_deprecated_anchors_use',
+            action='store_false',
+            help='Turn off warning of deprecated anchor usage.')
 
     def add_more_args(self):
         
@@ -2651,6 +2706,8 @@ class ExampleCommandLineRenderer():
             self.status = 1
             raise InvalidParametersException(
                 f'Parameters provided were not parsed: {str(argv)}')
+        DEPRECATED_ANCHOR_ANNOUNCER.warn_deprecated_anchors_use(
+            self.argp.warn_deprecated_anchors_use)
         default_attributes = ModelAttributes(material=DEFAULT_EXAMPLE_MATERIAL)
         self.options = RenderOptions(
             render_attributes=default_attributes,

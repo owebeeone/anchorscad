@@ -18,11 +18,9 @@ class BoxCylinder(ad.CompositeShape):
     '''
     size: tuple=(10, 20, 30)
     r: float=ad.dtfield(
-        self_default=lambda s: s.size[0] / 2,
-        init=False)
+        self_default=lambda s: s.size[0] / 2)
     h: float=ad.dtfield(
-        self_default=lambda s: s.size[2],
-        init=False)
+        self_default=lambda s: s.size[2])
     extrude_node: ad.Node=ad.dtfield(
         ad.ShapeNode(ad.LinearExtrude, 'h'),
         init=False)
@@ -43,7 +41,8 @@ class BoxCylinder(ad.CompositeShape):
         ad.surface_args('face_centre', 'base'),
         ad.surface_args('face_centre', 'back'),
         ad.surface_args('cylinder', 'base'),
-        ad.surface_args('round_centre', rh=1),)
+        ad.surface_args('round_centre', rh=1),
+        ad.surface_args('round_centre', rh=0.5),)
     
     def build(self) -> ad.Maker:
         cage_size = (self.size[0], self.size[1] + self.r, self.size[2])
@@ -76,12 +75,20 @@ class BoxCylinder(ad.CompositeShape):
         
         return maker
 
-    @ad.anchor('Centre base.')
+    @ad.anchor('Centre base. Deprecated: use "base" instead.', deprecated=True)
     def round_centre(self, h=0, rh=None):
         return self.maker.at('cylinder', 'base', h=h, rh=rh)
     
-    @ad.anchor('Centre top.')
+    @ad.anchor('Centre top. Deprecated: use "top" instead.', deprecated=True)
     def round_top(self, h=0, rh=None):
+        return self.maker.at('cylinder', 'top', h=h, rh=rh)
+    
+    @ad.anchor('Base of cylindrical section.')
+    def base(self, h=0, rh=None):
+        return self.maker.at('cylinder', 'base', h=h, rh=rh)
+    
+    @ad.anchor('Top of cylindrical section.')
+    def top(self, h=0, rh=None):
         return self.maker.at('cylinder', 'top', h=h, rh=rh)
 
 
