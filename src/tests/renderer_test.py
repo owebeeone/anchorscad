@@ -28,7 +28,7 @@ MAP_DEFAULT_BG = ad.MaterialMapDefault(MATERIAL_BG)
 
 MODEL_ATTRS = ad.ModelAttributes()
 
-# Applies map before default hence the default value is not mapped.
+# Applies map before default hence the default value is not mapped. 
 MAP_STACK_A = ad.MaterialMapStack((MAP_BG_RH_GG, MAP_DEFAULT_BG))
 
 # Applies default before map hence the default value is mapped.
@@ -62,41 +62,41 @@ class RendererTest(unittest.TestCase):
     def testMaterialDefaultMap(self):
         
         self.assertEqual(
-            MAP_DEFAULT.map(None, MODEL_ATTRS), 
-            MAP_DEFAULT.material)
+            MAP_DEFAULT.map_part_material_colour(None, None, None, MODEL_ATTRS), 
+            (None, MAP_DEFAULT.material, None))
         
         self.assertEqual(
-            MAP_DEFAULT.map(MATERIAL_WA, MODEL_ATTRS), 
-            MATERIAL_WA)
+            MAP_DEFAULT.map_part_material_colour(None, MATERIAL_WA, None, MODEL_ATTRS), 
+           (None, MATERIAL_WA, None))
         
     def testMaterialMap(self):
         self.assertEqual(
-            MAP_BG_RH_GG.map(MATERIAL_BG, MODEL_ATTRS), 
-            MATERIAL_GG)
+            MAP_BG_RH_GG.map_part_material_colour(None, MATERIAL_BG, None, MODEL_ATTRS), 
+            (None, MATERIAL_GG, None))
         
         self.assertEqual(
-            MAP_BG_RH_GG.map(MATERIAL_WA, MODEL_ATTRS), 
-            MATERIAL_WA)
+            MAP_BG_RH_GG.map_part_material_colour(None, MATERIAL_WA, None, MODEL_ATTRS), 
+            (None, MATERIAL_WA, None))
         
         self.assertEqual(
-            MAP_BG_RH_GG.map(MATERIAL_RH, MODEL_ATTRS), 
-            MATERIAL_GG)
+            MAP_BG_RH_GG.map_part_material_colour(None, MATERIAL_RH, None, MODEL_ATTRS), 
+            (None, MATERIAL_GG, None))
         
         self.assertEqual(
-            MAP_BG_RH_GG.map(None, MODEL_ATTRS), 
-            None)
+            MAP_BG_RH_GG.map_part_material_colour(None, None, None, MODEL_ATTRS), 
+            (None, None, None))
         
         self.assertEqual(
-            MAP_STACK_A.map(None, MODEL_ATTRS), 
-            MATERIAL_BG)
+            MAP_STACK_A.map_part_material_colour(None, None, None, MODEL_ATTRS), 
+            (None, MATERIAL_BG, None))
         
         self.assertEqual(
-            MAP_STACK_A.map(MATERIAL_BG, MODEL_ATTRS), 
-            MATERIAL_GG)
+            MAP_STACK_A.map_part_material_colour(None, MATERIAL_BG, None, MODEL_ATTRS), 
+            (None, MATERIAL_GG, None))
         
         self.assertEqual(
-            MAP_STACK_B.map(None, MODEL_ATTRS), 
-            MATERIAL_GG)
+            MAP_STACK_B.map_part_material_colour(None, None, None, MODEL_ATTRS), 
+            (None, MATERIAL_GG, None))
         
     def testRenderMaterial(self):
         result = render(BOX_MAKER)

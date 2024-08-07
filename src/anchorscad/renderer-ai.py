@@ -13,7 +13,7 @@ from dataclasses_json import dataclass_json, config
 from anchorscad import core, graph_model
 from anchorscad import linear as l
 import pythonopenscad as posc
-from typing import Any, Hashable, Dict, List, Tuple, Set
+from typing import Any, Hashable, Dict, List, Tuple, Set, Optional
 
 
 class EmptyRenderStack(core.CoreEception):
@@ -27,24 +27,37 @@ class PopCalledTooManyTimes(core.CoreEception):
 
 
 @dataclass
-class MaterialMapInstance:
+class PartMaterialMapInstance:
     path: 'ShapePath'
     from_material: core.Material
     to_material: core.Material
     material_map: core.MaterialMap
     part: core.Part = None
-    
+
 
 @dataclass
 class MaterialStats:
-    '''A class that keeps track of the materials used and where.'''
-    material_map_list: List[MaterialMapInstance] = field(default_factory=list)
+    '''A class that keeps track of the materials and parts used and where.'''
+    material_map_list: List[PartMaterialMapInstance] = field(default_factory=list)
     
     # The final list of materials actually used in the model.
     model_materials: Set[core.Material] = field(default_factory=set)
     
-    def add(self, path, from_material: core.Material, to_material: core.Material, material_map: core.MaterialMap):
-        self.material_map_list.append(MaterialMapInstance(path, from_material, to_material, material_map))
+    # The final list of parts actually used in the model.
+    model_parts: Set[core.Part] = field(default_factory=set)
+    
+    # The final list of part-materials actually used in the model.
+    model_part_martials: Set['PartMaterial'] = field(default_factory=dict)
+    
+    def add(self, 
+            path, 
+            from_material: core.Material, 
+            to_material: core.Material, 
+            material_map: core.MaterialMap, 
+            part: core.Part):
+        self.material_map_list.append(PartMaterialMapInstance(path, from_material, to_material, material_map, part))
+        if part:
+            self.model_parts.add(part)
     
     def has_material(self):
         '''Returns True if there is one ore more non None material in the model.'''
@@ -53,18 +66,56 @@ class MaterialStats:
         if not self.model_materials:
             return False
         return None not in self.model_materials
+
+    def has_part(self):
+        '''Returns True if there is one or more non None part in the model.'''
+        return bool(self.model_parts)
+    
+    def add_part_material(self, part_material: 'PartMaterial'):
+        '''Adds a part-material to the model.'''
+        self.model_part_martials.add(part_material)
+        self.model_parts.add(part_material.part)
+        self.model_materials.add(part_material.material)
+
+
+@dataclass(frozen=True)
+class PartMaterial:
+    '''A part and material combination.'''
+    part: Optional[core.Part]
+    material: Optional[core.Material]
+
+    def comparePriority(self, other: 'PartMaterial') -> int:
+        '''Compares the priority of this part-material with another.
+        A None part or material is considered to have the lowest priority.
+        '''
+        if self.part is None:
+            if other.part is None:
+                return 0
+            return -1
+        if other.part is None:
+            return 1
+        if self.part.priority != other.part.priority:
+            return self.part.priority - other.part.priority
         
+        if self.material is None:
+            if other.material is None:
+                return 0
+            return -1
+        if other.material is None:
+            return 1
+        return self.material.priority - other.material.priority
+    
 
 @dataclass
 class CombiningState:
-    '''An intermediate state object sontaining material specific solids and holes.'''
+    '''An intermediate state object containing part and material specific solids and holes.'''
     holes: List[Any] = field(default_factory=list)
-    material_solid: List[Tuple[core.Material, List[Any]]] = field(default_factory=list)
+    part_material_solid: List[Tuple[PartMaterial, List[Any]]] = field(default_factory=list)
     
     def __post_init__(self):
         assert isinstance(self.holes, list), 'Holes must be a list.'
-        for material, solids in self.material_solid:
-            # assert material is not None, 'Material cannot be None.' ### None Check ###
+        for part_material, solids in self.part_material_solid:
+            assert isinstance(part_material, PartMaterial), 'part_material must be a PartMaterial.'
             assert solids is not None, 'Solids cannot be None.'
             assert isinstance(solids, list), 'Solids must be a list.'
 
@@ -74,61 +125,59 @@ class CombiningState:
     def has_holes(self) -> bool:
         return bool(self.holes)
         
-    def add_material_solid(self, material: core.Material, *solids: Tuple[Any]) -> None:
-        '''Adds a material and solid to the list of material solids.'''
-        # if material is None:
-        #     raise Exception('Material cannot be None.') ### None check ###
-        self.material_solid.append((material, list(solids)))
+    def add_part_material_solid(self, part_material: PartMaterial, *solids: Tuple[Any]) -> None:
+        '''Adds a part, material and solid to the list of part material solids.'''
+        self.part_material_solid.append((part_material, list(solids)))
         
     def flatten_solids(self) -> List[Any]:
-        '''Returns a list of solids by remving all the material specifiers and returning the 
+        '''Returns a list of solids by removing all the part and material specifiers and returning the 
         flattened set of objects.'''
         if self.holes:
             raise Exception('Cannot convert to holes when there are holes.')
         
-        # Flastten all the material_solid solids into a single list.
-        solids = [solid for _, solids in self.material_solid for solid in solids]
+        # Flatten all the part_material_solid solids into a single list.
+        solids = [solid for _, solids in self.part_material_solid for solid in solids]
         return solids
     
-    def get_first_material(self) -> core.Material:
-        '''Returns the first material in the material_solid list.'''
-        if not self.material_solid:
+    def get_first_part_material(self) -> PartMaterial:
+        '''Returns the first part and material in the part_material_solid list.'''
+        if not self.part_material_solid:
             return None
-        return self.material_solid[0][0]
+        return self.part_material_solid[0][0]
     
-    def has_one_or_no_materials(self) -> bool:
-        '''Returns True if there is only one material or none.'''
-        return len(self.material_solid) <= 1
+    def has_one_or_no_parts_materials(self) -> bool:
+        '''Returns True if there is only one part-material combination or none.'''
+        return len(self.part_material_solid) <= 1
     
-    def priority_ordered(self) -> List[Tuple[core.Material, List[Any]]]:
-        '''Returns the material with the highest priority.'''
-        mat_dict = defaultdict(list)
+    def priority_ordered(self) -> List[Tuple[PartMaterial, List[Any]]]:
+        '''Returns the part-material combinations ordered by priority.'''
+        part_mat_dict = defaultdict(list)
         
-        for material, solids in self.material_solid:
-            mat_dict[material].extend(solids)
+        for part_material, solids in self.part_material_solid:
+            part_mat_dict[part_material].extend(solids)
             
-        mat_solids_list = list(mat_dict.items())
-        list.sort(mat_solids_list, 
+        part_mat_solids_list = list(part_mat_dict.items())
+        list.sort(part_mat_solids_list, 
                   reverse=True, 
-                  key=lambda mat_solids: 
-                        mat_solids[0].priority_sort_key() 
-                        if mat_solids[0] 
-                        else core.Material.default_priority_sort_key())
+                  ????? need to fix this
+                  key=lambda item: (
+                      item[0][0].priority if item[0][0] else -float('inf'),
+                      item[0][1].priority_sort_key() if item[0][1] else core.Material.default_priority_sort_key()
+                  ))
         
-        return mat_solids_list
+        return [(part, material, solids) for (part, material), solids in part_mat_solids_list]
     
-    def priority_cured(self, model) -> List[Tuple[core.Material, List[Any]]]:
-        '''Returns a list of material_solids with the higher priority shapes removed from the
+    def priority_cured(self, model) -> List[Tuple[PartMaterial, List[Any]]]:
+        '''Returns a list of part_material_solids with the higher priority shapes removed from the
         lower priority shapes.'''
-        # if not self.material_solid[0][0]:
-        #     raise Exception('Material cannot be None.') ### None check ###
-        mat_solids_list = self.priority_ordered()
+        part_mat_solids_list: List[Tuple[PartMaterial, List[Any]]] = self.priority_ordered()
         removal_list = []
-        result = [mat_solids_list[0]]
-        removal_next = list(result[0][1])
-        removal_priority = result[0][0].priority if result[0][0] else core.DEFAULT_MATERIAL_PRIORITY
-        for material, solids in mat_solids_list[1:]:
-            if material.priority != removal_priority:
+        result = [part_mat_solids_list[0]]
+        removal_next = list(result[0][2])
+        removal_part_priority = result[0][0].priority if result[0][0] else -float('inf')
+        removal_material_priority = result[0][1].priority if result[0][1] else core.DEFAULT_MATERIAL_PRIORITY
+        for part_material, solids in part_mat_solids_list[1:]:
+            if (part and part.priority != removal_part_priority) or (material.priority != removal_material_priority):
                 removal_list = list(removal_next)
             
             if material.kind.physical:
@@ -138,44 +187,43 @@ class CombiningState:
                 if len(solids) > 1:
                     solids = [model.Union()(*solids)]
                 solids = [model.Difference()(*solids, *removal_list)]
-                solids[0].setMetadataName(f'priority_cured_{material}')
+                solids[0].setMetadataName(f'priority_cured_{part}_{material}')
                 
-            result.append((material, solids))
+            result.append((part_material, solids))
                 
         return result
 
 @dataclass
 class Container():
-    '''A container for solids, holes and heads as the model is being redered.'''
+    '''A container for solids, holes and heads as the model is being rendered.'''
     mode: core._Mode
     model: Any
     shape_name: Hashable
-    material_solids: Dict[core.Material, List[Any]] = field(default_factory=dict, init=False, repr=False)
+    part_material_solids: Dict[PartMaterial, List[Any]] = field(default_factory=dict, init=False, repr=False)
     heads: List[Any] = field(default_factory=list, init=False, repr=False)
     holes: List[Any] = field(default_factory=list, init=False, repr=False)
     
         
-    def _get_or_create_material_solid_container(self, material: core.Material):
-        '''Returns the container for the given material, creating it if necessary.'''
-        # if material is None:
-        #     raise Exception('Material cannot be None.') ### None check ###
-        if material in self.material_solids:
-            return self.material_solids[material]
+    def _get_or_create_part_material_solid_container(self, part_material: PartMaterial):
+        '''Returns the container for the given part and material, creating it if necessary.'''
+        key = part_material
+        if key in self.part_material_solids:
+            return self.part_material_solids[key]
         result = []
-        self.material_solids[material] = result
+        self.part_material_solids[key] = result
         return result    
         
-    def _container_extend(self, material: core.Material, solids: List[Any]):
-        '''Extends a material container with the given solids.'''
-        if material in self.material_solids:
-            self.material_solids[material].extend(solids)
+    def _container_extend(self, part_material: PartMaterial, solids: List[Any]):
+        '''Extends a part-material container with the given solids.'''
+        if part_material in self.part_material_solids:
+            self.part_material_solids[part_material].extend(solids)
         else:
-            self.material_solids[material] = list(solids)
+            self.part_material_solids[part_material] = list(solids)
         
-    def _extend_material_solids(self, material_solids: List[Tuple[core.Material, List[Any]]]):
-        '''Extends the current material solids with the given material solids.'''
-        for material, solids in material_solids:
-            self._container_extend(material, solids)
+    def _extend_part_material_solids(self, part_material_solids: List[Tuple[PartMaterial, List[Any]]]):
+        '''Extends the current part material solids with the given part material solids.'''
+        for part_material, solids in part_material_solids:
+            self._container_extend(part_material, solids)
     
     def _apply_name(self, obj: List[Any]):
         '''Applies the shape name to the given objects.'''
@@ -185,11 +233,12 @@ class Container():
                     
     def _apply_combining_state(self, combining_state: CombiningState):
         '''Applies the combining state to this container.'''
-        self._extend_material_solids(combining_state.material_solid)
+        self._extend_part_material_solids(combining_state.part_material_solid)
         self.holes.extend(combining_state.holes)
 
-    def add_solid(self, *obj, material: core.Material):
-        container = self._get_or_create_material_solid_container(material)
+    def add_solid(self, *obj, part: Optional[core.Part], material: Optional[core.Material]):
+        container = self._get_or_create_part_material_solid_container(
+            PartMaterial(part, material))
         self._apply_name(obj)
         container.extend(obj)
         
@@ -208,21 +257,21 @@ class Container():
         Heads and holes (if any) are applied to each solid and the new list of solids is
         provided as the [CombiningState] result.'''
         holes = self.holes
-        material_solid = list(self.material_solids.items()) 
+        part_material_solid = list(self.part_material_solids.items()) 
         
         force_container = self.mode.has_operator_container or True
         
         # Combining solids and holes causes the result to have no holes.
         result = CombiningState()
         
-        if not material_solid:
+        if not part_material_solid:
             # No solids, hence nothing to combine. Holes are "consumed" here since
             # turning only holes into a solid is a no-op.
             return result
         
-        while material_solid:
+        while part_material_solid:
             
-            material, solids = material_solid.pop()
+            part_material, solids = part_material_solid.pop()
             
             if not solids:
                 continue  # Skip empty solids.
@@ -244,7 +293,7 @@ class Container():
                 result_node.setMetadataName('_combine_solids_and_holes')
             else:
                 result_node = solid_obj
-            result.add_material_solid(material, result_node)
+            result.add_part_material_solid(part_material, result_node)
         
         return result
     
@@ -276,36 +325,36 @@ class Container():
         assert not result.has_holes(), 'There should be no holes at this point.'
         
         # There are heads, so we need to combine them with the combined solids and holes.
-        result_material_solids = []
-        material_solids = result.material_solid
-        while material_solids:
+        result_part_material_solids = []
+        part_material_solids = result.part_material_solid
+        while part_material_solids:
             
-            material, solids = material_solids.pop()
+            part, material, solids = part_material_solids.pop()
             
-            top_head, last_head = self._combine_heads(make_copy=bool(material_solids))
+            top_head, last_head = self._combine_heads(make_copy=bool(part_material_solids))
             
             if isinstance(last_head, self.model.Difference):
                 print('last_head is a difference')
 
             last_head.append(*solids)
             
-            result_material_solids.append((material, [top_head]))
+            result_part_material_solids.append((part, material, [top_head]))
             
-        result.material_solid = result_material_solids
+        result.part_material_solid = result_part_material_solids
         return result
     
     def build_composite(self) -> CombiningState:
         '''Heads (if any) are applied to holes and solids as separate objects. 
         The result is a list of solids and holes that are not combined. (holes are preserved))'''
         
-        # A List[Tuple[core.Material, List[Any]]] is a list of material solids pairs.
-        material_solid = list(self.material_solids.items()) 
+        # A List[Tuple[Tuple[Optional[Part], core.Material], List[Any]]] is a list of part-material solids pairs.
+        part_material_solid = list(self.part_material_solids.items()) 
         
         if not self.heads:
-            return CombiningState(holes=self.holes, material_solid=material_solid)
+            return CombiningState(holes=self.holes, part_material_solid=[(part, material, solids) for (part, material), solids in part_material_solid])
         
         if self.holes:
-            if not material_solid:
+            if not part_material_solid:
                 # No solids, hence we can return just the holes.
                 top_head, tail_head = self._combine_heads(make_copy=False)
                 tail_head.append(*self.holes)
@@ -319,17 +368,17 @@ class Container():
         else:
             result = CombiningState()
         
-        # Applies heads to the material solids for each material.
-        while material_solid:
+        # Applies heads to the part material solids for each part-material combination.
+        while part_material_solid:
             
-            material, solids = material_solid.pop()
-            has_more = bool(material_solid)  # True if there are more materials.
+            part_material, solids = part_material_solid.pop()
+            has_more = bool(part_material_solid)  # True if there are more part-material combinations.
             
             heads_front, heads_tail = self._combine_heads(make_copy=has_more)
             
             heads_tail.append(*solids)
             
-            result.add_material_solid(material, heads_front)
+            result.add_part_material_solid(part_material, heads_front)
             
         return result
         
@@ -416,10 +465,21 @@ class ContextEntry():
     reference_frame: l.GMatrix
     attributes: core.ModelAttributes = None
     graph_node: object = None
+    mapped_part_material_colour: core.PartMaterialColour = None
 
     def get_material(self):
+        if self.mapped_part_material_colour:
+            return self.mapped_part_material_colour.material
+        return None
+    
+    def get_part(self):
+        if self.mapped_part_material_colour:
+            return self.mapped_part_material_colour.part
+        return None
+    
+    def get_material_map(self.):
         if self.attributes:
-            return self.attributes.get_material()
+            return self.attributes.material_map
         return None
 
 @dataclass
@@ -430,6 +490,14 @@ class Context():
     
     def __post_init__(self):
         self.model = self.renderer.model
+        
+    def map_part_material_colour(self, merged_attrs: core.ModelAttributes) -> core.PartMaterialColour:
+        '''Maps the part, material and colour using the material map if available otherwise returns the
+        original part, material and colour.'''
+        if merged_attrs.material_map:
+            return merged_attrs.material_map.map_part_material_colour(
+                merged_attrs.part, merged_attrs.material, merged_attrs.colour, merged_attrs)
+        return core.PartMaterialColour(merged_attrs.part, merged_attrs.material, merged_attrs.colour)        
 
     def push(self, 
              mode: core.ModeShapeFrame, 
@@ -437,13 +505,22 @@ class Context():
              attributes: core.ModelAttributes,
              shape_name: Hashable=None,
              graph_node: graph_model.Node=None):
+        '''Pushes a new context onto the stack. The context is an accumulation of the current state'''
         last_attrs = self.get_last_attributes()
+        last_part_material_colour = self.get_last_part_material_colour()
+        
         merged_attrs = last_attrs.merge(attributes)
         diff_attrs = last_attrs.diff(merged_attrs)
         
         container = Container(mode, model=self.model, shape_name=shape_name)
         
-        entry = ContextEntry(container, mode, reference_frame, merged_attrs, graph_node)
+        if not diff_attrs.is_empty():
+            # The mapping function can depend on any of the attributes.
+            part_material_colour = self.map_part_material_colour(merged_attrs)
+        else:
+            part_material_colour = last_part_material_colour
+        
+        entry = ContextEntry(container, mode, reference_frame, merged_attrs, graph_node, part_material_colour)
 
         self.stack.append(entry)
         
@@ -451,7 +528,7 @@ class Context():
             if reference_frame != l.IDENTITY:
                 container.add_head(self.model.Multmatrix(reference_frame.m.A))
             
-        if diff_attrs.colour:
+        if part_material_colour.colour != last_part_material_colour:
             container.add_head(self.model.Color(c=diff_attrs.colour.value))
             
         if diff_attrs.disable:
@@ -469,8 +546,7 @@ class Context():
         
             
     def pop(self):
-        last = self.stack[-1]
-        del self.stack[-1]
+        last : ContextEntry = self.stack.pop()
         if self.stack:
             last.container.close(last.mode, self.stack[-1].container)
             return None
@@ -483,7 +559,7 @@ class Context():
                     self.renderer.material_stats.model_materials.add(None)
                     return self.createNamedUnion(last.mode, 'pop')
                 
-                self.renderer.material_stats.model_materials.add(combining_state.get_first_material())
+                self.renderer.material_stats.add_part_material(combining_state.get_first_part_material())
                 if len(objs) > 1:
                     return self.createNamedUnion(last.mode, 'pop').append(*objs)
                 return objs[0]
@@ -514,12 +590,22 @@ class Context():
         result.setMetadataName(f'{name}{mode_str}')
         return result
     
-    def get_last_attributes(self):
+    def get_last_attributes(self) -> core.ModelAttributes:
+        '''Returns the last attributes in the stack or an empty one.'''
         if self.stack:
             attrs = self.stack[-1].attributes
             if not attrs is None:
                 return attrs
         return core.EMPTY_ATTRS
+    
+    def get_last_part_material_colour(self) -> core.PartMaterialColour:
+        '''Returns the last part-material-colour in the stack or an empty one.'''
+        if self.stack:
+            mapped_part_material_colour: core.PartMaterialColour = \
+                self.stack[-1].mapped_part_material_colour
+            if not mapped_part_material_colour is None:
+                return mapped_part_material_colour
+        return core.EMPTY_PART_MATERIAL_COLOUR
         
     def get_last_container(self):
         if not self.stack:
@@ -527,26 +613,21 @@ class Context():
         return self.stack[-1].container
     
     def add_solid(self, *obj):
-        '''Adds a solid into the current context. The material is taken from the 
+        '''Adds a solid into the current context. The Part and Material is taken from the 
         current attributes.'''
         if not self.stack:
             raise EmptyRenderStack('renderer stack is empty.')
         
-        last_context = self.stack[-1]
+        last_context: ContextEntry = self.stack[-1]
         
+        part = last_context.get_part()
         material = last_context.get_material()
-        mapped_material = material
-        material_map = None
-        
-        attributes = self.get_last_attributes()
-        if attributes:
-            material_map = attributes.material_map
-            if material_map:
-                mapped_material = material_map.map(material, attributes)
+        material_map = last_context.get_material_map()
                 
-        self.renderer.material_stats.add(self.get_current_graph_path(), material, mapped_material, material_map)
+        self.renderer.material_stats.add(
+            self.get_current_graph_path(), material, material, material_map, part)
         
-        last_context.container.add_solid(*obj, material=mapped_material)
+        last_context.container.add_solid(*obj, part=part, material=material)
 
 
 @dataclass
