@@ -2423,7 +2423,7 @@ def render_examples(module,
     '''Scans a module for all Anchorscad shape classes and renders examples.'''
     classes = find_all_shape_classes(module)
     # Lazy import renderer since renderer depends on this.
-    import anchorscad.renderer_ai as renderer
+    import anchorscad.renderer as renderer
     
     shape_count = 0
     example_count = 0
