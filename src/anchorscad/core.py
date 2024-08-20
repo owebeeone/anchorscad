@@ -241,11 +241,10 @@ class Part:
     # A Part of higher priority is removed from Parts of lower priority.
     # Materials of the same priority will overlap if they are not mutually exclusive.
     priority: float = dtfield(
-        DEFAULT_PART_PRIORITY,
-        hash=False,
-        compare=False,    
+        DEFAULT_PART_PRIORITY,  
         doc='The priority of the part. Higher priority parts are rendered first.')
     
+DEFAULT_PART = Part('default', priority=DEFAULT_PART_PRIORITY)
     
 @datatree(frozen=True)
 class Material:
@@ -258,8 +257,6 @@ class Material:
     # Materials of the same priority will overlap if they are not mutually exclusive.
     priority: float = dtfield(
         DEFAULT_MATERIAL_PRIORITY,
-        hash=False,
-        compare=False,    
         doc='The priority of the material. Higher priority materials are rendered first.')
 
     # The kind of material. This is used to determine how to render the material.    
@@ -286,20 +283,11 @@ DEFAULT_EXAMPLE_MATERIAL=Material('default')
 # Material applied to coordinates in example renders.
 COORDINATES_MATERIAL=Material('anchor', kind=NON_PHYSICAL_MATERIAL_KIND)
 
-@datatree(frozen=True, provide_override_field=False)
-class PartMaterialColour:
-    '''A combination of Part, Material and Colour.'''
-    part: Optional[Part]
-    material: Optional[Material]
-    colour: Optional[Colour]
 
-EMPTY_PART_MATERIAL_COLOUR = PartMaterialColour(None, None, None)
-    
-# MaterialMaps are used to map materials to other materials in order to provide
+# MaterialMap is used to map materials to other materials in order to provide
 # a mechanism to reuse models with different materials and have materials mapped
 # for different purposes.
-    
-@datatree(frozen=True, provide_override_field=False)
+
 class MaterialMap:
     '''A map for materials to other materials.
     This can be used to map materials to other materials when rendering.
@@ -322,22 +310,18 @@ class MaterialMap:
         '''Returns the mapped colour for the given colour.'''
         return colour  # Default is no mapping
     
-    def map_part_material_colour(self, 
-                                 part: Part, 
-                                 material: Material, 
-                                 colour: Colour, 
-                                 attributes:'ModelAttributes') \
-            -> PartMaterialColour:
-        '''Returns the mapped part, material and colour for the given part, material and colour.
+    def map_attributes(self, attributes:'ModelAttributes') -> 'ModelAttributes':
+        '''Returns a new ModelAttributes with various properties mapped.
         
-        This method can be overridden to provide a single method to map all three values in
-        an interrelated way. Attributes could also be used to provide additional context for
-        mapping.
+        This method can be overridden to provide a single method to map any values in
+        an interrelated way.
+        
+        For example, mapping colours to materials or parts to colours.
         '''
-        mapped_colour = self._map_colour(colour, attributes)
-        mapped_material = self._map_material(material, attributes)
-        map_part = self._map_part(part, attributes)
-        return PartMaterialColour(map_part, mapped_material, mapped_colour)
+        mapped_colour = self._map_colour(attributes.colour, attributes)
+        mapped_material = self._map_material(attributes.material, attributes)
+        map_part = self._map_part(attributes.part, attributes)
+        return replace(attributes, colour=mapped_colour, material=mapped_material, part=map_part)
 
 
 @datatree(frozen=True, provide_override_field=False)
@@ -389,36 +373,27 @@ class MaterialMapStack(MaterialMap):
     map_stack: Tuple[MaterialMap]
     
     def map(self, material: Material, attributes:'ModelAttributes') -> Material:
-        raise NotImplementedError('Use map_part_material_colour')
+        raise NotImplementedError('Use map_attributes')
     
     def _map_material(self, material: Material, attributes:'ModelAttributes') -> Material:
-        raise NotImplementedError('Use map_part_material_colour')
+        raise NotImplementedError('Use map_attributes')
     
     def _map_part(self, part: Part, attributes:'ModelAttributes') -> Part:
-        raise NotImplementedError('Use map_part_material_colour')
+        raise NotImplementedError('Use map_attributes')
     
     def _map_colour(self, colour: Colour, attributes:'ModelAttributes') -> Colour:
-        raise NotImplementedError('Use map_part_material_colour')
+        raise NotImplementedError('Use map_attributes')
     
-    def map_part_material_colour(self, 
-                                 part: Part, 
-                                 material: Material, 
-                                 colour: Colour, 
-                                 attributes:'ModelAttributes') \
-            -> PartMaterialColour:
+    def map_attributes(self, attributes:'ModelAttributes') -> 'ModelAttributes':
         '''Returns the mapped part, material and colour for the given part, material and colour.
         
         Applies the mappings in the order they are provided in the map_stack.
         '''
         
-        mapped_part = part
-        mapped_material = material
-        mapped_colour = colour
         for mmap in self.map_stack:
-            mapped_part, mapped_material, mapped_colour = mmap.map_part_material_colour(
-                mapped_part, mapped_material, mapped_colour, attributes)
+            attributes = mmap.map_part_material_colour(attributes)
             
-        return PartMaterialColour(mapped_part, mapped_material, mapped_colour)
+        return attributes
     
 
 @datatree(frozen=True)
@@ -437,17 +412,17 @@ class ModelAttributes(object):
     material_map: MaterialMap = dtfield(None, doc='Material map for the shape.')
     part: Part = dtfield(None, doc='Part to be applied to this shape.')
     
-    def _merge_of(self, attr, other):
+    def _merge_of(self, attr, other) -> object:
         return getattr(other, attr) or getattr(self, attr)
     
-    def _diff_of(self, attr: str, other: 'ModelAttributes'):
+    def _diff_of(self, attr: str, other: 'ModelAttributes') -> object:
         self_value = getattr(self, attr)
         other_value = getattr(other, attr)
         if self_value == other_value:
             return None
         return other_value
 
-    def merge(self, other: 'ModelAttributes'):
+    def merge(self, other: 'ModelAttributes') -> 'ModelAttributes':
         '''Returns a copy of self with entries from other replacing self's.'''
         if not other:
             return self
@@ -456,7 +431,7 @@ class ModelAttributes(object):
             (k, self._merge_of(k, other)) 
             for k in self.__annotations__.keys()))
     
-    def diff(self, other: 'ModelAttributes'):
+    def diff(self, other: 'ModelAttributes') -> 'ModelAttributes':
         '''Returns a new ModelAttributes with the diff of self and other.'''
         if not other:
             return self
@@ -464,62 +439,65 @@ class ModelAttributes(object):
             (k, self._diff_of(k, other)) 
             for k in self.__annotations__.keys()))
 
-    def is_empty(self):
+    def is_empty(self) -> bool:
         '''Returns True if all attributes are None.'''
         return all(getattr(self, k) is None for k in self.__annotations__.keys())
     
-    def _as_non_defaults_dict(self):
+    def _as_non_defaults_dict(self) -> Dict[str, object]:
         return dict((k, getattr(self, k)) 
                     for k in self.__annotations__.keys() if not getattr(self, k) is None)
     
     def _with(self, **kwds):
         return replace(self, **kwds)  # datatree replace
     
-    def with_colour(self, *colour_args, **colour_kwds):
+    def with_colour(self, *colour_args, **colour_kwds) -> 'ModelAttributes':
+        if len(colour_args) == 1 and len(colour_kwds) == 0:
+            if isinstance(colour_args[0], Colour):
+                return self._with(colour=colour_args[0])
         return self._with(colour=
             Colour(*colour_args, **colour_kwds) 
             if colour_args or colour_kwds 
             else None)
     
-    def with_fa(self, fa: float):
+    def with_fa(self, fa: float) -> 'ModelAttributes':
         return self._with(fa=fa)
     
-    def with_fs(self, fs: float):
+    def with_fs(self, fs: float) -> 'ModelAttributes':
         return self._with(fs=fs)
     
-    def with_fn(self, fn: int):
+    def with_fn(self, fn: int) -> 'ModelAttributes':
         return self._with(fn=fn)
     
-    def with_segment_lines(self, segment_lines: bool):
+    def with_segment_lines(self, segment_lines: bool) -> 'ModelAttributes':
         return self._with(segment_lines=segment_lines)
     
-    def with_disable(self, disable: bool):
+    def with_disable(self, disable: bool) -> 'ModelAttributes':
         return self._with(disable=disable)
     
-    def with_show_only(self, show_only: bool):
+    def with_show_only(self, show_only: bool) -> 'ModelAttributes':
         return self._with(show_only=show_only)
     
-    def with_debug(self, debug: bool):
+    def with_debug(self, debug: bool) -> 'ModelAttributes':
         return self._with(debug=debug)
     
-    def with_transparent(self, transparent: bool):
+    def with_transparent(self, transparent: bool) -> 'ModelAttributes':
         return self._with(transparent=transparent)
     
-    def with_use_polyhedrons(self, as_polyhedrons: bool):
+    def with_use_polyhedrons(self, as_polyhedrons: bool) -> 'ModelAttributes':
         return self._with(use_polyhedrons=as_polyhedrons)
     
-    def with_material(self, material: Material):
+    def with_material(self, material: Material) -> 'ModelAttributes':
         return self._with(material=material)
     
-    def with_material_map(self, material_map: MaterialMap):
+    def with_material_map(self, material_map: MaterialMap) -> 'ModelAttributes':
         if self.material_map:
             material_map = MaterialMapStack((self.material_map, material_map))
         return self._with(material_map=material_map)
     
-    def with_part(self, part: Part):
+    def with_part(self, part: Part) -> 'ModelAttributes':
         return self._with(part=part)
     
-    def fill_dict(self, out_dict, field_names=('fn', 'fs', 'fa')):
+    def fill_dict(self, out_dict, field_names=('fn', 'fs', 'fa')) -> Dict[str, object]:
         for field_name in field_names:
             if field_name in out_dict:
                 continue
@@ -529,21 +507,21 @@ class ModelAttributes(object):
             out_dict[field_name] = value
         return out_dict
     
-    def to_str(self):
+    def to_str(self) -> str:
         '''Generates a repr with just the non default values.'''
         return self.__class__.__name__ + '(' + ', '.join(
             f'{k}={v!r}' for k, v in self._as_non_defaults_dict().items()) + ')'
         
-    def get_material(self):
+    def get_mapped_attributes(self):
         '''Returns the material to use for this model level.'''
         if self.material_map:
-            return self.material_map.map(self.material, self)
+            return self.material_map.map_attributes(self)
         return self.material 
             
-    def __str__(self):
+    def __str__(self) -> str:
         return self.to_str()
     
-    def __repr__(self):
+    def __repr__(self) -> str:
         return self.to_str()
     
     
@@ -1363,7 +1341,6 @@ class CageOfNode(Node):
     def __init__(self, *args_, **kwds_):
         super().__init__(cageof, 'hide_cage', *args_, **kwds_)
 
-@datatree(frozen=True)
 class AbsoluteReference:
     pass
 
@@ -2446,7 +2423,7 @@ def render_examples(module,
     '''Scans a module for all Anchorscad shape classes and renders examples.'''
     classes = find_all_shape_classes(module)
     # Lazy import renderer since renderer depends on this.
-    import anchorscad.renderer as renderer
+    import anchorscad.renderer_ai as renderer
     
     shape_count = 0
     example_count = 0

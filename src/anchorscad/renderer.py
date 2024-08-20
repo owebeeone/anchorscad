@@ -419,7 +419,7 @@ class ContextEntry():
 
     def get_material(self):
         if self.attributes:
-            return self.attributes.get_material()
+            return self.attributes.material
         return None
 
 @dataclass
