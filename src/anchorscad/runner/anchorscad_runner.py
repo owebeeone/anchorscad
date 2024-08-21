@@ -172,15 +172,17 @@ class ExampleRunner:
         fname = os.path.join(self.out_dir, rel_filename)
         full_path = pathlib.Path(fname)
         full_path.parent.mkdir(parents=True, exist_ok=True)
-        slash_rel_filename = rel_filename.replace('\\', '/')
+        slash_rel_filename = rel_filename.replace('/', '/')
         
         # If we get a sanitized part name, we are dealing with a part so we need to 
-        # add the part to the parts_model_files dictionary.
+        # add the part to the parts_model_files list.
         if sanitized_part_name:
-            print(f"'{sanitized_part_name}'")
-            runner_example = runner_example.parts_model_files[sanitized_part_name]
+            result = rs.RunnerExamplePartResults()
+            runner_example.parts_model_files.append([sanitized_part_name, result])
+        else:
+            result = runner_example
         
-        return slash_rel_filename, runner_example, full_path
+        return slash_rel_filename, result, full_path
         
     def file_writer(self, obj, clz, example_name, base_example_name, part_name=None):
         sanitized_part_name = core.sanitize_name(part_name) if part_name else None
@@ -350,7 +352,7 @@ class ExampleRunner:
         runner_example.output_file_size = os.stat(self.output_file_name).st_size
         runner_example.error_file_size = os.stat(self.error_file_name).st_size
         if runner_example.error_file_size:
-            runner_results.examples_with_error_output += 1
+            runner_results.examples_with_error_output_count += 1
             self.examples_with_errors.append(
                 rs.RunnerModuleExampleRef(
                     module_name=self.module_name,
@@ -406,7 +408,7 @@ def str2bool(v):
 class AnchorScadRunner(core.ExampleCommandLineRenderer):
     
     DESCRIPTION='''\
-    Traverses the anchorscad directory and runs all example programs.
+    Traverses the provided anchorscad directory and runs all example programs/models.
     
     '''
     
@@ -687,8 +689,16 @@ def remove_from_list(l, v):
 def run():
     runner = AnchorScadRunner(sys.argv[1:])
     
+    # For debugging.
     # if not ENVIRON_NAME in runner.env:
-    #     runner = AnchorScadRunner(['src\\anchorscad\\models\\components'])
+    #     runner = AnchorScadRunner(['src/anchorscad/models/components', 'anchorscad.models.components.switch_case'])
+    #     # args = ['--no_warn_deprecated_anchors_use', 
+    #     #         '--gen-stl', 
+    #     #         '--gen-3mf', 
+    #     #         'src/anchorscad/models/components/terminal_blocks/terminal_kf301.py',
+    #     #         'anchorscad.models.components.terminal_blocks.terminal_kf301']
+    #     # runner = AnchorScadRunner(args)
+    #     # runner.env[ENVIRON_NAME] = args[3]
     runner.run()
 
 if __name__ == '__main__':

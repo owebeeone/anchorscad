@@ -4,11 +4,13 @@ Created on 22 Jan 2022
 @author: gianni
 '''
 
+from collections import defaultdict
 from dataclasses import dataclass, field
 from dataclasses_json import dataclass_json
-from typing import Dict, List, Optional
+from typing import List, Optional, Tuple
 from debugpy.common.json import default
 
+List = list
 
 @dataclass_json
 @dataclass
@@ -16,7 +18,7 @@ class RunnerExamplePartResults(object):
     '''
     Status type for a part of an example of a shape.
     '''
-    part_name: str=None # The part name.
+    part_name: Optional[str]=None # The part name.
     scad_file: Optional[str]=None
     stl_file: Optional[str]=None # The STL file.
     f3mf_file: Optional[str]=None # The 3MF file (possibly multi-part/material).
@@ -49,8 +51,7 @@ class RunnerExampleResults(object):
     path_html_file: Optional[str]=None # The HTML file for the 2D extrusion paths
     shape_pickle_file: Optional[str]=None # The pickled shape object.
     injected_fields_html_file: Optional[str]=None # The datatree field provenance HTML file.
-    parts_model_files: Dict[str, RunnerExamplePartResults]=\
-        field(default_factory=RunnerExamplePartResults)
+    parts_model_files: List[Tuple[str, RunnerExamplePartResults]]=field(default_factory=list)
 
 
 @dataclass_json
@@ -60,8 +61,9 @@ class RunnerShapeResults(object):
     Status type for a shape class run.
     '''
     class_name: str
-    examples_with_error_output: int=0
-    example_results: List[RunnerExampleResults]=field(default_factory=list)
+    examples_with_error_output_count: int=0
+    #example_results: List[RunnerExampleResults]=field(default_factory=list)
+    example_results: list=field(default_factory=list)
 
 
 @dataclass_json
@@ -106,20 +108,33 @@ class RunnerModuleStatus2(RunnerModuleStatus):
     other_thing: str=None
 
 
-example = RunnerModuleStatus(
-    'mod_name',
-    (RunnerShapeResults('shape1', 
-                        (RunnerExampleResults('ex_name11', 'sf', 'gf', 'pf', 'stl'),
-                         RunnerExampleResults('ex_name12', 'sf', 'gf', 'pf', 'stl'))),
-    RunnerShapeResults('shape2', 
-                        (RunnerExampleResults('ex_name21', 'sf', 'gf', 'pf', 'stl'),
-                         RunnerExampleResults('ex_name22', 'sf', 'gf', 'pf', 'stl'))),
-    ),
-    examples_with_error_output=0
+def main():
+    
+    example_part = RunnerExamplePartResults('part1', 'scad1', 'stl1', 'f3mf1', 'png1', 'oe1', 'oo1')
+    
+    sp = example_part.to_json(indent=4)
+    example_part_1 = RunnerExamplePartResults.from_json(sp)
+    
+    example = RunnerModuleStatus(
+        'mod_name',
+        (RunnerShapeResults('shape1', 
+            (RunnerExampleResults('ex_name11', 'sf', 'gf', 'pf', 'stl',
+                parts_model_files=[
+                    ('part1', RunnerExamplePartResults('part1', 'scad1', 'stl1', 'f3mf1', 'png1', 'oe1', 'oo1')),
+                    ('part2', RunnerExamplePartResults('part2', 'scad2', 'stl2', 'f3mf2', 'png2', 'oe2', 'oo2'))])),
+             RunnerExampleResults('ex_name12', 'sf', 'gf', 'pf', 'stl',
+                parts_model_files=[
+                    ('part1', RunnerExamplePartResults('part1', 'scad1', 'stl1', 'f3mf1', 'png1', 'oe1', 'oo1')),
+                    ('part2', RunnerExamplePartResults('part2', 'scad2', 'stl2', 'f3mf2', 'png2', 'oe2', 'oo2'))])),
+        RunnerShapeResults('shape2', 
+            (RunnerExampleResults('ex_name21', 'sf', 'gf', 'pf', 'stl'),
+             RunnerExampleResults('ex_name22', 'sf', 'gf', 'pf', 'stl'))),
+        ),
+    examples_with_error_output=[]
     )
 
-def main():
     s = example.to_json(indent=4)
+    print(s)
     js = RunnerModuleStatus2.from_json(s)
 
     print(s)
