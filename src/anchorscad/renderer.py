@@ -86,26 +86,9 @@ _FLOAT_FORMAT_REPLACEMENTS = {'.': '_', '-': 'm'}
 # Define the module global for maximum decimal places
 _MAX_FLOAT_ID_CHARS = 3
 
-_HASH_MODULO = int(1e8)
-
-def _sanitize_name(s: str) -> str:
-    '''Sanitizes a string to be a valid identifier.'''
-    # Replace contiguous whitespace and invalid characters with a single underscore.
-    sanitized = re.sub(r'\s+|\W|^(?=\d)', '_', s)
-    
-    # Handle multiple invalid sections by appending hash to each invalid segment
-    if not sanitized.isidentifier():
-        segments = re.split(r'_+', sanitized)
-        hashed_segments = [f'{seg}_{abs(hash(seg)) % _HASH_MODULO}' 
-                                if not seg.isidentifier() 
-                                else seg for seg in segments]
-        sanitized = '_'.join(hashed_segments)
-    
-    return sanitized
-
-def make_identifier_from_tuple(names: Tuple[str, ...]) -> str:
+def _make_identifier_from_tuple(names: Tuple[str, ...]) -> str:
     '''Returns a sanitized identifier for the given string.'''
-    return '_'.join(_sanitize_name(name) for name in names)
+    return '_'.join(core.sanitize_name(name) for name in names)
 
 @total_ordering
 @dataclass(frozen=True)
@@ -172,11 +155,11 @@ class PartMaterial:
         
         part = self.get_part()
         p_pri_formatted = format_priority(part.priority)
-        p_sanitized = _sanitize_name(part.name)
+        p_sanitized = core.sanitize_name(part.name)
         
         material = self.get_material()
         m_pri_formatted = format_priority(material.priority)
-        m_sanitized = _sanitize_name(material.name)
+        m_sanitized = core.sanitize_name(material.name)
         
         return f'{p_sanitized}_{p_pri_formatted}_{m_sanitized}_{m_pri_formatted}'
     
@@ -228,7 +211,7 @@ class PartMarterialResolver:
     def unique_identifier(self, key: Union[PartMaterial, Tuple[str, ...]], suffix: str=None) -> str:
         '''Returns a unique identifier for the part-material-priority combination.'''
         id: str = key.make_identifier() \
-            if isinstance(key, PartMaterial) else make_identifier_from_tuple(key)
+            if isinstance(key, PartMaterial) else _make_identifier_from_tuple(key)
         uid = id if not suffix else f'{id}_{suffix}'
         
         # Ensure the identifier is unique. While used to evade potential name clashes
@@ -325,7 +308,7 @@ class PartMarterialResolver:
         part_models: Dict[str, Any] = dict()
         for k, v in parts.items():
             # The generated identifier is only informational, no need to uniqueify it.
-            part_models[k] = self._create_final_model(make_identifier_from_tuple(k), v)
+            part_models[k] = self._create_final_model(_make_identifier_from_tuple(k), v)
         
         all_parts_model: Any = self._create_final_model('all_parts', all_parts)
         

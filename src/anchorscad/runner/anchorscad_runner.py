@@ -20,7 +20,7 @@ import platform
 import importlib
 import pathlib
 import anchorscad.runner.runner_status as rs
-from typing import Dict
+from typing import Any, Dict, Tuple, Union
 import pickle
 import argparse
 
@@ -139,7 +139,7 @@ class ExampleRunner:
         self.module_dir = os.path.sep.join(self.module_name.split('.'))
         self.openscad_properties = openscad_exe_properties(self.argp.use_dev_openscad)
         
-    def get_example_record(self, clz, base_example_name):
+    def get_example_record(self, clz, base_example_name) -> rs.RunnerExampleResults:
         results = self.runner_results.get(clz.__name__, None)
         if not results:
             results = rs.RunnerShapeResults(class_name=clz.__name__)
@@ -153,12 +153,19 @@ class ExampleRunner:
             results.example_results.append(example)
         return example, results
         
-    def gen_filenames_and_runner(self, clz, example_name, base_example_name, ext):
+    def gen_filenames_and_runner(self, clz, example_name, base_example_name, ext, 
+            sanitized_part_name=None) -> Tuple[
+                str, Union[rs.RunnerExampleResults, rs.RunnerExamplePartResults], str]:
+        if sanitized_part_name:
+            part_name_addl = f'_{sanitized_part_name}'
+        else:
+            part_name_addl = ''
         rel_filename = self.out_file_format.format(
             module_dir=self.module_dir,
             ext=ext,
             class_name=clz.__name__, 
-            example=example_name)
+            example=example_name,
+            part_name_addl=part_name_addl)
         
         runner_example, _ = self.get_example_record(clz, base_example_name)
         
@@ -167,38 +174,50 @@ class ExampleRunner:
         full_path.parent.mkdir(parents=True, exist_ok=True)
         slash_rel_filename = rel_filename.replace('\\', '/')
         
+        # If we get a sanitized part name, we are dealing with a part so we need to 
+        # add the part to the parts_model_files dictionary.
+        if sanitized_part_name:
+            print(f"'{sanitized_part_name}'")
+            runner_example = runner_example.parts_model_files[sanitized_part_name]
+        
         return slash_rel_filename, runner_example, full_path
         
-    def file_writer(self, obj, clz, example_name, base_example_name):
+    def file_writer(self, obj, clz, example_name, base_example_name, part_name=None):
+        sanitized_part_name = core.sanitize_name(part_name) if part_name else None
+        rel_filename: str = None
+        runner_example: Union[rs.RunnerExampleResults, rs.RunnerExamplePartResults] = None
+        scad_full_path: str = None
         rel_filename, runner_example, scad_full_path =\
             self.gen_filenames_and_runner(
-                clz, example_name, base_example_name, 'scad')
+                clz, example_name, base_example_name, 'scad', sanitized_part_name)
+        if part_name:
+            runner_example.part_name = part_name
         runner_example.scad_file = rel_filename
         obj.write(scad_full_path)
         
         stl_rel_filename, runner_example, stl_full_path =\
             self.gen_filenames_and_runner(
-                clz, example_name, base_example_name, 'stl')
+                clz, example_name, base_example_name, 'stl', sanitized_part_name)
         runner_example.stl_file = stl_rel_filename
         
         f3mf_rel_filename, runner_example, f3mf_full_path =\
             self.gen_filenames_and_runner(
-                clz, example_name, base_example_name, '3mf')
+                clz, example_name, base_example_name, '3mf', sanitized_part_name)
         runner_example.f3mf_file = f3mf_rel_filename
         
         png_rel_filename, runner_example, png_full_path =\
             self.gen_filenames_and_runner(
-                clz, example_name, base_example_name, 'png')
+                clz, example_name, base_example_name, 'png', sanitized_part_name)
         runner_example.png_file = png_rel_filename
         
         err_rel_filename, runner_example, err_full_path =\
             self.gen_filenames_and_runner(
-                clz, example_name, base_example_name, 'openscad.err.txt')
+                clz, example_name, base_example_name, 'openscad.err.txt', sanitized_part_name)
         runner_example.openscad_err_file = err_rel_filename
         
         out_rel_filename, runner_example, out_full_path =\
             self.gen_filenames_and_runner(
-                clz, example_name, base_example_name, 'openscad.out.txt')
+                clz, example_name, base_example_name, 'openscad.out.txt', sanitized_part_name)
         runner_example.openscad_out_file = out_rel_filename
         
         if not self.run_openscad(
@@ -207,7 +226,11 @@ class ExampleRunner:
             # Command failed.
             runner_example.png_file = None
             runner_example.stl_file = None
-            runner_example.f3mf_file = None
+            runner_example.f3mf_file = None   
+    
+    def parts_writer(self, parts: Dict[str, Any], clz, example_name, base_example_name):
+        for part_name, obj in parts.items():
+            self.file_writer(obj, clz, example_name, base_example_name, part_name)
   
     def run_openscad(self, stl_file, f3mf_file, png_file, scad_file, out_file, err_file):
         if not self.argp.gen_stl:
@@ -455,7 +478,7 @@ class AnchorScadRunner(core.ExampleCommandLineRenderer):
             default=os.path.join(
                 'output',
                 '{module_dir}', 
-                'anchorcad_{class_name}_{example}_example.{ext}'),
+                'anchorcad_{class_name}_{example}{part_name_addl}_example.{ext}'),
             help='output format for generated files.')
         
         self.argq.add_argument(
@@ -499,7 +522,8 @@ class AnchorScadRunner(core.ExampleCommandLineRenderer):
             ex_runner.injected_fields_writer,
             ex_runner.shape_writer,
             ex_runner.start_example,
-            ex_runner.end_example)
+            ex_runner.end_example,
+            ex_runner.parts_writer)
         
         runner_status = ex_runner.write_runner_status()
         

@@ -6,8 +6,24 @@ Created on 22 Jan 2022
 
 from dataclasses import dataclass, field
 from dataclasses_json import dataclass_json
-from typing import List, Optional
+from typing import Dict, List, Optional
 from debugpy.common.json import default
+
+
+@dataclass_json
+@dataclass
+class RunnerExamplePartResults(object):
+    '''
+    Status type for a part of an example of a shape.
+    '''
+    part_name: str=None # The part name.
+    scad_file: Optional[str]=None
+    stl_file: Optional[str]=None # The STL file.
+    f3mf_file: Optional[str]=None # The 3MF file (possibly multi-part/material).
+    png_file: Optional[str]=None # The PNG image file.
+    openscad_err_file: Optional[str]=None # The OpenSCAD stderr file.
+    openscad_out_file: Optional[str]=None # The OpenSCAD stdout file.
+
 
 @dataclass_json
 @dataclass
@@ -33,6 +49,8 @@ class RunnerExampleResults(object):
     path_html_file: Optional[str]=None # The HTML file for the 2D extrusion paths
     shape_pickle_file: Optional[str]=None # The pickled shape object.
     injected_fields_html_file: Optional[str]=None # The datatree field provenance HTML file.
+    parts_model_files: Dict[str, RunnerExamplePartResults]=\
+        field(default_factory=RunnerExamplePartResults)
 
 
 @dataclass_json
@@ -44,6 +62,7 @@ class RunnerShapeResults(object):
     class_name: str
     examples_with_error_output: int=0
     example_results: List[RunnerExampleResults]=field(default_factory=list)
+
 
 @dataclass_json
 @dataclass

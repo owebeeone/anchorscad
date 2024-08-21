@@ -26,7 +26,7 @@ from anchorscad.colours import Colour
 from anchorscad.svg_renderer import HtmlRenderer
 import numpy as np
 import pythonopenscad as posc
-from typing import Hashable, Dict, Tuple, Optional
+from typing import Any, Hashable, Dict, Tuple, Optional, Union
 
 
 class CoreEception(Exception):
@@ -2389,6 +2389,28 @@ def find_all_shape_classes(module):
             shape_classes.append(shape_class)
     return shape_classes
 
+HASH_MODULO = int(1e8)
+
+def _sanitize_name_single_name(s: Union[str, Tuple[str,...]]) -> str:
+    '''Sanitizes a string to be a valid identifier.'''
+    # Replace contiguous whitespace and invalid characters with a single underscore.
+    sanitized = re.sub(r'\s+|\W|^(?=\d)', '_', s)
+    
+    # Handle multiple invalid sections by appending hash to each invalid segment
+    if not sanitized.isidentifier():
+        segments = re.split(r'_+', sanitized)
+        hashed_segments = [f'{seg}_{abs(hash(seg)) % HASH_MODULO}' 
+                                if not seg.isidentifier() 
+                                else seg for seg in segments]
+        sanitized = '_'.join(hashed_segments)
+    
+    return sanitized
+
+def sanitize_name(s: Union[str, Tuple[str,...]]) -> str:
+    '''Sanitizes a string ot tuple of them to be a valid identifier.'''
+    if isinstance(s, tuple):
+        return '_'.join(_sanitize_name_single_name(name) for name in s)
+    return _sanitize_name_single_name(s)
 
 @datatree
 class RenderOptions:
@@ -2413,13 +2435,14 @@ def nameof(name, example_version):
 
 def render_examples(module, 
                     render_options, 
-                    consumer, 
+                    consumer,
                     graph_consumer,
                     paths_consumer,
                     injected_field_consumer,
                     shape_consumer=None,
                     start_example=None,
-                    end_example=None):
+                    end_example=None,
+                    parts_consumer=None):
     '''Scans a module for all Anchorscad shape classes and renders examples.'''
     classes = find_all_shape_classes(module)
     # Lazy import renderer since renderer depends on this.
@@ -2428,6 +2451,7 @@ def render_examples(module,
     shape_count = 0
     example_count = 0
     error_count = 0
+    parts_count = 0
     for clz in classes:
         if render_options.match_name(clz.__name__):
             shape_count += 1
@@ -2449,6 +2473,10 @@ def render_examples(module,
                     injected_field_consumer(clz, name, e)
                     if shape_consumer:
                         shape_consumer(maker, shape, clz, name, e)
+                        
+                    parts_count += len(result.parts)
+                    if parts_consumer:
+                        parts_consumer(result.parts, clz, name, e)
                 except BaseException as ex:
                     error_count += 1
                     traceback.print_exception(*sys.exc_info(), limit=20) 
@@ -2458,7 +2486,7 @@ def render_examples(module,
                 finally:
                     if end_example:
                         end_example(clz, e)
-    return shape_count, example_count, error_count
+    return shape_count, example_count, error_count, parts_count
 
 @datatree(provide_override_field=False)
 class ModuleDefault():
@@ -2472,30 +2500,41 @@ class ModuleDefault():
     If you want to change the default to provide all resources, you can
     set the all flag to True. e.g.
     
-    MAIN_DEFAULT=ModuleDefault(all=True)
+    MAIN_DEFAULT=ModuleDefault(all=1)
+    
+    If you want to set the default to provide all resources except for
+    graph files, you can set the all flag to 2. e.g.
+    
+    MAIN_DEFAULT=ModuleDefault(all=2, write_graph_files=False)
     
     Similarly, write_graph_files and write_graph_svg_files apply
     as well.
     '''
     write_files: bool=dtfield(
-        False, 'Writes OpendSCAD models to files.')
+        None, 'Writes OpendSCAD models to files.')
     write_graph_files: bool=dtfield(
-        False, 'Produces a graph of shape_names in .dot GraphViz format.')
+        None, 'Produces a graph of shape_names in .dot GraphViz format.')
     write_graph_svg_files: bool=dtfield(
-        False, 'Produces a graph of shape_names in .dot and .svg formats.')
+        None, 'Produces a graph of shape_names in .dot and .svg formats.')
     write_path_files: bool=dtfield(
-        False, 'Produces an html file containg 2D paths if any are used.')
+        None, 'Produces an html file containg 2D paths if any are used.')
     write_injection_files: bool=dtfield(
-        False, 'Produces an html file containg datatree injected field mappings.')
-    all: bool=dtfield(
-        False, 'Produce all output files.')
+        None, 'Produces an html file containg datatree injected field mappings.')
+    write_part_files: bool=dtfield(
+        None, 'Writes OpenSCAD models for parts to files.')
+    all: int=dtfield(
+        0, 'If set to 1, set all options to true. '
+           'If set to 2, set all options to true if not otherwise set.')
     
     def __post_init__(self):
-        if self.all:
-            for f in self.__dataclass_fields__: 
-                if f == 'all':
-                    continue
+        for f in self.__dataclass_fields__: 
+            if f == 'all':
+                continue
+            if self.all == 1:
                 setattr(self, f, True)
+            elif getattr(self, f) is None:
+                setattr(self, f, self.all == 2)
+
     
     def apply(self, obj):
         '''Apply the default values to obj.'''
@@ -2650,6 +2689,19 @@ class ExampleCommandLineRenderer():
             action='store_true',
             help='Writes models to files.')
         self.argq.set_defaults(write_files=None)
+        
+        self.argq.add_argument(
+            '--no-write-parts', 
+            dest='write_part_files',
+            action='store_false',
+            help='Perform a test run. It will not make changes to file system.')
+        
+        self.argq.add_argument(
+            '--write-parts', 
+            dest='write_part_files',
+            action='store_true',
+            help='Writes models for sub-parts to files.')
+        self.argq.set_defaults(write_part_files=None)
 
         self.argq.add_argument(
             '--no-graph_write', 
@@ -2683,6 +2735,13 @@ class ExampleCommandLineRenderer():
             default=os.path.join(
                 'examples_out', 'anchorcad_{class_name}_{example}_example.scad'),
             help='The OpenSCAD formatted output filename.')
+        
+        self.argq.add_argument(
+            '--part_out_file_name', 
+            type=str,
+            default=os.path.join(
+                'examples_out', 'anchorcad_{class_name}_{example}_{part}_example.scad'),
+            help='The OpenSCAD formatted output filename for multi part models.')
         
         self.argq.add_argument(
             '--graph_file_name', 
@@ -2808,7 +2867,6 @@ class ExampleCommandLineRenderer():
             main_default = self.module.MAIN_DEFAULT
             main_default.apply(self.argp)
             
-
     def file_writer(self, obj, clz, example_name, base_example_name):
         fname = self.argp.out_file_name.format(
             class_name=clz.__name__, example=example_name)
@@ -2823,6 +2881,33 @@ class ExampleCommandLineRenderer():
             strv = obj.dumps()
             sys.stdout.write(
                 f'Shape: {clz.__name__} {example_name} {len(strv)}\n')
+            
+    def parts_writer(self, parts: Dict[str, Any], clz, example_name, base_example_name):
+        if self.argp.write_part_files:
+            for part_name, obj in parts.items():
+                part_name_sanitized = sanitize_name(part_name)
+                fname = self.argp.part_out_file_name.format(
+                    class_name=clz.__name__, example=example_name, part=part_name_sanitized)
+                path = pathlib.Path(fname)
+                path.parent.mkdir(parents=True, exist_ok=True)
+                obj.write(path)
+        else:
+            if len(parts) == 1 and 'default' in parts:
+                return  # No need to print out stats on default part shapes.
+            for part_name, obj in parts.items():
+                part_name_sanitized = sanitize_name(part_name)
+                fname = self.argp.part_out_file_name.format(
+                    class_name=clz.__name__, example=example_name, part=part_name_sanitized)
+                path = pathlib.Path(fname)
+                parent = path.parent
+                if parent in self.set_mkdir and not path.parent.exists():
+                    self.set_mkdir.add(parent)
+                    sys.stderr.write(
+                        f'directory "{parent}" does not exist. Will be created if --write-part requested.\n')
+                strv = obj.dumps()
+                sys.stdout.write(
+                    f'Shape: {clz.__name__} {example_name} part:{part_name} {len(strv)}\n')
+
 
     def graph_file_writer(self, graph, clz, example_name, base_example_name):
         fname = self.argp.graph_file_name.format(
@@ -2894,7 +2979,8 @@ class ExampleCommandLineRenderer():
             self.file_writer,
             self.graph_file_writer,
             self.path_file_writer,
-            self.injected_file_writer)
+            self.injected_file_writer,
+            parts_consumer=self.parts_writer)
     
     def list_shapes(self):
         classes = find_all_shape_classes(self.module)
@@ -2910,7 +2996,8 @@ class ExampleCommandLineRenderer():
         
         sys.stderr.write(f'shapes: {self.counts[0]}\n'
                          f'examples: {self.counts[1]}\n'
-                         f'errors: {self.counts[2]}\n')
+                         f'errors: {self.counts[2]}\n'
+                         f'parts: {self.counts[3]}\n')
 
     def fix_status(self):
         if self.status:
