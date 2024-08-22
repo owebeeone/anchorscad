@@ -228,7 +228,8 @@ class PartMarterialResolver:
     def _make_part_material_module(
             self, part_material: PartMaterial, objs: List[Any], suffix: str=None) -> Any:
         '''Returns a module for the part-material combination.'''
-        suffix = None if part_material.get_material().kind.physical else 'non_physical'
+        suffix = suffix if part_material.get_material().kind.physical \
+                        else f'non_physical{"_" + suffix if suffix else ""}'
         o = self.model.Module(self.unique_identifier(part_material, suffix=suffix))(*objs)
         o.setMetadataName(part_material.description())
         return o
@@ -521,9 +522,6 @@ class Container():
             part_material, solids = part_material_solids.pop()
             
             top_head, last_head = self._combine_heads(make_copy=bool(part_material_solids))
-            
-            if isinstance(last_head, self.model.Difference):
-                print('last_head is a difference')
 
             last_head.append(*solids)
             

@@ -391,7 +391,7 @@ class MaterialMapStack(MaterialMap):
         '''
         
         for mmap in self.map_stack:
-            attributes = mmap.map_part_material_colour(attributes)
+            attributes = mmap.map_attributes(attributes)
             
         return attributes
     

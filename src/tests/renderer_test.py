@@ -40,6 +40,8 @@ BOX_MAKER = (BOX_SHAPE.solid('box').material(MATERIAL_BG).at('centre')
              .add_at(BOX_SHAPE.solid('box2').material(MATERIAL_RH).at('centre'), 'face_centre', 'front'))
 
 
+def xxx(result):
+    print(f'XXX--- {repr(str(result.rendered_shape))}')
 
 class RendererTest(unittest.TestCase):
     
@@ -49,7 +51,7 @@ class RendererTest(unittest.TestCase):
         
         self.assertEqual(
             str(result.rendered_shape), 
-            "// 'None : _combine_solids_and_holes'\nunion() {\n  cube(size=[1.0, 1.0, 1.0]);\n}\n")
+            "// Start: lazy_union\ndefault_5_default_5();\n// End: lazy_union\n\n// Modules.\n\n// 'PartMaterial undef-default - undef-default'\nmodule default_5_default_5() {\n  // 'None : _combine_solids_and_holes'\n  union() {\n    cube(size=[1.0, 1.0, 1.0]);\n  }\n} // end module default_5_default_5\n")
         
     def testEmpty(self):
         shape = Empty()
@@ -57,46 +59,51 @@ class RendererTest(unittest.TestCase):
         
         self.assertEqual(
             str(result.rendered_shape), 
-            "// 'pop:solid'\nunion();\n")
+            "// Start: lazy_union\n// End: lazy_union\n")
         
     def testMaterialDefaultMap(self):
         
         self.assertEqual(
-            MAP_DEFAULT.map_part_material_colour(None, None, None, MODEL_ATTRS), 
-            (None, MAP_DEFAULT.material, None))
+            MAP_DEFAULT.map_attributes(ad.ModelAttributes()), 
+            ad.ModelAttributes().with_material(MATERIAL_BP))
         
         self.assertEqual(
-            MAP_DEFAULT.map_part_material_colour(None, MATERIAL_WA, None, MODEL_ATTRS), 
-           (None, MATERIAL_WA, None))
+            MAP_DEFAULT.map_attributes(
+              ad.ModelAttributes().with_material(MATERIAL_WA)), 
+            ad.ModelAttributes().with_material(MATERIAL_WA))
         
     def testMaterialMap(self):
         self.assertEqual(
-            MAP_BG_RH_GG.map_part_material_colour(None, MATERIAL_BG, None, MODEL_ATTRS), 
-            (None, MATERIAL_GG, None))
+            MAP_BG_RH_GG.map_attributes(
+                ad.ModelAttributes().with_material(MATERIAL_BG)), 
+            ad.ModelAttributes().with_material(MATERIAL_GG))
         
         self.assertEqual(
-            MAP_BG_RH_GG.map_part_material_colour(None, MATERIAL_WA, None, MODEL_ATTRS), 
-            (None, MATERIAL_WA, None))
+            MAP_BG_RH_GG.map_attributes(
+                ad.ModelAttributes().with_material(MATERIAL_WA)), 
+            ad.ModelAttributes().with_material(MATERIAL_WA))
         
         self.assertEqual(
-            MAP_BG_RH_GG.map_part_material_colour(None, MATERIAL_RH, None, MODEL_ATTRS), 
-            (None, MATERIAL_GG, None))
+            MAP_BG_RH_GG.map_attributes(
+                ad.ModelAttributes().with_material(MATERIAL_RH)), 
+            ad.ModelAttributes().with_material(MATERIAL_GG))
         
         self.assertEqual(
-            MAP_BG_RH_GG.map_part_material_colour(None, None, None, MODEL_ATTRS), 
-            (None, None, None))
+            MAP_BG_RH_GG.map_attributes(ad.ModelAttributes()), 
+            ad.ModelAttributes())
         
         self.assertEqual(
-            MAP_STACK_A.map_part_material_colour(None, None, None, MODEL_ATTRS), 
-            (None, MATERIAL_BG, None))
+            MAP_STACK_A.map_attributes(ad.ModelAttributes()),
+            ad.ModelAttributes().with_material(MATERIAL_BG))
         
         self.assertEqual(
-            MAP_STACK_A.map_part_material_colour(None, MATERIAL_BG, None, MODEL_ATTRS), 
-            (None, MATERIAL_GG, None))
+            MAP_STACK_A.map_attributes(
+                ad.ModelAttributes().with_material(MATERIAL_BG,)), 
+             ad.ModelAttributes().with_material(MATERIAL_GG))
         
         self.assertEqual(
-            MAP_STACK_B.map_part_material_colour(None, None, None, MODEL_ATTRS), 
-            (None, MATERIAL_GG, None))
+            MAP_STACK_B.map_attributes(ad.ModelAttributes()),
+            ad.ModelAttributes().with_material(MATERIAL_GG))
         
     def testRenderMaterial(self):
         result = render(BOX_MAKER)
@@ -105,22 +112,14 @@ class RendererTest(unittest.TestCase):
         self.assertEqual(
             str(result.rendered_shape),
             '''// Start: lazy_union
-// "pop - Material(name='red_HIPS', priority=5.0, kind=MaterialKind(physical=True)):solid"
-union() {
-  // 'None : _combine_solids_and_holes'
-  union() {
-    // 'box2'
-    multmatrix(m=[[1.0, 0.0, 0.0, -5.0], [0.0, 0.0, -1.0, 5.0], [0.0, 1.0, 0.0, -10.0], [0.0, 0.0, 0.0, 1.0]]) {
-      // 'box2 : _combine_solids_and_holes'
-      union() {
-        // 'box2'
-        cube(size=[10.0, 20.0, 30.0]);
-      }
-    }
-  }
-}
-// "pop - Material(name='blue_PETG', priority=5.0, kind=MaterialKind(physical=True)):solid"
-union() {
+default_5_red_HIPS_5();
+default_5_blue_PETG_5_cured();
+// End: lazy_union
+
+// Modules.
+
+// 'PartMaterial undef-default - blue_PETG 5.0'
+module default_5_blue_PETG_5() {
   // 'None : _combine_solids_and_holes'
   union() {
     // 'box'
@@ -132,8 +131,30 @@ union() {
       }
     }
   }
-}
-// End: lazy_union
+} // end module default_5_blue_PETG_5
+
+// 'PartMaterial undef-default - blue_PETG 5.0'
+module default_5_blue_PETG_5_cured() {
+  difference() {
+    default_5_blue_PETG_5();
+    default_5_red_HIPS_5();
+  }
+} // end module default_5_blue_PETG_5_cured
+
+// 'PartMaterial undef-default - red_HIPS 5.0'
+module default_5_red_HIPS_5() {
+  // 'None : _combine_solids_and_holes'
+  union() {
+    // 'box2'
+    multmatrix(m=[[1.0, 0.0, 0.0, -5.0], [0.0, 0.0, -1.0, 5.0], [0.0, 1.0, 0.0, -10.0], [0.0, 0.0, 0.0, 1.0]]) {
+      // 'box2 : _combine_solids_and_holes'
+      union() {
+        // 'box2'
+        cube(size=[10.0, 20.0, 30.0]);
+      }
+    }
+  }
+} // end module default_5_red_HIPS_5
 ''')
 
 
