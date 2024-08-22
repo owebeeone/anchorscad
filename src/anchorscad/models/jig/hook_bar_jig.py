@@ -5,7 +5,6 @@ Created on 2023-10-28
 '''
 
 import anchorscad as ad
-from src.anchorscad.core import Maker
 
 EXPLAND_FOR_PRINTER_TOLERANCE=0.2
 
@@ -96,7 +95,7 @@ class HookBarCutoutShape(ad.CompositeShape):
     
     EXAMPLE_SHAPE_ARGS=ad.args(hide_cage=False)
     
-    def build(self) -> Maker:
+    def build(self) -> ad.Maker:
         
         maker = self.cutout_cage_node(self.cutour_cage_shape_node()).at('centre')
         
@@ -130,7 +129,7 @@ class HookBarStock(ad.CompositeShape):
     EXAMPLE_ANCHORS=(
         ad.surface_args('face_centre', 'front'),)
     
-    def build(self) -> Maker:
+    def build(self) -> ad.Maker:
 
         maker = self.cage_node(self.cage_shape_node()).at('centre')
         
@@ -166,7 +165,7 @@ class HookBarStockWithHoles(ad.CompositeShape):
         ad.surface_args(('hole', 0), 'centre'),
         ad.surface_args('face_centre', 'left'),)
     
-    def build(self) -> Maker:
+    def build(self) -> ad.Maker:
         maker = self.hook_bar_stock_node().solid('stock').at()
         
         hole = self.hole_node()
@@ -239,7 +238,7 @@ class HookBarHoleJig(ad.CompositeShape):
     cutout_node: ad.Node=ad.dtfield(
         ad.ShapeNode(HookBarCutoutShape))
     
-    def build(self) -> Maker:
+    def build(self) -> ad.Maker:
         #maker = self.jig_node().solid('jig').colour('blue', 0.3).transparent(True).at()
         maker = self.jig_node().solid('jig').at()
         
@@ -308,7 +307,7 @@ class HookBarBendLineJig(ad.CompositeShape):
     jig_node: ad.Node=ad.dtfield(
         ad.ShapeNode(ad.Box, prefix='jig_'))
     
-    def build(self) -> Maker:
+    def build(self) -> ad.Maker:
         shape = self.jig_node()
         
         maker = shape.solid('jig').at()
@@ -330,7 +329,7 @@ class HookBarBendLineJigMultiple(ad.CompositeShape):
     
     count: int=ad.dtfield(4, doc='The number of side by side bend line jigs')
     
-    def build(self) -> Maker:
+    def build(self) -> ad.Maker:
         shape = self.single_jig_node()
         maker = shape.solid(('jig', 0)).at('face_centre', 'top')
         for i in range(self.count - 1):
