@@ -12,7 +12,7 @@ from typing import Tuple
 @ad.datatree
 class MultiMaterialTest(ad.CompositeShape):
     '''
-    <description>
+    A basic multi-material test shape.
     '''
     h: float=50
     r_top: float=20
@@ -41,6 +41,7 @@ class MultiMaterialTest(ad.CompositeShape):
             shape = self.cone_node(h=h, r_top=r_top, r_base=r_base)
             g = (1 + i) / len(self.extensions)
             maker2 = shape.solid(('ext', i))\
+                .part(ad.Part(f"part{i // 2}", i))\
                 .material(ad.Material(f"mat{i}"))\
                 .colour((1, g, 0.2, 0.7))\
                 .at('base', post=ad.ROTX_180)

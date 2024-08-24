@@ -316,7 +316,7 @@
                 shapeResults.forEach(shape => {
                     shape.example_results.forEach(example => {
                         const modelItem = $("<div>").addClass("menu-element").addClass("align-vertical").click(() => {
-                            renderModelDetails(module, shape, example, $(".model-details"));
+                            renderModelDetails(module, shape, example, null, $(".model-details"));
                         });
                         if (example.png_file) {
                             modelItem.css("background-image", `url(/${example.png_file})`);
@@ -360,7 +360,7 @@
                 partsNames.sort().forEach(partName => {
                     var partData = example.parts_model_files[partName];
                     const partItem = $("<div>").addClass("part-menu-element").addClass("align-vertical").click(() => {
-                        renderPartDetails(module, example, shape, partData, $(".model-details"));
+                        renderModelDetails(module, shape, example, partData, $(".model-details"));
                     });
                     if (partData.png_file) {
                         partItem.css("background-image", `url(/${partData.png_file})`);
@@ -399,19 +399,27 @@
                 $(".model-details").empty();
             }
 
-            function renderModelDetails(module, shape, example, details) {
-                renderParts(module, shape, example);
+            function renderModelDetails(module, shape, example, part, details) {
+                var originalPart = part;
+                if (!part) {
+                    renderParts(module, shape, example);
+                    part = example;
+                }
                 details.empty();
-                details.append(`<h3>${module.module_name}.${shape.class_name}.${example.example_name}</h3>`);
+                var partDetails = '';
+                if (originalPart) {
+                    partDetails = ` - Part ${originalPart.part_name}`;
+                }
+                details.append(`<h3>${module.module_name}.${shape.class_name}.${example.example_name}${partDetails}</h3>`);
 
                 // The fetch calls are synchronous, so we append a structure to the details container.
-                if (example.png_file) {
+                if (part.png_file) {
                     createContainer(details, "model-image-container")
-                        .append(`<img src="/${example.png_file}" class="model-image">`);
+                        .append(`<img src="/${part.png_file}" class="model-image">`);
                 }
 
-                if (example.error_str) {
-                    details.append(`<p class="error-message">${example.error_str}</p>`);
+                if (part.error_str) {
+                    details.append(`<p class="error-message">${part.error_str}</p>`);
                 }
                 
                 if (example.path_html_file) {
@@ -428,20 +436,20 @@
                         createContainer(details, "stderr-container"), 
                         example.error_file_name, "Error File");
                 }
-                if (example.scad_file) {
+                if (part.scad_file) {
                     fetchAndRenderTextFile(
                         createContainer(details, "scad-container"), 
-                        example.scad_file, "SCAD File", true);
+                        part.scad_file, "SCAD File", true);
                 }
-                if (example.openscad_err_file) {
+                if (part.openscad_err_file) {
                     fetchAndRenderTextFile(
                         createContainer(details, "openscad-stderr-container"), 
-                        example.openscad_err_file, "OpenSCAD Standard Error Output");
+                        part.openscad_err_file, "OpenSCAD Standard Error Output");
                 }
-                if (example.openscad_out_file) {
+                if (part.openscad_out_file) {
                     fetchAndRenderTextFile(
                         createContainer(details, "openscad-stderr-container"), 
-                        example.openscad_out_file, "OpenSCAD Standard Output");
+                        part.openscad_out_file, "OpenSCAD Standard Output");
                 }
                 if (example.graph_file) {
                     fetchAndRenderTextFile(
@@ -459,8 +467,8 @@
                     createContainer(details, "injected-fields-container")
                         .append(`<iframe src="/${example.injected_fields_html_file}" class="iframe-container"></iframe>`);
                 }
-                if (example.stl_file) {
-                    const fileToRender = "/" + example.stl_file;
+                if (part.stl_file) {
+                    const fileToRender = "/" + part.stl_file;
                     render3DModel(createContainer(details, "threeD-container"), fileToRender);
                 }
             }
