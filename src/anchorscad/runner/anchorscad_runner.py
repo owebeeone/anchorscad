@@ -172,7 +172,7 @@ class ExampleRunner:
         fname = os.path.join(self.out_dir, rel_filename)
         full_path = pathlib.Path(fname)
         full_path.parent.mkdir(parents=True, exist_ok=True)
-        slash_rel_filename = rel_filename.replace('/', '/')
+        slash_rel_filename = rel_filename.replace('\\', '/')
         
         # If we get a sanitized part name, we are dealing with a part so we need to 
         # add the part to the parts_model_files list.
