@@ -96,6 +96,29 @@
             cursor: pointer;
             user-select: none; /* Prevent text selection */
         }
+        .part-menu-element {
+            display: inline-block;
+            padding: 10px;
+            margin: 5px;
+            border: 2px solid #4ce575;
+            cursor: pointer;
+            user-select: none; /* Prevent text selection */
+            background-size: contain;
+            background-repeat: no-repeat;
+            background-position: center;
+            width: 100px; /* Adjust width as needed */
+            height: 100px; /* Adjust height as needed */
+        }
+        .part-menu-element img {
+            max-width: 100px;
+            max-height: 100px;
+            display: inline-block;
+            padding: 10px;
+            margin: 5px;
+            border: 2px solid #4ce575;
+            cursor: pointer;
+            user-select: none; /* Prevent text selection */
+        }
         .text-wrap {
             /* Ensure text wraps within the div */
             white-space: normal;
@@ -112,6 +135,14 @@
             border-color: blue;
         }
         .menu-element {
+            display: inline-block;
+            cursor: pointer;
+            user-select: none; /* Prevent text selection */
+        }
+        .part-menu-element.selected {
+            border-color: blue;
+        }
+        .part-menu-element {
             display: inline-block;
             cursor: pointer;
             user-select: none; /* Prevent text selection */
@@ -176,6 +207,11 @@
             <div style="flex: 1;">
                 <div class="model-list-container horiz-scrolling content-container">
                     <div id="model-list">
+
+                    </div>
+                </div><br>
+                <div class="part-list-container horiz-scrolling content-container">
+                    <div id="part-list">
 
                     </div>
                 </div>
@@ -301,7 +337,50 @@
                         .setMenuItemsContainer($("#model-list"))
                         .setMenuItems($(".menu-element"))
                         .setChevronElements($("#bcheveron-left"), $("#bcheveron-right"))
-                        .setOverscrollElements("#left-elastic", $("#right-elastic"), $("#elastic-filler"))
+                        .setOverscrollElements($("#left-elastic"), $("#right-elastic"), $("#elastic-filler"))
+                        .setParams({inertiaAnimationDurationMillis:1000})
+                        .build();
+                } catch (e) {
+                    console.error("Error creating scroller: " + e, e.stack);
+                }
+            }
+
+            function renderParts(module, shape, example) {
+                var partsNames = Object.keys(example.parts_model_files);
+                var partList = $("#part-list");
+                partList.remove();
+                if (partsNames.length == 0) {
+                    return;
+                }
+                $(".part-list-container").append("<div id=\"part-list\">")
+                partList = $("#part-list");
+                $(".part-menu-element").remove();
+                partList.append("<div class=\"elastic-element align-vertical\" id=\"part-left-elastic\"></div>");
+
+                partsNames.sort().forEach(partName => {
+                    var partData = example.parts_model_files[partName];
+                    const partItem = $("<div>").addClass("part-menu-element").addClass("align-vertical").click(() => {
+                        renderPartDetails(module, example, shape, partData, $(".model-details"));
+                    });
+                    if (partData.png_file) {
+                        partItem.css("background-image", `url(/${partData.png_file})`);
+                    } else {
+                        partItem.addClass("text-wrap");
+                        partItem.text(shape.class_name + '\n' + example.example_name + '\n' + partName);
+                    }
+                    partList.append(partItem);
+                });
+                
+                partList.append("<div class=\"elastic-filler-element align-vertical\" id=\"part-elastic-filler\"></div>");
+                partList.append("<div class=\"elastic-element align-vertical\" id=\"part-right-elastic\"></div>");
+
+                try {
+                    scroller = new ScrollingElementBuilder()
+                        .setScrollingElement(".part-list-container")
+                        .setMenuItemsContainer($("#part-list"))
+                        .setMenuItems($(".part-menu-element"))
+                        .setChevronElements($("#bcheveron-left"), $("#bcheveron-right"))
+                        .setOverscrollElements($("#part-left-elastic"), $("#part-right-elastic"), $("#part-elastic-filler"))
                         .setParams({inertiaAnimationDurationMillis:1000})
                         .build();
                 } catch (e) {
@@ -321,6 +400,7 @@
             }
 
             function renderModelDetails(module, shape, example, details) {
+                renderParts(module, shape, example);
                 details.empty();
                 details.append(`<h3>${module.module_name}.${shape.class_name}.${example.example_name}</h3>`);
 
