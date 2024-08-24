@@ -306,6 +306,8 @@
             function renderModels(module) {
                 const shapeResults = module.shape_results;
                 clearModelDetails();
+                var partList = $("#part-list");
+                partList.remove();
                 var modelList = $("#model-list");
                 modelList.remove();
                 $(".model-list-container").append("<div id=\"model-list\">")
