@@ -2885,7 +2885,7 @@ class ExampleCommandLineRenderer():
     def parts_writer(self, parts: Dict[str, Any], clz, example_name, base_example_name):
         if self.argp.write_part_files:
             for part_name, obj in parts.items():
-                part_name_sanitized = sanitize_name(part_name)
+                part_name_sanitized = 'part-' + sanitize_name(part_name)
                 fname = self.argp.part_out_file_name.format(
                     class_name=clz.__name__, example=example_name, part=part_name_sanitized)
                 path = pathlib.Path(fname)
