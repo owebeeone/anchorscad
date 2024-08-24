@@ -286,15 +286,13 @@ class ComparisonResult:
 
 def compare_file_contents(file1, file2, args) -> ComparisonResult:
     '''Compare the contents of two files.'''
+
     if file1.endswith('.scad') and file2.endswith('.scad'):
-
-
-        if file1.endswith('.scad') and file2.endswith('.scad'):
-            difference = compare_scad_files(file1, file2, args.epsilon)
-            return ComparisonResult(difference is None, difference)
-        else:
-            are_equal = filecmp.cmp(file1, file2, shallow=False)
-            return ComparisonResult(are_equal)
+        difference = compare_scad_files(file1, file2, args.epsilon)
+        return ComparisonResult(difference is None, difference)
+    else:
+        are_equal = filecmp.cmp(file1, file2, shallow=False)
+        return ComparisonResult(are_equal)
         
 def to_png_file_name(file_name):
     '''Convert a file name to a PNG file name.'''
@@ -615,11 +613,16 @@ def main():
     return 0
 
 if __name__ == '__main__':
+    # args = ['--dir1', 'generated-dev-fobm-pmc', 
+    #     '--dir2', 'generated-dev-fobm',
+    #     '--suffixes', '.scad', '.png', 
+    #     '--epsilon', '1e-8', 
+    #     '--gen-diff-image']
     # args = ['--dir1', 'generated.tess1', 
     #         '--dir2', 'generated.master',
     #         '--suffixes', '.scad', 
     #         '--epsilon', '1e-8', 
     #         '--gen-diff-image']
     # args = ['--serve_diff_output_dir', 'generated.master-tess1',]
-    # sys.argv = [sys.argv[0]] + args
+    #sys.argv = [sys.argv[0]] + args
     exit(main())

@@ -157,7 +157,7 @@ class ExampleRunner:
             sanitized_part_name=None) -> Tuple[
                 str, Union[rs.RunnerExampleResults, rs.RunnerExamplePartResults], str]:
         if sanitized_part_name:
-            part_name_addl = f'_{sanitized_part_name}'
+            part_name_addl = f'_{str(sanitized_part_name)}'
         else:
             part_name_addl = ''
         rel_filename = self.out_file_format.format(
@@ -177,8 +177,7 @@ class ExampleRunner:
         # If we get a sanitized part name, we are dealing with a part so we need to 
         # add the part to the parts_model_files list.
         if sanitized_part_name:
-            result = rs.RunnerExamplePartResults()
-            runner_example.parts_model_files.append([sanitized_part_name, result])
+            result = runner_example.parts_model_files[sanitized_part_name]
         else:
             result = runner_example
         

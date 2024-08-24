@@ -183,6 +183,6 @@ def main():
     return 0
 
 if __name__ == '__main__':
-    #args = ['--generated_dir', 'generated.master1']
+    #args = ['--generated_dir', 'generated-dev-fobm-pmc']
     #sys.argv = [sys.argv[0]] + args
     exit(main())
