@@ -3,9 +3,7 @@ Created on 8 Jan 2021
 
 @author: gianni
 '''
-from textwrap import indent
 
-from anchorscad.extrude import LinearExtrude
 from anchorscad.extrude_flex import make_offset_polygon2d, PathOffsetMaker
 import anchorscad.svg_renderer as sr
 import numpy as np
@@ -66,7 +64,7 @@ class ExtrudeTest(TestCase):
         iterable_assert(self.assertAlmostEqual, expected, points)
 
         node = path.get_node('curve')
-        assert not node is None
+        assert node is not None
 
         iterable_assert(self.assertAlmostEqual, node.extents(),
                         [[0., -0.28], [0.75, 1]])
@@ -292,14 +290,14 @@ class ExtrudeTest(TestCase):
                          [0.,  0.,  0.,  1.]])
 
     def test_find_a_b_c_from_point_tangent(self):
-        l, p, t = extrude.find_a_b_c_from_point_tangent([10, 0], [-20, 20])
-        expect_0 = l[0] * p[0] + l[1] * p[1] - l[2]
+        d, p, t = extrude.find_a_b_c_from_point_tangent([10, 0], [-20, 20])
+        expect_0 = d[0] * p[0] + d[1] * p[1] - d[2]
         self.assertAlmostEqual(expect_0, 0)
         k = 1
-        expect_0 = l[0] * (p[0] + k * t[0]) + l[1] * (p[1] + k * t[1]) - l[2]
+        expect_0 = d[0] * (p[0] + k * t[0]) + d[1] * (p[1] + k * t[1]) - d[2]
         self.assertAlmostEqual(expect_0, 0)
         k = -1
-        expect_0 = l[0] * (p[0] + k * t[0]) + l[1] * (p[1] + k * t[1]) - l[2]
+        expect_0 = d[0] * (p[0] + k * t[0]) + d[1] * (p[1] + k * t[1]) - d[2]
         self.assertAlmostEqual(expect_0, 0)
 
     def test_solve_circle_tangent_point(self):

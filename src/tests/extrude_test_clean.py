@@ -5,7 +5,6 @@ from unittest import TestCase
 from test_tools import iterable_assert
 import anchorscad as ad
 import anchorscad.extrude as extrude
-from dataclasses import dataclass
 
 
 TEST_META_DATA = ad.EMPTY_ATTRS.with_fn(10)

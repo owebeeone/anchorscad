@@ -6,7 +6,7 @@ for matrix, transform and vector strings.
 
 from anchorscad import GMatrix, GVector, datatree, dtfield
 
-from typing import List, Union
+from typing import Union
 import re
 import numpy as np
 

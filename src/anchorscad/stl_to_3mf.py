@@ -190,7 +190,7 @@ def stl_to_model_group(stl_files):
         stl_mesh = Mesh.from_file(stl_file)
         
         # Create a model ID from the stl file name, removing everything but the base name.
-        stl_base_name = os.path.basename(stl_file)
+        stl_base_name = os.path.basename(stl_file)  # noqa: F841
         
         # Dedupe the verticies and get the tri_map.
         verticies, trimap = dedupe_verticies(stl_mesh.v0, stl_mesh.v1, stl_mesh.v2)

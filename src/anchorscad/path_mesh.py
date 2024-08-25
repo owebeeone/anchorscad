@@ -1,7 +1,6 @@
 from dataclasses import dataclass, field
 import numpy as np
-from typing import Union, List, Tuple
-from collections import defaultdict
+from typing import List, Tuple
 
 
 def closest_points(points1: np.array, points2: np.array) \
@@ -182,7 +181,7 @@ class _TesselatorHelperSide:
             return tuple(correct_circular_sequence((incoming[0], closest), n))
         
         # Include the closest point if it is not already included.
-        if not closest in incoming:
+        if closest not in incoming:
             # Use the correct_circular_sequence to make sure the sequence is consistent.
             incoming = correct_circular_sequence(tuple(incoming) + (closest,), n)
         
@@ -247,7 +246,6 @@ class _TesselatorHelperSide:
         return 1
     
     def set_fixed_range(self, i: int, r: Tuple[int, int]) -> None:
-        was = self.fixed_ranges[i]
         self.fixed_ranges[i] = r
         
     def detect_crossover(self, idx: int) -> None:

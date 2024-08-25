@@ -19,7 +19,6 @@ from anchorscad.path_utils import remove_colinear_points
 import numpy as np
 import traceback as tb
 import numbers
-import math
 import manifold3d as m3d
 
 
@@ -94,10 +93,10 @@ def _vlen(v):
     return np.sqrt(np.sum(v**2))
 
 def _normalize(v):
-    l = _vlen(v)
-    if l == 0:
+    d = _vlen(v)
+    if d == 0:
         raise ValueError('Cannot normalize a zero length vector.')
-    return v / l
+    return v / d
 
 def extentsof(p):
     return np.array((p.min(axis=0), p.max(axis=0)))
@@ -163,7 +162,7 @@ class CubicSpline():
             
             return (t,) if  t >= t_range[0] and t <= t_range[1] else ()
     
-        b2_4ac = b * b - 4 * a * c;
+        b2_4ac = b * b - 4 * a * c
         if b2_4ac < 0:
             # Complex roots - no answer.
             return ()
@@ -204,8 +203,8 @@ class CubicSpline():
         '''Returns the normal to the curve at t for the 2 given dimensions.'''
         d = self.derivative(t)
         vr = np.array([d[dims[1]], -d[dims[0]]])
-        l = np.sqrt(np.sum(vr**2))
-        return vr / l
+        d = np.sqrt(np.sum(vr**2))
+        return vr / d
     
     def extremes(self):
         roots = self.curve_maxima_minima_t()
@@ -326,8 +325,8 @@ class QuadraticSpline():
         '''Returns the normal to the curve at t for the 2 given dimensions.'''
         d = self.derivative(t)
         vr = np.array([d[dims[1]], -d[dims[0]]])
-        l = np.sqrt(np.sum(vr**2))
-        return vr / l
+        d = np.sqrt(np.sum(vr**2))
+        return vr / d
     
     def extremes(self):
         roots = self.curve_maxima_minima_t()
@@ -367,8 +366,8 @@ def _normal_of_2d(v1, v2, dims=[0, 1]):
     vr = np.array(v1)
     vr[dims[0]] = v1[dims[1]] - v2[dims[1]]
     vr[dims[1]] = v2[dims[0]] - v1[dims[0]]
-    l = np.sqrt(np.sum(vr * vr))
-    return vr / l
+    d = np.sqrt(np.sum(vr * vr))
+    return vr / d
 
 def adder(a, b):
     if a is None:
@@ -394,16 +393,13 @@ class OpBase(ABC):
     def _as_non_defaults_dict(self):
         return dict((k, getattr(self, k)) 
                     for k in self.__annotations__.keys() 
-                        if not getattr(self, k) is None and k != 'prev_op')
+                        if getattr(self, k) is not None and k != 'prev_op')
         
     def is_move(self):
         return False
-
-    def transform(self, m):
-        raise NotImplemented('Derived class must implement this.')
     
     def render_as_svg(self, svg_model):
-        raise NotImplemented('Derived class must implement this.')
+        raise NotImplementedError('Derived class must implement this.')
     
     def get_centre(self):
         '''Returns the centre of the operation, if the operation has a centre.'''
@@ -874,10 +870,7 @@ class Path():
                 # otherise it will return an empty cross section since it is deemed to be a hole.
                 # TODO: Fix AnchorSCAD to handle multiple paths correctly.
                 cs = m3d.CrossSection([points[0][::-1]])
-                assert not cs.is_empty(), f'Empty cross section should not happen.'
-                order_reversed = True
-            else:
-                order_reversed = False
+                assert not cs.is_empty(), 'Empty cross section should not happen.'
             
             num_segments = meta_data.fn \
                 if self.path_modifier.circular_segments is None \
@@ -1025,13 +1018,13 @@ def find_a_b_c_from_point_tangent(p, t):
     b = -tn[0]
     c = np.linalg.det([p, tn])
     
-    l = np.array([a, b, c])
+    d = np.array([a, b, c])
     if a < 0:
-        l = -l
+        d = -d
     elif a == 0 and b < 0:
-        l = -l
+        d = -d
         
-    return l, p, t
+    return d, p, t
 
 def find_2d_line_intersection(l1, l2):
     '''Finds the point of intersection of l1 and l2. l1 and l2 are 3x1 quantities
@@ -1314,7 +1307,7 @@ class PathBuilder():
         def __post_init__(self):
             assert self.path_modifier is not MISSING_PATH_MODIFIER, 'path_modifier must be set.'
             self.point.setflags(write=False)
-            if not (self.dir is None):
+            if self.dir is not None:
                 self.dir.setflags(write=False)
             
         def lastPosition(self):
@@ -1673,8 +1666,8 @@ class PathBuilder():
         
     def move(self, point, name=None, direction=None):
         if not self.multi and self.ops:
-            raise MoveNotAllowedException(f'Move is not allowed in non multi-path builder.')
-        if not direction is None:
+            raise MoveNotAllowedException('Move is not allowed in non multi-path builder.')
+        if direction is not None:
             direction = np.array(LIST_2_FLOAT(direction))
         return self.add_op(self._MoveTo(np.array(LIST_2_FLOAT(point)),
                                         dir=direction,
@@ -1691,7 +1684,7 @@ class PathBuilder():
                 calculated from the previous point.
         '''
         assert len(self.ops) > 0, "Cannot line to without starting point"
-        if not (direction_override is None):
+        if direction_override is not None:
             direction_override = np.array(LIST_2_FLOAT(point))
     
         return self.add_op(self._LineTo(np.array(LIST_2_FLOAT(point)), 
@@ -1794,9 +1787,9 @@ class PathBuilder():
     def _rotate_n(self, direction: l.GVector, degrees: Tuple[float],
                   radians: Tuple[float], sinr_cosr: Tuple[float, float], xform: Tuple[l.GMatrix],
                   size: int, ) -> List[l.GVector]:
-        l = size if size else max(len(degrees), len(radians), len(sinr_cosr), len(xform))
+        d = size if size else max(len(degrees), len(radians), len(sinr_cosr), len(xform))
         directions = []
-        for i in range(l):
+        for i in range(d):
             v_degress = degrees[i] if len(degrees) > i else None
             v_radians = radians[i] if len(radians) > i else None
             v_sinr_cosr = sinr_cosr[i] if len(sinr_cosr) > i else None
@@ -1935,9 +1928,9 @@ class PathBuilder():
             cv1 = points[0]
             cv2 = points[1]
             cv3 = points[2]
-        if not rel_len is None:
-            l = np.sqrt(np.sum((cv0 - cv3)**2))
-            cv_len = tuple(rel_len * l if v is None else v * l * rel_len for v in cv_len)
+        if rel_len is not None:
+            d = np.sqrt(np.sum((cv0 - cv3)**2))
+            cv_len = tuple(rel_len * d if v is None else v * d * rel_len for v in cv_len)
         cv1 = self.squeeze_and_rot(cv0, cv1, cv_len[0], degrees[0], radians[0])
         cv2 = self.squeeze_and_rot(cv3, cv2, cv_len[1], degrees[1], radians[1])
         
@@ -1982,9 +1975,9 @@ class PathBuilder():
         if sweep_angle_radians is None:
             sweep_angle_radians = sweep_angle_degrees * np.pi / 180
         
-        if not sweep_sinr_cosr is None:
+        if sweep_sinr_cosr is not None:
             sin_sweep, cos_sweep = sweep_sinr_cosr
-            assert not sweep_direction is None, 'If sweep_sinr_cosr is specified a ' \
+            assert sweep_direction is not None, 'If sweep_sinr_cosr is specified a ' \
                 'sweep_direction must also be specified.'
             path_direction = sweep_direction
         else:
@@ -2051,7 +2044,7 @@ class PathBuilder():
         if centre is None:
             raise UnableToFitCircleWithGivenParameters(
                 f'Unable to fit circle, radius={radius}, start={start} last={last}.')
-        if direction == None:
+        if direction is None:
             direction = not is_left
         return self.add_op(self._ArcTo(last,
                                        centre,
@@ -2077,7 +2070,7 @@ class PathBuilder():
         
         # The direction should mean that the middle position traversed before last position.
         path_direction = True
-        if not direction is None:
+        if direction is not None:
             path_direction = direction
         elif middle_delta < 0:
             if end_delta < 0:
@@ -2142,7 +2135,7 @@ class PathBuilder():
         gpoint = l.GVector(LIST_3_FLOAT(point))
         gcontrol = l.GVector(LIST_3_FLOAT(control))
         g_rel = (gcontrol - gpoint)
-        if not cv_len is None and g_rel.length() > EPSILON:
+        if cv_len is not None and g_rel.length() > EPSILON:
             g_rel = g_rel.N * cv_len
 
         if radians:
@@ -2268,8 +2261,8 @@ class PolyhedronBuilder:
         
     def make_two_ended(self, transforms, direction=True):
         first_offs, last_offs = self.add_sequence(transforms, direction)
-        self.add_end_face(first_offs, True == direction)
-        self.add_end_face(last_offs, False == direction)
+        self.add_end_face(first_offs, direction)
+        self.add_end_face(last_offs, not direction)
 
     def make_loop(self, transforms, direction):
         first_offs, last_offs = self.add_sequence(transforms, direction)
@@ -2309,12 +2302,12 @@ class PathGenerator:
     def get_r_generator(self, metadata):
         '''Returns an iterable for the 'r' value, a value between 0 and 1 that
         describes how far along the extrusion the path is.'''
-        raise NotImplemented
+        raise NotImplementedError
     
     def get_polygons_at(self, r):
         '''Returns the 'polygons' (the result of Path.polygons()) for a given r
         where r is between 0 and 1.'''
-        raise NotImplemented
+        raise NotImplementedError
 
 
 @datatree
@@ -2692,7 +2685,7 @@ class LinearExtrude(ExtrudedShape):
                            applied to the position. This provides an easy way to align
                            the anchor to the base Path of the extrusion.
         '''
-        if not rh is None:
+        if rh is not None:
             h = h + rh * self.h
         op = self.path.name_map.get(path_node_name)
         if not op:
@@ -2976,28 +2969,6 @@ class RotateExtrude(ExtrudedShape):
                 # core.surface_args('azimuth', 'curve2', az_angle=-45, degrees=120),
                 # core.surface_args('azimuth', 'curve2', az_angle=45, t_end=True, degrees=120),
                 )),
-        'arc_azimuth2': core.ExampleParams(
-            shape_args=core.args(
-                PathBuilder()
-                    .move([0, _SCALE * 25])
-                    .line([_SCALE * 25, _SCALE * 25], 'linear1')
-                    .arc_tangent_point([_SCALE * 25, _SCALE * 50], name='curve1')
-                    .arc_tangent_point([_SCALE * 25, _SCALE * -50], degrees=180, name='curve2')
-                    .arc_tangent_point([_SCALE * 25, _SCALE * -25], degrees=180, name='curve3')
-                    .line([0, _SCALE * -25], 'linear2')
-                    .line([0, _SCALE * 25], 'linear3')
-                    .build(),
-                degrees=120,
-                fn=80,
-                use_polyhedrons=False
-                ),
-            anchors=(
-                core.surface_args('linear1', 0.5, 0),
-                # core.surface_args('azimuth', 'curve1', az_angle=45, degrees=120),
-                # core.surface_args('azimuth', 'curve1', az_angle=-45, t_end=True, degrees=120),
-                # core.surface_args('azimuth', 'curve2', az_angle=-45, degrees=120),
-                # core.surface_args('azimuth', 'curve2', az_angle=45, t_end=True, degrees=120),
-                )),
         'offset_ex': core.ExampleParams(
             description='An example of using the offset modifier with a Path containing a '
                         'variety of primitive segments.',
@@ -3129,8 +3100,8 @@ class RotateExtrude(ExtrudedShape):
         return renderer
 
     def to_3d_from_2d(self, vec_2d, angle=0., degrees=0, radians=None):
-        return l.rotZ(
-            degrees=degrees, radians=radians) * l.rotX(90) * l.GVector([vec_2d[0], vec_2d[1], 0])
+        return l.rotZ(degrees=degrees, radians=radians, angle=angle
+            ) * l.rotX(90) * l.GVector([vec_2d[0], vec_2d[1], 0])
     
     def _z_radians_scale_align(self, rel_h, twist_vector):
         xelipse_max = self.scale[0] * rel_h + (1 - rel_h)

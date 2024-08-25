@@ -468,7 +468,7 @@ class Container():
             
             try:
                 len(solids)
-            except:
+            except:  # noqa: E722
                 print(f'Error: solids is not a list: {solids}')
                 solids = [solids]
             
@@ -770,7 +770,7 @@ class Context():
         '''Returns the last attributes in the stack or an empty one.'''
         if self.stack:
             attrs = self.stack[-1].attributes
-            if not attrs is None:
+            if attrs is not None:
                 return attrs
         return core.EMPTY_ATTRS
     
@@ -778,7 +778,7 @@ class Context():
         '''Returns the last part-material-colour in the stack or an empty one.'''
         if self.stack:
             mapped_attributes: core.ModelAttributes = self.stack[-1].mapped_attributes
-            if not mapped_attributes is None:
+            if mapped_attributes is not None:
                 return mapped_attributes
         return core.EMPTY_ATTRS
         

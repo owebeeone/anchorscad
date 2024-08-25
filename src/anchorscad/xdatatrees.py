@@ -176,7 +176,7 @@ class XmlObjectBuilder:
         return qname.localname
     
     def _add_entry(self, name: str, value: Any, container_factory: FunctionType):
-        if not name in self.result_dict:
+        if name not in self.result_dict:
             if container_factory is None:
                 self.result_dict[name] = value
             else:
@@ -190,7 +190,7 @@ class XmlObjectBuilder:
             else:
                 try:
                     self.result_dict[name].append(value)
-                except TooManyValuesError as e:
+                except TooManyValuesError:
                     raise TooManyValuesError(
                         f'In element {self.get_element_name()}, '
                         f'multiple attributes named {name} exist, only one allowed.')
@@ -258,7 +258,7 @@ class XmlParserSpec:
         xml_name = field_spec.get_xml_name()
         
         current_spec = specs.get(xml_name, None)
-        if not current_spec is None:
+        if current_spec is not None:
             raise ValueError(
                 f'In element {field_spec.get_field_name()}, '
                 f'{field_spec.xml_name} is already defined as an attribute by '
@@ -395,7 +395,7 @@ def get_xml_path(xml_element: etree.ElementBase) -> str:
     root = xml_element.getroottree().getroot()
     nsmap = root.nsmap
     path = [make_xml_name_from(xml_element.tag, nsmap)]
-    while not xml_element is root:
+    while xml_element is not root:
         xml_element = xml_element.getparent()
         path.append(make_xml_name_from(xml_element.tag, nsmap))
     return '/'.join(reversed(path))
@@ -504,7 +504,7 @@ class _XFieldParams:
         '''Create a new instance of this class with the passed in values
         overriding the values in this instance.'''
         
-        if not xmlns is UNSPECIFIED:
+        if xmlns is not UNSPECIFIED:
             if exmlns is UNSPECIFIED:
                 exmlns = xmlns
             if axmlns is UNSPECIFIED:
@@ -559,7 +559,7 @@ class _XFieldParams:
         other_params = kwds
         if not other_params:
             other_params = self.other_params
-        elif not self.other_params is UNSPECIFIED:
+        elif self.other_params is not UNSPECIFIED:
             # Override individual entries in self.other_params with kwds.
             other_params = {**self.other_params, **other_params}
             
@@ -650,7 +650,7 @@ class _Attribute(XmlDataType):
             python_field_name: str,
             field_config: _XFieldParams):
         # The name has been specified, no transform is required.
-        if not field_config.aname in UNSPECIFIED_OR_NONE:
+        if field_config.aname not in UNSPECIFIED_OR_NONE:
             return field_config.aname, field_config.axmlns
         
         # attribute names are based on the python field name.
@@ -689,7 +689,7 @@ class _Element(XmlDataType):
             python_field_name: str,
             field_config: _XFieldParams):
         # attribute names are based on the python field name.
-        if not field_config.ename in UNSPECIFIED_OR_NONE:
+        if field_config.ename not in UNSPECIFIED_OR_NONE:
             return field_config.ename, field_config.exmlns
         
         # attribute names are based on the python field name.
@@ -819,7 +819,7 @@ def xfield(ftype: 'XmlDataType' = UNSPECIFIED,
     invalid_params = set(kwargs.keys()).difference(_ALLOWED_XFIELD_PARAMS)
     assert not invalid_params, f'xfield Invalid parameters {invalid_params}'
 
-    if not xmlns is UNSPECIFIED:
+    if xmlns is not UNSPECIFIED:
         if exmlns is UNSPECIFIED:
             exmlns = xmlns
         if axmlns is UNSPECIFIED:
@@ -878,14 +878,11 @@ def _get_field_as_params(current_field_value: Field) \
     is a _XFieldParams, that as well.
     '''
     
-    if new_default_value is UNSPECIFIED:
-        new_default_value = None
-    
     all_values = (
         (fname, getattr(current_field_value, fname, MISSING)) 
             for fname in _ALLOWED_XFIELD_PARAMS)
     
-    curr_values = dict((k, v) for k, v in all_values if not v is MISSING)
+    curr_values = dict((k, v) for k, v in all_values if v is not MISSING)
     
     default_value = curr_values.get('default', UNSPECIFIED)
     if isinstance(default_value, _XFieldParams):
@@ -955,9 +952,9 @@ def _get_collector_type(annotation: Any) -> Tuple[type, bool]:
                 if not isinstance(item, self.CONTAINED_TYPE):
                     item = self.CONTAINED_TYPE(item)
                     
-                if not self.value is UNSPECIFIED:
+                if self.value is not UNSPECIFIED:
                     raise TooManyValuesError(
-                        f'Cannot speficy multiple values for')
+                        'Cannot speficy multiple values for')
                 self.value = item
                 
             def get(self):

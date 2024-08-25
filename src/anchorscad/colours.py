@@ -215,7 +215,7 @@ class Colour:
             if rgb is None and corr.startswith('#'):  # hex color
                 rgb = self.parse_hex_color(corr)
             assert rgb is not None, f'Colour {corr} not found'
-            if not g is None and a is None and len(rgb) == 3:
+            if g is not None and a is None and len(rgb) == 3:
                 # Assume g is alpha
                 a , g = g, a
             assert g is None and b is None, \
@@ -231,7 +231,7 @@ class Colour:
             # All entries should be numbers.
             assert all(isinstance(v, numbers.Number) for v in rgb), \
                 'All entries must be numbers'
-            if not g is None and a is None and len(rgb) == 3:
+            if g is not None and a is None and len(rgb) == 3:
                 # Assume g is alpha
                 a , g = g, a
             assert len(rgb) >= 3, 'RGB tuple must have 3 or 4 elements'

@@ -61,7 +61,7 @@ complex relationships that require a large number of parameters.
 '''
 
 from dataclasses import dataclass, field, Field, MISSING
-from typing import AbstractSet, Any, List, Dict
+from typing import List, Dict
 from frozendict import frozendict
 from sortedcollections import OrderedSet
 from types import FunctionType
@@ -247,7 +247,7 @@ def dtfield(default=MISSING, doc=None, self_default=None, init=MISSING, **kwargs
     metadata = kwargs.pop('metadata', {})
     metadata[METADATA_DOCS_NAME] = FieldMetadata(doc)
     if self_default:
-        if not default is MISSING:
+        if default is not MISSING:
             raise SpecifiedMultipleDefaults(
                 'Cannot specify default and self_default.')
         default = BindingDefault(self_default)
@@ -359,7 +359,7 @@ class Node:
             # Add all the fields not already specified.
             all_fields = _OrderedSet(name
                              for name in init_fields
-                             if name != OVERRIDE_FIELD_NAME and not name in exclude)
+                             if name != OVERRIDE_FIELD_NAME and name not in exclude)
             fields_specified = _OrderedSet(fields_specified).union(
                 all_fields - all_specified)
 
@@ -381,7 +381,7 @@ class Node:
                     to_id = from_id
                 else:
                     to_id = prefix + from_id + suffix
-                if not from_id in init_fields:
+                if from_id not in init_fields:
                     raise MappedFieldNameNotFound(
                         f'Field name "{from_id}" is not an '
                         f'{clz_or_func.__name__}.__init__ parameter name')
@@ -395,7 +395,7 @@ class Node:
             for map_specified in maps_specified:
                 # The dictionary has a set of from:to pairs.
                 for from_id, to_id in map_specified.items():
-                    if not from_id in init_fields:
+                    if from_id not in init_fields:
                         raise MappedFieldNameNotFound(
                             f'Field name "{from_id}" mapped to "{to_id}" '
                             f'is not an {clz_or_func.__name__}.__init__ parameter name')
@@ -409,7 +409,7 @@ class Node:
 
             for from_id in fields_specified:
                 to_id = prefix + from_id + suffix
-                if not from_id in init_fields:
+                if from_id not in init_fields:
                     raise MappedFieldNameNotFound(
                         f'Field name "{from_id}" is not an '
                         f'{clz_or_func.__name__}.__init__ parameter name')
@@ -423,7 +423,7 @@ class Node:
             for map_specified in maps_specified:
                 # The dictionary has a set of from:to pairs.
                 for from_id, to_id in map_specified.items():
-                    if not from_id in init_fields:
+                    if from_id not in init_fields:
                         raise MappedFieldNameNotFound(
                             f'Field name "{from_id}" mapped to "{to_id}" '
                             f'is not an {clz_or_func.__name__}.__init__ parameter name')
@@ -567,7 +567,7 @@ class InjectedFields:
                     next_level = get_injected_fields(source.node.clz_or_func.clz_or_func)
                     if source.node_field_name in next_level.injections:
                         nested_table_content = _html_row(source.node_field_name, next_level.injections[source.node_field_name], True)
-                rows += (f"""
+                rows += ("""
                 <tr>
                 """
                 +
@@ -708,7 +708,7 @@ def _apply_node_fields(clz):
                 if rev_map_name is None:
                     continue  # Skip fields mapped to None, these are not injected.
                 anno_detail = anno_detail_tuple[0]
-                if not rev_map_name in new_annos:
+                if rev_map_name not in new_annos:
                     new_annos[rev_map_name] = anno_detail.anno_type
                     if not hasattr(clz, rev_map_name):
                         field_default, node_default = _make_dataclass_field(
@@ -726,7 +726,7 @@ def _apply_node_fields(clz):
     for bclz in clz.__mro__[-1:0:-1]:
         bnodes = getattr(bclz, DATATREE_SENTIENEL_NAME, {})
         for name, val in bnodes.items():
-            if not name in nodes:
+            if name not in nodes:
                 nodes[name] = val
 
     setattr(clz, DATATREE_SENTIENEL_NAME, nodes)
@@ -768,12 +768,12 @@ class BoundNode:
         ovrde = (node.parent.override.get_override(node.name)
                  if node.parent.override
                  else MISSING)
-        if not ovrde is MISSING:
+        if ovrde is not MISSING:
             ovrde_bind = ovrde.bind_signature(
                 node.node.init_signature)
 
             for k, v in passed_bind.items():
-                if not k in ovrde_bind:
+                if k not in ovrde_bind:
                     ovrde_bind[k] = v
 
             if ovrde.clazz:
@@ -785,7 +785,7 @@ class BoundNode:
         # Pull any values left from the parent or, as a final resort,
         # the alt_defaults object.
         for fr, to in node.node.expose_map.items():
-            if not fr in ovrde_bind:
+            if fr not in ovrde_bind:
                 val = getattr(node.parent, to)
                 if (val is None
                     and ((alt_default_allow_set is None)
@@ -898,7 +898,7 @@ def _process_datatree(clz, init, repr, eq, order, unsafe_hash, frozen,
     if hasattr(clz, '__post_init__'):
         post_init_func = getattr(clz, '__post_init__')
         if not hasattr(post_init_func, '__is_datatree_override_post_init__'):
-            if not post_init_func in post_init_chain:
+            if post_init_func not in post_init_chain:
                 post_init_chain[post_init_func] = None
 
     clz.__post_init_chain__ = tuple(post_init_chain.keys())

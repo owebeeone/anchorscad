@@ -22,6 +22,7 @@ import datetime
 import time
 import urllib.parse
 import json
+import socket
 
 
 # The HTML to return for the index page.
@@ -261,8 +262,6 @@ class ThreadedHTTPServer(socketserver.ThreadingMixIn, http.server.HTTPServer):
         super().__init__(server_address, RequestHandlerClass)
         self.last_modified_time = 0
 
-
-import socket
 
 def find_free_port(start_port=8080):
     port = start_port

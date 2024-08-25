@@ -4,7 +4,6 @@ Created on 26 Sept 2022
 @author: gianni
 '''
 
-from importlib.metadata import metadata
 import numpy as np
 import anchorscad.linear as l
 import anchorscad.datatrees as dt
@@ -106,7 +105,7 @@ class SvgPathRenderer(object):
     def splineto(self, points, name, trace=None):
         last_path, last_pos = self._set_last_position(points[2])
         self._builder.append(
-            f'C ' + ' '.join(f'{p[0]:G} {p[1]:G}' for p in points))
+            'C ' + ' '.join(f'{p[0]:G} {p[1]:G}' for p in points))
         points = (last_pos, points[0], points[1], points[2])
         seg = Segment(name=name, trace=trace, shape_type='splineto',
                       path=last_path + self._builder[-1], points=points)
@@ -115,7 +114,7 @@ class SvgPathRenderer(object):
     def qsplineto(self, points, name, trace=None):
         last_path, last_pos = self._set_last_position(points[1])
         self._builder.append(
-            f'Q ' + ' '.join(f'{p[0]:G} {p[1]:G}' for p in points))
+            'Q ' + ' '.join(f'{p[0]:G} {p[1]:G}' for p in points))
         points = (last_pos, points[0], points[1])
         seg = Segment(name=name, trace=trace, shape_type='splineto',
                       path=last_path + self._builder[-1], points=points)
@@ -250,7 +249,7 @@ class SvgGraduationRenderer(object):
 
         def add_text(grads):
             grads.append(
-                f'<text text-anchor="end" transform='
+                '<text text-anchor="end" transform='
                 + f'"translate({st[0]:G} {st[1]:G}) rotate({angle}) scale(1, -1)">{v:G}</text>')
 
         for d, od, angle, sign in ((0, 1, 270, -1), (1, 0, 0, 1)):

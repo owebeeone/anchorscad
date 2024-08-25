@@ -127,7 +127,6 @@ class SlicerProjectModel:
             for filename, content in self.metafiles.items():
                 zipfile.writestr(filename, content)
             
-            modelFilenames = {}
             for objectid, model in self.models.items():
                 zipfile.writestr(filename, model.xml_3mf_content)
 

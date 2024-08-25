@@ -10,7 +10,7 @@ import re
 try:
     import graphviz
     _graphviz_imported = True
-except:
+except:  # noqa: E722
     _graphviz_imported = False
     
 _num = 0
@@ -32,8 +32,8 @@ class Node:
         return f'{self.get_id()} [label="{self.get_label()}"];'
     
     def get_label(self):
-        l = str(self.label)
-        return re.escape(l)
+        lbl = str(self.label)
+        return re.escape(lbl)
     
     def get_clazz_name(self):
         if not self.clazz_name:

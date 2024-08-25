@@ -5,13 +5,10 @@ Created on 5 Feb 2021
 '''
 
 
-from dataclasses import dataclass
 import unittest
 
 import anchorscad as ad
 import anchorscad.extrude as extrude
-import anchorscad.linear as l
-from anchorscad.renderer import render
 from tests.test_tools import iterable_assert
 import numpy as np
 

@@ -26,7 +26,7 @@ from anchorscad.colours import Colour
 from anchorscad.svg_renderer import HtmlRenderer
 import numpy as np
 import pythonopenscad as posc
-from typing import Any, Hashable, Dict, Tuple, Optional, Union
+from typing import Any, Hashable, Dict, Tuple, Union
 
 
 class CoreEception(Exception):
@@ -156,7 +156,7 @@ class AnchorArgs():
     def apply(self, maker):
         result = apply_at_args(
             maker, *self.args_[1][0], **self.args_[1][1])
-        if not self.scale_anchor is None:
+        if self.scale_anchor is not None:
             result = result * l.scale(self.scale_anchor)
         return result
     
@@ -445,7 +445,7 @@ class ModelAttributes(object):
     
     def _as_non_defaults_dict(self) -> Dict[str, object]:
         return dict((k, getattr(self, k)) 
-                    for k in self.__annotations__.keys() if not getattr(self, k) is None)
+                    for k in self.__annotations__.keys() if getattr(self, k) is not None)
     
     def _with(self, **kwds):
         return replace(self, **kwds)  # datatree replace
@@ -611,7 +611,7 @@ class NamedShapeBase(object):
 
     def _as_non_defaults_dict(self):
         return dict((k, getattr(self, k)) 
-                    for k in self.__annotations__.keys() if not getattr(self, k) is None)
+                    for k in self.__annotations__.keys() if getattr(self, k) is not None)
     
     def _with(self, **kwds):
         return replace(self, **kwds)  # datatree replace
@@ -1042,7 +1042,7 @@ class Shape(ShapeNamer, ShapeMaker):
             repr(s) for s in cls.get_extended_example_keys() if not isinstance(s, str))
         assert not non_str_keys, (f'Shpae examples in "{cls.__name__}" contains non string keys: '
                                   f'{non_str_keys}. Recast these to strings.')
-        assert not 'default' in cls.get_extended_example_keys(), (f'Shpae examples in "{cls.__name__}" '
+        assert 'default' not in cls.get_extended_example_keys(), (f'Shpae examples in "{cls.__name__}" '
                                                         f'must not contain key "default".')
         return ('default',) + tuple(cls.get_extended_example_keys())
     
@@ -1070,7 +1070,7 @@ class Shape(ShapeNamer, ShapeMaker):
             example_params = cls.get_extended_example_params(name)
 
         try:
-            entryname = (f'{cls.__name__}' + example_params.args_str())
+            entryname = f'{cls.__name__}{example_params.args_str()}'  # noqa: F841
             shape = cls(
                 *example_params.shape_args[0], 
                 **example_params.shape_args[1]
@@ -1412,7 +1412,7 @@ class Maker(Shape):
             
         if (pargs or kwds) and (args or anchor):
             raise IllegalParameterException(
-                f'Recieved positional args and kwds when parameter "args" or anchor is also'
+                'Recieved positional args and kwds when parameter "args" or anchor is also'
                 'provided.')
         if anchor:
             pargs = anchor.pargs
@@ -1868,8 +1868,8 @@ def non_defaults_dict(dataclas_obj, include=None, exclude=()):
             f'Expected parameter \'exclude\' to be a tuple but is a {exclude.__class__.__name__}')
     return dict((k, getattr(dataclas_obj, k)) 
                 for k in dataclas_obj.__annotations__.keys() 
-                if (not k in exclude) and (
-                    include is None or k in include) and not getattr(dataclas_obj, k) is None)
+                if (k not in exclude) and (
+                    include is None or k in include) and getattr(dataclas_obj, k) is not None)
 
 def non_defaults_dict_include(dataclas_obj, include, exclude=()):
     if not (include is None or isinstance(include, tuple) or isinstance(include, dict)):
@@ -1880,7 +1880,7 @@ def non_defaults_dict_include(dataclas_obj, include, exclude=()):
             f'Expected parameter \'exclude\' to be a tuple but is a {exclude.__class__.__name__}')
     return dict((k, getattr(dataclas_obj, k)) 
                 for k in include 
-                if (not k in exclude) and not getattr(dataclas_obj, k) is None)
+                if (k not in exclude) and getattr(dataclas_obj, k) is not None)
     
     
 ARGS_XLATION_TABLE={'fn': '_fn', 'fa': '_fa', 'fs': '_fs'}
@@ -2005,7 +2005,7 @@ class Sphere(Shape):
     
     @anchor('A location on the sphere.')
     def surface(self, degrees: ANGLES_TYPE=ANGLES_TYPE([0, 0, 0]), radians: ANGLES_TYPE=None):
-        if not radians is None:
+        if radians is not None:
             angle_type = 'radians'
             angles = ANGLES_TYPE(radians)
         else:
@@ -2081,7 +2081,7 @@ class Cone(Shape):
                 rh=None, radius_delta=0.0):
         if h is None:
             h = 0.0
-        if not rh is None:
+        if rh is not None:
             h = h + self.h * rh
         r = (h / self.h) if self.h else 0
         x = r * self.r_top + (1 - r) * self.r_base + radius_delta
@@ -2161,7 +2161,7 @@ class CompositeShape(Shape):
         
     def __post_init__(self):
         maker = self.build()
-        assert not maker is None, 'Function build() must return a Maker.' 
+        assert maker is not None, 'Function build() must return a Maker.' 
         self._set_maker(maker)
         
     def build(self) -> Maker:
@@ -2293,9 +2293,9 @@ class AnnotatedCoordinates(CompositeShape):
     coord_label_at: tuple=args(post=l.translate([0, 0, 1]) * l.rotY(-90))
     label: str=None
     label_pos_ratio: l.GVector=l.GVector([0.5, 0.5, 0.5])
-    hide_x: bool=dtfield(self_default=lambda s: not 'x' in s.coord_labels)
-    hide_y: bool=dtfield(self_default=lambda s: not 'y' in s.coord_labels)
-    hide_z: bool=dtfield(self_default=lambda s: not 'z' in s.coord_labels)
+    hide_x: bool=dtfield(self_default=lambda s: 'x' not in s.coord_labels)
+    hide_y: bool=dtfield(self_default=lambda s: 'y' not in s.coord_labels)
+    hide_z: bool=dtfield(self_default=lambda s: 'z' not in s.coord_labels)
     coordinates_node: Coordinates=dtfield(init=False, default=ShapeNode(Coordinates))
     coordinates: Coordinates=dtfield(init=True, self_default=lambda s: s.coordinates_node())
     
@@ -2329,7 +2329,7 @@ class AnnotatedCoordinates(CompositeShape):
         return maker
     
     @anchor('The base of the stem of the object')
-    def origin(self, *args, **kwds):
+    def origin(self):
         return l.IDENTITY
 
     
@@ -2354,7 +2354,7 @@ def make_intersection_or_hole(as_hole,
     maker = base_shape.solid('base').at(anchor=base_anchor)
     mode = ModeShapeFrame.HOLE if as_hole else ModeShapeFrame.SOLID
     other_anchor_in_use = other_anchor
-    if not other_anchor_intersect is None and not as_hole:
+    if other_anchor_intersect is not None and not as_hole:
         other_anchor_in_use = other_anchor_intersect
     maker.add_at(other_shape.named_shape('other', mode)
                  .at(anchor=other_anchor_in_use))
@@ -2875,7 +2875,7 @@ class ExampleCommandLineRenderer():
             path.parent.mkdir(parents=True, exist_ok=True)
             obj.write(path)
         else:
-            if not path.parent in self.set_mkdir and not path.parent.exists():
+            if path.parent not in self.set_mkdir and not path.parent.exists():
                 self.set_mkdir.add(path.parent)
                 sys.stderr.write(f'directory "{path.parent}" does not exist. Will be created.\n')
             strv = obj.dumps()
@@ -2920,7 +2920,7 @@ class ExampleCommandLineRenderer():
             else:    
                 graph.write(path, example_name)
         else:
-            if not path.parent in self.set_mkdir and not path.parent.exists():
+            if path.parent not in self.set_mkdir and not path.parent.exists():
                 self.set_mkdir.add(path.parent)
                 sys.stderr.write(f'directory "{path.parent}" does not exist. Will be created.\n')
             strv = repr(graph)
@@ -2940,7 +2940,7 @@ class ExampleCommandLineRenderer():
             path.parent.mkdir(parents=True, exist_ok=True)
             html_renderer.write(path, example_name)
         else:
-            if not path.parent in self.set_mkdir and not path.parent.exists():
+            if path.parent not in self.set_mkdir and not path.parent.exists():
                 self.set_mkdir.add(path.parent)
                 sys.stderr.write(f'directory "{path.parent}" does not exist. Will be created.\n')
             strv = html_renderer.create_html(example_name)
@@ -2964,7 +2964,7 @@ class ExampleCommandLineRenderer():
             with open(path, 'w') as f:
                 f.write(html_str)
         else:
-            if not path.parent in self.set_mkdir and not path.parent.exists():
+            if path.parent not in self.set_mkdir and not path.parent.exists():
                 self.set_mkdir.add(path.parent)
                 sys.stderr.write(f'directory "{path.parent}" does not exist. Will be created.\n')
             sys.stdout.write(
@@ -3014,7 +3014,7 @@ class ExampleCommandLineRenderer():
             self._load_anchorcad_module(self.argp.module)
             if not self.argp.write_files:
                 sys.stderr.write(
-                    f'Anchorscad example renderer running in (--no-write) mode.\n')
+                    'Anchorscad example renderer running in (--no-write) mode.\n')
 
             self.run_module()
 

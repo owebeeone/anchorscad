@@ -8,7 +8,6 @@ from dataclasses import dataclass
 import anchorscad.core as core
 import anchorscad.extrude as e
 import anchorscad.linear as l
-import numpy as np
 
 @core.shape
 @dataclass

@@ -48,7 +48,7 @@ class QuadTree:
         
     def insert(self, bbox, value):
         k = map_bounding_box_to_key(bbox[0], bbox[1])
-        if not k in self.sd:
+        if k not in self.sd:
             self.sd[k] = []
             
         self.sd[k].append((bbox, value))

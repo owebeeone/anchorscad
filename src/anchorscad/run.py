@@ -38,9 +38,9 @@ from subprocess import Popen
 import sys
 
 try:
-    import pythonopenscad as posc
+    import pythonopenscad as posc  # noqa: F401
     POSC_AVAIL = True
-except:
+except:  # noqa: E722
     POSC_AVAIL = False
     
 
@@ -94,7 +94,7 @@ class RunAnchorSCADModule:
         self.python_path_ok = False
         if ppath:
             ppath_list = list(Path(i) for i in ppath.split(PATH_SEPARATOR))
-            if not ad_path in ppath_list:
+            if ad_path not in ppath_list:
                 ppath_list.append(ad_path)
                 new_ppath = PATH_SEPARATOR.join(str(p) for p in ppath_list)
                 log_message(new_ppath)
