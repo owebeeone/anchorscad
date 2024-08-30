@@ -511,9 +511,16 @@ class PathModifier:
     def square(self) -> 'PathModifier':
         return replace(self, join_type=self.OFFSET_SQUARE)
     
+    def segments(self, segments: int) -> 'PathModifier':
+        return replace(self, circular_segments=segments)
+    
     @classmethod
     def with_offset(cls, offset: float) -> 'PathModifier':
         return PathModifier(offset=offset)
+    
+    @classmethod
+    def with_segments(cls, circular_segments: int) -> 'PathModifier':
+        return PathModifier(circular_segments=circular_segments)
     
     @classmethod
     def as_round(cls) -> 'PathModifier':
@@ -928,7 +935,8 @@ class Path():
                              suffix=None, 
                              appender=adder,
                              skip_first_move=None,
-                             offset: float=None) -> 'PathBuilder':
+                             offset: float=None,
+                             metadata: core.ModelAttributes=None) -> 'PathBuilder':
         '''Returns a PathBuilder with the new transformed path.
         Args:
           m: A GMatrix to transform the points.
@@ -947,6 +955,11 @@ class Path():
                 path_modifier = PathModifier.with_offset(offset)
             else:
                 skip_first_move = True if skip_first_move is None else skip_first_move
+                
+            if metadata and metadata.fn:
+                path_modifier = path_modifier.segments(metadata.fn) \
+                    if path_modifier \
+                    else PathModifier.segments(metadata.fn)
             
             builder = PathBuilder(path_modifier=path_modifier)
         
@@ -967,9 +980,10 @@ class Path():
 
         return builder
             
-    def transform(self, m: l.GMatrix=l.IDENTITY, offset: float=None):
+    def transform(
+        self, m: l.GMatrix=l.IDENTITY, offset: float=None, metadata: core.ModelAttributes=None) -> 'Path':
         '''Returns a new Path but transformed by m with offset path modifier.'''
-        return self.transform_to_builder(m=m, offset=offset).build()
+        return self.transform_to_builder(m=m, offset=offset, metadata=metadata).build()
 
 
 def to_gvector(np_array):

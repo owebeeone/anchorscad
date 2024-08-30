@@ -319,8 +319,8 @@ class Node:
               set.
             use_defaults: Allows use of defaults otherwise defaults should be
               specified elsewhere.
-            suffix: Suffix to apply to injected field names.
-            prefix: Prefix to apply to injected field names.
+            suffix: Suffix to apply to injected field names not otherwise mapped.
+            prefix: Prefix to apply to injected field names not otherwise mapped.
             expose_all: Forces the mapping of all fields even if the expose_spec
               excluded the class or function parameter name.
             expose_if_avail: The set of field to expose if they're available.

@@ -244,6 +244,10 @@ class Part:
         DEFAULT_PART_PRIORITY,  
         doc='The priority of the part. Higher priority parts are rendered first.')
     
+    def use_priority(self, other_part: 'Part', priority_increment: float=0.0) -> 'Part':
+        '''Returns a new Part with the priority of this part and the name of other_part.'''
+        return Part(name=other_part.name, priority=self.priority + priority_increment)
+    
 DEFAULT_PART = Part('default', priority=DEFAULT_PART_PRIORITY)
     
 @datatree(frozen=True)
@@ -1383,7 +1387,7 @@ class Maker(Shape):
         self.entries[name] = mode_shape_frame
         return self
 
-    def add(self, maker):
+    def add(self, maker: 'Maker') -> 'Maker':
         if not isinstance(maker, Maker):
             raise IllegalParameterException(
                 f'Expected a parameter of type {self.__class__.__name__!r} but received an '
@@ -1395,13 +1399,13 @@ class Maker(Shape):
         return self
     
     def add_at(self, 
-               maker, 
+               maker: 'Maker', 
                *pargs, 
                pre=None, 
                post=None, 
                args=None, 
                anchor=None, 
-               **kwds):
+               **kwds) -> 'Maker':
         '''Adds another maker at the anchor of the provided parameters.
         If args is provided, this is a packed set of args from core.args.
         '''
