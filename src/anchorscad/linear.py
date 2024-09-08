@@ -502,7 +502,7 @@ class GMatrix(object):
     def copy(self) -> 'GMatrix':
         return GMatrix(self)
     
-    def get_translation(self) -> 'GMatrix':
+    def get_translation(self) -> GVector:
         return GVector(self.m.T.A[3])
     
     def get_rotation(self) -> 'GMatrix':
@@ -968,7 +968,7 @@ def scale(s) -> GMatrix:
     '''Returns a GMatrix that scales by a vector [x,y,z] scalars or [s,s,s].'''
     try:
         v = LIST_3_FLOAT(s)
-    except:
+    except TypeError:
         v = LIST_3_FLOAT([s, s, s])
     
     return GMatrix(

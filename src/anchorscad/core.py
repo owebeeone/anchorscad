@@ -1785,12 +1785,15 @@ class Box(Shape):
             shape_args=args((100, 100, 100)),
             anchors=(
                 surface_args('face_centre', 'front'),
+                surface_args('face_centre', 'front', rh=-1),
                 surface_args('face_corner', 'front', 0),
+                surface_args('face_corner', 'front', 0, rh=-0.5),
                 surface_args('face_edge', 'front', 2),
                 surface_args('face_edge', 'front', 1, 0.15),
                 surface_args('face_centre', 'top'),
                 surface_args('face_corner', 'top', 0),
                 surface_args('face_edge', 'top', 2),
+                surface_args('face_edge', 'top', 2, rh=0.5),
                 surface_args('face_edge', 'top', 1, 0.15),)
             )
         }
@@ -1825,17 +1828,22 @@ class Box(Shape):
         return l.translate(l.GVector(self.size) / 2)
     
     @anchor('Corner of box given face (0-5) and corner (0-3)')
-    def face_corner(self, face, corner, t=0, d=0):
-        return self.face_edge(face, corner, t=t, d=d)
+    def face_corner(self, face, corner, t=0, d=0, h:float=0.0, rh: float=0.0):
+        return self.face_edge(face, corner, t=t, d=d, h=h, rh=rh)
     
     @anchor('Edge centre of box given face (0-5) and edge (0-3)')
-    def face_edge(self, face, edge, t=0.5, d=0):
+    def face_edge(self, face, edge, t=0.5, d=0, h:float=0.0, rh: float=0.0):
         face = self.FACE_MAP[face]
         orientation = self.ORIENTATION[face] * l.rotZ(90 * edge)
         loc = l.GVector(self.size)  # make a copy.
         half_of = self.COORDINATES_EDGE_HALVES[face][edge]
         zero_of = self.COORDINATES_CORNERS_ZEROS[face][edge]
+        keep_value = self.COORDINATES_CENTRES_AXIS[face % 3][0]
         for i in range(3):
+            if i == keep_value:
+                if face < 3:
+                    loc[i] = 0.0
+                h += self.size[i] * rh
             if i in half_of:
                 if i in zero_of:
                     loc[i] = t * loc[i] + d
@@ -1843,21 +1851,23 @@ class Box(Shape):
                     loc[i] = (1 - t) * loc[i] - d
             elif i in zero_of:
                 loc[i]  = 0.0
-        return l.translate(loc) * orientation
+        return l.translate(loc) * orientation * l.tranZ(-h)
         
     @anchor('Centre of face given face (0-5)')
-    def face_centre(self, face):
+    def face_centre(self, face, h:float=0.0, rh: float=0.0):
         face = self.FACE_MAP[face]
         orientation = self.ORIENTATION[face]
         loc = l.GVector(self.size)  # make a copy.
         keep_value = self.COORDINATES_CENTRES_AXIS[face % 3][0]
+        h: float = 0.0
         for i in range(3):
             if i == keep_value:
                 if face < 3:
                     loc[i] = 0.0
+                h += self.size[i] * rh
             else:
                 loc[i] = loc[i] * 0.5
-        return l.translate(loc) * orientation
+        return l.translate(loc) * orientation * l.tranZ(-h)
     
 
 
