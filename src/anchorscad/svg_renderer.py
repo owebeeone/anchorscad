@@ -502,7 +502,8 @@ class SvgRenderer(object):
             fill: none;
             pointer-events: stroke;
         }}''',
-        f'''{self.style_prefix}.selected {{
+        f'''{self.style_prefix}.segment.selected,''',
+        f'''{self.style_prefix}.segment.selected:hover {{
             stroke: {self.stroke_selected_colour};
             stroke-width: {self.stroke_selected_width_px / self.img_scale:G};
             fill: #0000;
@@ -623,6 +624,7 @@ HTML_TEMPLATE = '''\
                     if (this === lastEntered) {{
                         return;
                     }}
+                    clearSelected();
                     const segId = JQ(this).attr('id');
                     const segmentData = segment_metadata.segdict[segId];
                     const pathId = segmentData.path_id;
