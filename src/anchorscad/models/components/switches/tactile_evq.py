@@ -285,10 +285,14 @@ class TactileEvqHole(ad.CompositeShape):
     terminal_hole_h: float = 6
     terminal_hole_node: ad.Node = ad.ShapeNode(ad.Cylinder, prefix='terminal_hole_')
     
+    xy_scale: float = 1 - 0.4 / 6
+    
+    scale: ad.GMatrix = ad.dtfield(
+        self_default=lambda s: ad.scale((s.xy_scale, s.xy_scale, 1)))
+    
     EXAMPLE_SHAPE_ARGS = ad.args(fn=64)
     
     def build(self) -> ad.Maker:
-        
         evq_shape = self.evq_node()
         maker = evq_shape.solid('evq').at('base', post=ad.ROTX_180)
         
@@ -317,9 +321,9 @@ class TactileEvqHoleTest(ad.CompositeShape):
         maker = self.test_plate_node().solid('test_plate').at('face_centre', 'base', post=ad.ROTX_180)
         
         # Scaled to compensate for the 3D printer's shrinkage.
-        xy_scale = 1 - 0.4 / 6
-        maker.add_at(self.evq_hole_node().hole('evq_hole')
-                     .at('base', post=ad.scale((xy_scale, xy_scale, 1))), 'centre')
+        evq_hole = self.evq_hole_node()
+        maker.add_at(evq_hole.hole('evq_hole')
+                     .at('base', post=evq_hole.scale), 'centre')
         
         return maker
 

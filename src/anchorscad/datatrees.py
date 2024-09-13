@@ -766,7 +766,7 @@ class BoundNode:
         passed_bind = node.node.init_signature.bind_partial(
             *args, **kwds).arguments
         ovrde = (node.parent.override.get_override(node.name)
-                 if node.parent.override
+                 if hasattr(node.parent, 'override') and node.parent.override
                  else MISSING)
         if ovrde is not MISSING:
             ovrde_bind = ovrde.bind_signature(

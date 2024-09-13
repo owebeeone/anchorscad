@@ -1797,7 +1797,6 @@ class Box(Shape):
                 surface_args('face_edge', 'top', 1, 0.15),)
             )
         }
-
     
     FACE_MAP=frozendict({
         0: 0,
@@ -2943,7 +2942,7 @@ class ExampleCommandLineRenderer():
             
     def path_file_writer(self, paths_dict, clz, example_name, base_example_name):
         '''Render all the paths used in the shape to an html file.'''
-        if not paths_dict:
+        if not paths_dict or len(paths_dict.paths) == 0:
             return  # No paths to render, get out quickly.
         
         fname = self.argp.paths_file_name.format(

@@ -19,8 +19,9 @@ def get_path_and_line_number(trace):
 
 
 @dataclass_json
-@dt.datatree
+@dt.datatree(provide_override_field=False)
 class Segment(object):
+    path_id: str
     name: object
     trace: object = dt.dtfield(
         metadata=config(encoder=get_path_and_line_number))
@@ -38,7 +39,7 @@ class Segment(object):
 
 
 @dataclass_json
-@dt.datatree
+@dt.datatree(provide_override_field=False)
 class Segments(object):
     segdict: dict = dt.dtfield(default_factory=dict)
 
@@ -49,14 +50,17 @@ class Segments(object):
         return self.segdict.items()
 
 
-@dt.datatree
+@dt.datatree(provide_override_field=False)
 class SvgPathRenderer(object):
     '''Render visitor/builder for anchorscad.Path. Creates an SVG path string.'''
+    path_id: str
+    all_segments: Segments
     last_position: np.array = None
     is_path_closed: bool = True
     _builder: list = dt.dtfield(default=None, init=False, repr=False)
     _paths: list = dt.dtfield(default_factory=list, init=False)
-    _segs: list = dt.dtfield(default_factory=Segments, init=False)
+    _segs: Segments = dt.dtfield(default_factory=Segments, init=False)
+    _seg_node: dt.Node = dt.Node(Segment, 'path_id')
 
     def _set_last_position(self, new_last_position):
         if self.last_position is None:
@@ -73,6 +77,11 @@ class SvgPathRenderer(object):
         if self._builder:
             self._paths.append(' '.join(self._builder))
             #self._builder = None
+            
+    def _add_seg(self, seg):
+        self._segs.append(seg)
+        if self.all_segments:
+            self.all_segments.append(seg)
 
     def moveto(self, end_point, name, trace=None):
         # Starting a new path means closing the current if any.
@@ -80,16 +89,16 @@ class SvgPathRenderer(object):
         self._set_last_position(end_point)
         svg_path = f'M {end_point[0]:G} {end_point[1]:G}'
         self._builder.append(svg_path)
-        seg = Segment(name=name, trace=trace, shape_type='moveto',
-                      path=svg_path, points=(end_point,))
-        self._segs.append(seg)
+        seg = self._seg_node(name=name, trace=trace, shape_type='moveto',
+                             path=svg_path, points=(end_point,))
+        self._add_seg(seg)
 
     def lineto(self, end_point, name, trace=None):
         last_path, last_pos = self._set_last_position(end_point)
         self._builder.append(f'L {end_point[0]:G} {end_point[1]:G}')
-        seg = Segment(name=name, trace=trace, shape_type='lineto',
+        seg = self._seg_node(name=name, trace=trace, shape_type='lineto',
                       path=last_path + self._builder[-1], points=(last_pos, end_point,))
-        self._segs.append(seg)
+        self._add_seg(seg)
 
     def arcto1(self, radius, sweep_angle, sweep_flag, end_point, name, trace=None):
         last_path, last_pos = self._set_last_position(end_point)
@@ -98,27 +107,27 @@ class SvgPathRenderer(object):
         self._builder.append(
             f'A {radius:G} {radius:G} 0 {large_arc:d} {sweep_flag:d} '
             f'{end_point[0]:G} {end_point[1]:G}')
-        seg = Segment(name=name, trace=trace, shape_type='arcto1',
+        seg = self._seg_node(name=name, trace=trace, shape_type='arcto1',
                       path=last_path + self._builder[-1], points=(last_pos, end_point))
-        self._segs.append(seg)
+        self._add_seg(seg)
 
     def splineto(self, points, name, trace=None):
         last_path, last_pos = self._set_last_position(points[2])
         self._builder.append(
             'C ' + ' '.join(f'{p[0]:G} {p[1]:G}' for p in points))
         points = (last_pos, points[0], points[1], points[2])
-        seg = Segment(name=name, trace=trace, shape_type='splineto',
+        seg = self._seg_node(name=name, trace=trace, shape_type='splineto',
                       path=last_path + self._builder[-1], points=points)
-        self._segs.append(seg)
+        self._add_seg(seg)
         
     def qsplineto(self, points, name, trace=None):
         last_path, last_pos = self._set_last_position(points[1])
         self._builder.append(
             'Q ' + ' '.join(f'{p[0]:G} {p[1]:G}' for p in points))
         points = (last_pos, points[0], points[1])
-        seg = Segment(name=name, trace=trace, shape_type='splineto',
+        seg = self._seg_node(name=name, trace=trace, shape_type='splineto',
                       path=last_path + self._builder[-1], points=points)
-        self._segs.append(seg)
+        self._add_seg(seg)
 
     def close(self):
         '''Closes the path by creating a line from the last added point to the
@@ -366,6 +375,8 @@ class SvgRenderer(object):
     stroke_hover_width_px: float = 4.5
     stroke_colour: str = 'black'
     stroke_hover_colour: str = 'red'
+    stroke_selected_colour: str = 'green'
+    stroke_selected_width_px: float = 6.5
 
     img_scale: float = dt.dtfield(init=False)
     model_transform: l.GMatrix = dt.dtfield(init=False)
@@ -384,18 +395,19 @@ class SvgRenderer(object):
     path_render_node: dt.Node = dt.dtfield(
         dt.Node(SvgPathRenderer), init=False)
     path_render: SvgPathRenderer = dt.dtfield(
-        self_default=lambda s: s.path_render_node())
+        self_default=lambda s: s.path_render_node(path_id=s.path_id, all_segments=s.all_segments))
     grad_render_node: dt.Node = dt.dtfield(
         dt.Node(SvgGraduationRenderer), init=False)
     frame_render_node: dt.Node = dt.dtfield(
         dt.Node(SvgFrameRenderer, prefix='frame_'), init=False)
     
     json_indent: int = 2
-    svg_id: str = None
+    path_id: str = None
     svg_class: str = None
     style_prefix: str = dt.dtfield(
         init=False,
-        self_default=lambda s: f'#{s.svg_id} > g > ' if s.svg_id else '')
+        self_default=lambda s: f'#{s.path_id} > g > ' if s.path_id else '')
+    all_segments: Segments = None
 
     def __post_init__(self):
         self.path.svg_path_render(self.path_render)
@@ -449,7 +461,7 @@ class SvgRenderer(object):
         elems = (
             f'width="{w}"',
             f'height="{h}"',
-            f'id="{self.svg_id}"' if self.svg_id else None,
+            f'id="{self.path_id}"' if self.path_id else None,
             f'class="{self.svg_class}"' if self.svg_class else None,)
         elems_str = ' '.join(e for e in elems if e)
         return (
@@ -488,6 +500,12 @@ class SvgRenderer(object):
             stroke: {self.stroke_colour};
             stroke-width: {self.stroke_width_px / self.img_scale:G};
             fill: none;
+            pointer-events: stroke;
+        }}''',
+        f'''{self.style_prefix}.selected {{
+            stroke: {self.stroke_selected_colour};
+            stroke-width: {self.stroke_selected_width_px / self.img_scale:G};
+            fill: #0000;
             pointer-events: stroke;
         }}''',
         f'''{self.style_prefix}.segment:hover {{
@@ -532,10 +550,10 @@ class SvgMetadataEntry:
 @dataclass_json
 @dataclass
 class SvgMetadataCollection:
-    map_ids: dict=dt.field(default_factory=dict)
+    path_items: dict=dt.field(default_factory=dict)
     
     def insert(self, id, div_id, path_id, anchors):
-        self.map_ids[id] = SvgMetadataEntry(id, div_id, path_id, anchors)
+        self.path_items[path_id] = SvgMetadataEntry(id, div_id, path_id, anchors)
     
 
 HTML_TEMPLATE = '''\
@@ -561,14 +579,100 @@ HTML_TEMPLATE = '''\
             border: 1px solid #ffffff;
             z-index: 100;
         }}
+        #infoArea {{
+            position: fixed;
+            top: 10px; /* Adjust as needed */
+            right: 10px; /* Adjust as needed */
+            width: 50%; /* Set the width of the text area */
+            height: 50%; /* Set the height of the text area */
+            z-index: 1000; /* Ensure it floats above other elements */
+            background-color: #fff;
+            border: 1px solid #ccc;
+            padding: 10px;
+            box-shadow: 0px 0px 10px rgba(0, 0, 0, 0.1);
+            resize: none; /* Optional: Disable resize if desired */
+        }}
     </style>
-    <script src="https://ajax.googleapis.com/ajax/libs/jquery/3.6.1/jquery.min.js"></script>
+    <script src="https://ajax.googleapis.com/ajax/libs/jquery/3.7.1/jquery.min.js"></script>
     <script type="text/javascript">
-        image_metadata = {image_metadata};
+    
+        let image_metadata = {image_metadata};
+        let segment_metadata = {segment_metadata};
+        
+        function deferrred() {{
+            let JQ = $;  // Alias for jQuery.
+            
+            // Updates the text area with metadata information.
+            function updateTextArea(content) {{
+                JQ('#infoArea').val(content);
+            }}
+            
+            const clearSelected = function() {{
+                $('.selected').removeClass('selected');
+            }}
+            
+            var doclear = true;
+            var timeSelected = 0;
+            var lastEntered = null;
+            
+            // Run this function after the document has fully loaded
+            JQ(document).ready(function() {{
+                // Add event listeners to each segment using jQuery
+                JQ('.segment').on('mouseenter', function() {{
+                    // Get segment id and use it to fetch metadata from image_metadata
+                    if (this === lastEntered) {{
+                        return;
+                    }}
+                    const segId = JQ(this).attr('id');
+                    const segmentData = segment_metadata.segdict[segId];
+                    const pathId = segmentData.path_id;
+                    const metadata = image_metadata.path_items[pathId]; // Assuming segment data from image_metadata map
+                    const pathList = [];
+                    metadata.anchors.anchor_paths.forEach(function(anchorPath) {{
+                        pathList.push(``);
+                        pathList.push(anchorPath.shape_path.join(', ') + ', ' + segmentData.name);
+                    }});
+                    const segmentInfo = `name: ${{segmentData.name}}\\n`
+                            + `type: ${{segmentData.shape_type}}\\n`
+                            + `Shape anchor paths:\\n${{pathList.join('\\n')}}`;
+                    updateTextArea(segmentInfo);
+                    doclear = true;
+                }});
+
+                    
+                JQ('.segment').on('mouseleave', function() {{
+                    if (doclear) {{
+                        // Clear text area when mouse leaves the segment
+                        updateTextArea('');
+                        clearSelected();
+                        lastEntered = null;
+                    }}
+                    const currentTime = Date.now();
+                    const elapsed = currentTime - timeSelected;
+                    if (elapsed > 1000) {{
+                        doclear = true;
+                    }}
+                }});
+                
+                JQ('.segment').on('click', function() {{
+                    // Persist the text area content when clicked.
+                    doclear = false;
+                    clearSelected();
+                    timeSelected = Date.now();
+                    $(this).addClass('selected');
+                }});
+            }});
+        }}
+        document.addEventListener('DOMContentLoaded', deferrred);
     </script>
 </head>
 <body>
 </body>
+  <!-- Text area to display segment information -->
+  <textarea 
+        id="infoArea" 
+        placeholder="Hover over a path segment to display information. Click to select."></textarea>
+
   {svg_divs}
 </html>
 '''
@@ -580,6 +684,7 @@ class HtmlRenderer:
     svg_renderer_node: dt.Node=dt.Node(SvgRenderer, exclude=('path',))
     metadata_collection: SvgMetadataCollection=dt.field(default_factory=SvgMetadataCollection)
     svg_divs: list=dt.field(default_factory=list)
+    all_segments: Segments=dt.field(default_factory=Segments)
     
     def __post_init__(self):
         for i, (path, anchors) in enumerate(self.paths_dict.items()):
@@ -591,7 +696,7 @@ class HtmlRenderer:
     def _create_div_from_path(self, div_id, path_id, path):
         '''Create a div containing the svg image for a path.'''
         svg_renderer = self.svg_renderer_node(
-            path=path, svg_class='svg_path', svg_id=path_id)
+            path=path, svg_class='svg_path', path_id=path_id, all_segments=self.all_segments)
         
         svg_str = svg_renderer.to_svg_string()
         
@@ -603,8 +708,14 @@ class HtmlRenderer:
     def create_html(self, name='AnchorScad Paths'):
         '''Create the html page.'''
         svg_divs = '\n'.join(self.svg_divs)
-        json_src = self.metadata_collection.to_json(indent=self.json_indent)
-        return HTML_TEMPLATE.format(name=name, image_metadata=json_src, svg_divs=svg_divs)
+        image_metadata_json_src = self.metadata_collection.to_json(indent=self.json_indent)
+        segment_metadata_json_src = self.all_segments.to_json(
+            indent=self.json_indent)
+        return HTML_TEMPLATE.format(
+            name=name, 
+            image_metadata=image_metadata_json_src, 
+            segment_metadata=segment_metadata_json_src, 
+            svg_divs=svg_divs)
 
     def write(self, filename, name='AnchorScad Paths', encoding="utf-8"):
         '''Writes the html page to a file.
