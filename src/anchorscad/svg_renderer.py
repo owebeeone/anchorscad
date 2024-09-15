@@ -30,6 +30,9 @@ def normalize_path(abs_path):
 def get_path_and_line_number(trace):
     return normalize_path(trace.filename), trace.lineno
 
+def convert_to_python_floats(points):
+    return tuple((float(p[0]), float(p[1])) for p in points)
+
 
 @dataclass_json
 @dt.datatree(provide_override_field=False)
@@ -40,7 +43,8 @@ class Segment(object):
         metadata=config(encoder=get_path_and_line_number))
     shape_type: str
     path: str
-    points: tuple
+    points: tuple = dt.dtfield(
+        metadata=config(encoder=convert_to_python_floats))
     sweep_angle: float = None  # For arcs.
     sweep_flag: int = None  # For arcs.
     id: str = dt.dtfield(self_default=lambda s: s.next_id())
