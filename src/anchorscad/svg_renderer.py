@@ -9,13 +9,26 @@ import anchorscad.linear as l
 import anchorscad.datatrees as dt
 from dataclasses_json import dataclass_json, config
 from dataclasses import dataclass
+import os
+import sys
+from functools import lru_cache
 
 
 LIST_3_FLOAT_0 = l.list_of(l.strict_float, len_min_max=(3, 3), fill_to_min=0.0)
 
+@lru_cache(maxsize=None)  # Cache the normalized paths to avoid recalculating
+def normalize_path(abs_path):
+    # Try to make the path relative to the Python module path (sys.path)
+    for path in sys.path:
+        if abs_path.startswith(path):
+            return os.path.relpath(abs_path, path).replace('\\', '/')
+
+    # If not relative to any Python module path, make it relative to the current working directory
+    return os.path.relpath(abs_path, os.getcwd()).replace('\\', '/')
+
 
 def get_path_and_line_number(trace):
-    return trace.filename, trace.lineno
+    return normalize_path(trace.filename), trace.lineno
 
 
 @dataclass_json
@@ -100,7 +113,7 @@ class SvgPathRenderer(object):
                       path=last_path + self._builder[-1], points=(last_pos, end_point,))
         self._add_seg(seg)
 
-    def arcto1(self, radius, sweep_angle, sweep_flag, end_point, name, trace=None):
+    def arcto1(self, radius, sweep_angle, sweep_flag, end_point, centre, name, trace=None):
         last_path, last_pos = self._set_last_position(end_point)
         sweep_angle=abs(sweep_angle)
         large_arc = int(abs(sweep_angle) > np.pi)
@@ -108,7 +121,7 @@ class SvgPathRenderer(object):
             f'A {radius:G} {radius:G} 0 {large_arc:d} {sweep_flag:d} '
             f'{end_point[0]:G} {end_point[1]:G}')
         seg = self._seg_node(name=name, trace=trace, shape_type='arcto1',
-                      path=last_path + self._builder[-1], points=(last_pos, end_point))
+                path=last_path + self._builder[-1], points=(last_pos, end_point, centre))
         self._add_seg(seg)
 
     def splineto(self, points, name, trace=None):
@@ -125,7 +138,7 @@ class SvgPathRenderer(object):
         self._builder.append(
             'Q ' + ' '.join(f'{p[0]:G} {p[1]:G}' for p in points))
         points = (last_pos, points[0], points[1])
-        seg = self._seg_node(name=name, trace=trace, shape_type='splineto',
+        seg = self._seg_node(name=name, trace=trace, shape_type='qsplineto',
                       path=last_path + self._builder[-1], points=points)
         self._add_seg(seg)
 
@@ -377,6 +390,11 @@ class SvgRenderer(object):
     stroke_hover_colour: str = 'red'
     stroke_selected_colour: str = 'green'
     stroke_selected_width_px: float = 6.5
+    stroke_metadata_colour: str = 'blue'
+    stroke_metadata_width_px: float = 3.5
+    stroke_metadata_dash_width_px: float = 10
+    dot_metadata_colour: str = 'darkgreen'
+    dot_metadata_radius_px: float = 6.5
 
     img_scale: float = dt.dtfield(init=False)
     model_transform: l.GMatrix = dt.dtfield(init=False)
@@ -514,6 +532,15 @@ class SvgRenderer(object):
             stroke-width: {self.stroke_hover_width_px / self.img_scale:G};
             fill: #0000;
             pointer-events: stroke;
+        }}''',
+        f'''{self.style_prefix}.dot {{
+            fill: {self.dot_metadata_colour};
+            r: {self.dot_metadata_radius_px / self.img_scale:G};
+        }}''',
+        f'''{self.style_prefix}.control-line {{
+            stroke: {self.stroke_metadata_colour};
+            stroke-width: {self.stroke_metadata_width_px / self.img_scale:G};
+            stroke-dasharray: {self.stroke_metadata_dash_width_px / self.img_scale:G};
         }}''')
         return ("<style>", shape_style, *seg_styles, "</style>")
 
@@ -585,7 +612,7 @@ HTML_TEMPLATE = '''\
             top: 10px; /* Adjust as needed */
             right: 10px; /* Adjust as needed */
             width: 50%; /* Set the width of the text area */
-            height: 50%; /* Set the height of the text area */
+            height: 40px; /* Set the height of the text area */
             z-index: 1000; /* Ensure it floats above other elements */
             background-color: #fff;
             border: 1px solid #ccc;
@@ -593,6 +620,13 @@ HTML_TEMPLATE = '''\
             box-shadow: 0px 0px 10px rgba(0, 0, 0, 0.1);
             resize: none; /* Optional: Disable resize if desired */
         }}
+        #infoArea.hovering {{
+            height: 30%;
+        }}
+        #infoArea.selected {{
+            height: 50%;
+        }}
+        
     </style>
     <script src="https://ajax.googleapis.com/ajax/libs/jquery/3.7.1/jquery.min.js"></script>
     <script type="text/javascript">
@@ -608,8 +642,75 @@ HTML_TEMPLATE = '''\
                 JQ('#infoArea').val(content);
             }}
             
-            const clearSelected = function() {{
+            function clearSelected(includeVisuals=true) {{
                 $('.selected').removeClass('selected');
+                if (includeVisuals) {{
+                    $('.metadata-visuals').remove();
+                }}
+            }}
+            
+            function addDots(points, svgGroup) {{
+                points.forEach(point => {{
+                    const dot = document.createElementNS("http://www.w3.org/2000/svg", "circle");
+                    dot.setAttribute('cx', point[0]);
+                    dot.setAttribute('cy', point[1]);
+                    dot.classList.add('dot', 'metadata-visuals');
+                    svgGroup.append(dot);
+                }});
+            }}
+            
+            function addControlLine(p1, p2, svgGroup) {{
+                const line = document.createElementNS("http://www.w3.org/2000/svg", "line");
+                line.setAttribute('x1', p1[0]);
+                line.setAttribute('y1', p1[1]);
+                line.setAttribute('x2', p2[0]);
+                line.setAttribute('y2', p2[1]);
+                line.classList.add('control-line', 'metadata-visuals');
+                svgGroup.append(line);
+            }}
+            
+            function handleArc(segmentData, svgGroup) {{
+                addDots(segmentData.points, svgGroup);
+                addControlLine(segmentData.points[0], segmentData.points[2], svgGroup);
+                addControlLine(segmentData.points[1], segmentData.points[2], svgGroup);
+            }}
+
+            function handleSpline(segmentData, svgGroup) {{
+                addDots(segmentData.points, svgGroup);
+                addControlLine(segmentData.points[0], segmentData.points[1], svgGroup);
+                addControlLine(segmentData.points[2], segmentData.points[3], svgGroup);
+            }}
+
+            function handleLine(segmentData, svgGroup) {{
+                addDots(segmentData.points, svgGroup);
+            }}
+            
+            function handleQuadSpline(segmentData, svgGroup) {{
+                addDots(segmentData.points, svgGroup);
+                addControlLine(segmentData.points[0], segmentData.points[1], svgGroup);
+                addControlLine(segmentData.points[1], segmentData.points[2], svgGroup);
+            }}
+
+            const SEGMENT_HANDLERS = {{
+                'arcto1': handleArc,
+                'splineto': handleSpline,
+                'lineto': handleLine,
+                'qsplineto': handleQuadSpline,
+                // Add more shape types as needed
+            }};
+            
+            function handleSegment(segmentData, svgGroup) {{
+                const handler = SEGMENT_HANDLERS[segmentData.shape_type];
+                
+                if (handler) {{
+                    handler(segmentData, svgGroup);
+                }} else {{
+                    console.error(`No handler found for shape_type: ${{segmentData.shape_type}}`);
+                }}
+            }}
+            
+            function getSvgGroup(pathId) {{
+                return $(`#${{pathId}} > g`);
             }}
             
             var doclear = true;
@@ -624,9 +725,11 @@ HTML_TEMPLATE = '''\
                     if (this === lastEntered) {{
                         return;
                     }}
+                    $('#infoArea').addClass('selected').addClass('hovering');
                     clearSelected();
                     const segId = JQ(this).attr('id');
                     const segmentData = segment_metadata.segdict[segId];
+                    handleSegment(segmentData, getSvgGroup(segmentData.path_id));
                     const pathId = segmentData.path_id;
                     const metadata = image_metadata.path_items[pathId]; // Assuming segment data from image_metadata map
                     const pathList = [];
@@ -649,6 +752,7 @@ HTML_TEMPLATE = '''\
                         clearSelected();
                         lastEntered = null;
                     }}
+                    $('#infoArea').removeClass('hovering');
                     const currentTime = Date.now();
                     const elapsed = currentTime - timeSelected;
                     if (elapsed > 1000) {{
@@ -659,9 +763,10 @@ HTML_TEMPLATE = '''\
                 JQ('.segment').on('click', function() {{
                     // Persist the text area content when clicked.
                     doclear = false;
-                    clearSelected();
+                    clearSelected(false);
                     timeSelected = Date.now();
                     $(this).addClass('selected');
+                    $('#infoArea').addClass('selected').removeClass('hovering');
                 }});
             }});
         }}

@@ -51,7 +51,7 @@ class CsqPathRenderer(object):
                       path=last_path + self._builder[-1], points=(last_pos, end_point,))
         self._segs.append(seg)
 
-    def arcto1(self, radius, sweep_angle, sweep_flag, end_point, name, trace=None):
+    def arcto1(self, radius, sweep_angle, sweep_flag, end_point, centre, name, trace=None):
         assert False, 'Not implemented'
         # last_path, last_pos = self._set_last_position(end_point)
         # sweep_angle=abs(sweep_angle)

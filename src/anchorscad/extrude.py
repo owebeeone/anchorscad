@@ -1636,6 +1636,7 @@ class PathBuilder():
                 self.arcto.sweep_angle,
                 self.path_direction,
                 self.end_point,
+                self.centre,
                 self.name,
                 self.trace)
             
