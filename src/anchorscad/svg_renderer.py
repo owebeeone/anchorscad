@@ -542,6 +542,7 @@ class SvgRenderer(object):
         f'''{self.style_prefix}.dot {{
             fill: {self.dot_metadata_colour};
             r: {self.dot_metadata_radius_px / self.img_scale:G};
+            pointer-events: none;
         }}''',
         f'''{self.style_prefix}.cursor-dot {{
             fill: {self.cursor_dot_metadata_colour};
@@ -602,6 +603,30 @@ HTML_TEMPLATE = '''\
     <meta charset="utf-8" />
     <title>{name}</title>
     <style type="text/css">
+        .main-container {{
+            text-align: center;
+            width: {main_width:d}px;
+            margin: 0px;
+        }}
+        .svg-path {{
+            width: {width:d}px;
+            margin-top: 10px;
+            margin-bottom: 0px;
+            padding: 2px 20px;
+        }}
+        .svg-container {{
+            width: {width:d}px;
+            margin-top: 10px;
+            margin-bottom: 0px;
+            padding: 0px;
+        }}
+        .download-button {{
+            display: inline-block;
+            margin-top: 0px;
+            margin-bottom: 10px;
+            padding: 2px 20px;
+            font-size: 16px;
+        }}
         body {{
             font-family: Arial, Helvetica, sans-serif;
             font-size: 12px;
@@ -644,6 +669,46 @@ HTML_TEMPLATE = '''\
     
         let image_metadata = {image_metadata};
         let segment_metadata = {segment_metadata};
+    
+        /**
+        * Downloads an SVG element as a file.
+        *
+        * @param {{string}} svgId - The ID of the SVG element to download.
+        * @param {{string}} filename - The name of the file to be downloaded (e.g., "image.svg").
+        */
+        function downloadSVG(svgId, filename) {{
+            // Get the SVG element by its ID
+            const svgElement = document.getElementById(svgId);
+            if (!svgElement) {{
+                console.error(`No SVG element found with ID "${{svgId}}".`);
+                return;
+            }}
+
+            // Clone the SVG node to avoid modifying the original
+            const clonedSvg = svgElement.cloneNode(true);
+
+            // Serialize the SVG to a string
+            const serializer = new XMLSerializer();
+            let svgString = serializer.serializeToString(clonedSvg);
+
+            // Create a Blob from the SVG string
+            const blob = new Blob([svgString], {{ type: "image/svg+xml;charset=utf-8" }});
+
+            // Create a temporary link element
+            const link = document.createElement("a");
+            link.href = URL.createObjectURL(blob);
+            link.download = filename;
+
+            // Append the link to the body (required for Firefox)
+            document.body.appendChild(link);
+
+            // Trigger the download by simulating a click
+            link.click();
+
+            // Clean up by removing the link and revoking the object URL
+            document.body.removeChild(link);
+            URL.revokeObjectURL(link.href);
+        }}
         
         function deferrred() {{
             let JQ = $;  // Alias for jQuery.
@@ -666,7 +731,7 @@ HTML_TEMPLATE = '''\
                     dot.setAttribute('cx', point[0]);
                     dot.setAttribute('cy', point[1]);
                     dot.classList.add('dot', 'metadata-visuals');
-                    svgGroup.append(dot);
+                    svgGroup.append(dot, document.createTextNode('\\n        '));
                 }});
             }}
             
@@ -675,7 +740,7 @@ HTML_TEMPLATE = '''\
                 dot.setAttribute('cx', point[0]);
                 dot.setAttribute('cy', point[1]);
                 dot.classList.add('cursor-dot', 'metadata-visuals');
-                svgGroup.append(dot);
+                svgGroup.append(dot, document.createTextNode('\\n        '));
             }}
             
             function addControlLine(p1, p2, svgGroup) {{
@@ -685,7 +750,7 @@ HTML_TEMPLATE = '''\
                 line.setAttribute('x2', p2[0]);
                 line.setAttribute('y2', p2[1]);
                 line.classList.add('control-line', 'metadata-visuals');
-                svgGroup.append(line);
+                svgGroup.append(line, document.createTextNode('\\n        '));
             }}
             
             function handleArc(segmentData, svgGroup) {{
@@ -773,7 +838,6 @@ HTML_TEMPLATE = '''\
                 const x = centerPoint[0] + interpolatedRadius * Math.cos(finalAngle);
                 const y = centerPoint[1] + interpolatedRadius * Math.sin(finalAngle);
 
-                // addCursorDot([x, y], debugGroup);
                 return [x, y];
             }}
 
@@ -795,20 +859,19 @@ HTML_TEMPLATE = '''\
                 // Add more shape types as needed
             }};
             
-            //let debugGroup = null;
             function handleSegment(node, segmentData, event) {{
                 const handler = SEGMENT_HANDLERS[segmentData.shape_type];
                 if (handler) {{         
                     const svg = document.getElementById(segmentData.path_id);
                     const group = svg.querySelector('g');
                     const pointer = getSVGCoordinates(event, svg, group);
-                    //debugGroup = group;
-                    addCursorDot(pointer, group);
                     const t = findClosestT(handler.evaluator, segmentData, pointer);
+                    const actualPoint = handler.evaluator(segmentData, t);
                     const svgGroup = getSvgGroup(segmentData.path_id);
                 
                     handler.renderHandler(segmentData, svgGroup);
-                    return {{ 'point': pointer, 't': t }};
+                    addCursorDot(pointer, group);
+                    return {{ 'point': actualPoint, 't': t }};
                 }} else {{
                     console.error(`No handler found for shape_type: ${{segmentData.shape_type}}`);
                 }}
@@ -897,7 +960,7 @@ HTML_TEMPLATE = '''\
                     clearSelected();
                     const segId = JQ(this).attr('id');
                     const segmentData = segment_metadata.segdict[segId];
-                    const result = handleSegment(this, segmentData, event);
+                    const cursorResult = handleSegment(this, segmentData, event);
                     const pathId = segmentData.path_id;
                     const metadata = image_metadata.path_items[pathId]; // Assuming segment data from image_metadata map
                     const pathList = [];
@@ -906,9 +969,10 @@ HTML_TEMPLATE = '''\
                         pathList.push(anchorPath.shape_path.join(', ') + ', ' + segmentData.name);
                     }});
                     var pointInfo = '';
-                    if (result) {{
-                        pointInfo = `Point: (${{result.point[0].toFixed(3)}}, ${{result.point[1].toFixed(3)}})\\n`
-                            + `Paraneter t: ${{result.t.toFixed(3)}}\\n`;
+                    if (cursorResult) {{
+                        const {{point, t}} = cursorResult;
+                        pointInfo = `Point: (${{point[0].toFixed(3)}}, ${{point[1].toFixed(3)}})\\n`
+                            + `Paraneter t: ${{t.toFixed(3)}}\\n`;
                     }}
                     const segmentInfo = `name: ${{segmentData.name}}\\n`
                             + `type: ${{segmentData.shape_type}}\\n`
@@ -955,8 +1019,9 @@ HTML_TEMPLATE = '''\
   <textarea 
         id="infoArea" 
         placeholder="Hover over a path segment to display information. Click to select."></textarea>
-
+  <div class="main-container">
   {svg_divs}
+  </div>
 </html>
 '''
 
@@ -984,8 +1049,9 @@ class HtmlRenderer:
         svg_str = svg_renderer.to_svg_string()
         
         return f'''<div class="svg-path" id="{div_id}">
-    <div class="svg">
+    <div class="svg-container">
         {'        '.join(svg_str.splitlines(True))}
+        <button class="download-button" onclick="downloadSVG('{path_id}', 'anchorscad_path.svg')">Download SVG</button>
     </div>\n</div>'''
     
     def create_html(self, name='AnchorScad Paths'):
@@ -996,6 +1062,8 @@ class HtmlRenderer:
             indent=self.json_indent)
         return HTML_TEMPLATE.format(
             name=name, 
+            width=int(self.target_image_size[0]),
+            main_width=int(self.target_image_size[0] + 40),
             image_metadata=image_metadata_json_src, 
             segment_metadata=segment_metadata_json_src, 
             svg_divs=svg_divs)
