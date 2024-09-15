@@ -41,6 +41,8 @@ class Segment(object):
     shape_type: str
     path: str
     points: tuple
+    sweep_angle: float = None  # For arcs.
+    sweep_flag: int = None  # For arcs.
     id: str = dt.dtfield(self_default=lambda s: s.next_id())
 
     curr_idx = 0  # Ad ID generator.
@@ -121,7 +123,9 @@ class SvgPathRenderer(object):
             f'A {radius:G} {radius:G} 0 {large_arc:d} {sweep_flag:d} '
             f'{end_point[0]:G} {end_point[1]:G}')
         seg = self._seg_node(name=name, trace=trace, shape_type='arcto1',
-                path=last_path + self._builder[-1], points=(last_pos, end_point, centre))
+                path=last_path + self._builder[-1], 
+                sweep_angle=sweep_angle, sweep_flag=int(sweep_flag),
+                points=(last_pos, end_point, centre))
         self._add_seg(seg)
 
     def splineto(self, points, name, trace=None):
@@ -395,6 +399,8 @@ class SvgRenderer(object):
     stroke_metadata_dash_width_px: float = 10
     dot_metadata_colour: str = 'darkgreen'
     dot_metadata_radius_px: float = 6.5
+    cursor_dot_metadata_colour: str = 'yellow'
+    cursor_dot_metadata_radius_px: float = 3.5
 
     img_scale: float = dt.dtfield(init=False)
     model_transform: l.GMatrix = dt.dtfield(init=False)
@@ -537,6 +543,11 @@ class SvgRenderer(object):
             fill: {self.dot_metadata_colour};
             r: {self.dot_metadata_radius_px / self.img_scale:G};
         }}''',
+        f'''{self.style_prefix}.cursor-dot {{
+            fill: {self.cursor_dot_metadata_colour};
+            r: {self.cursor_dot_metadata_radius_px / self.img_scale:G};
+            pointer-events: none;
+        }}''',
         f'''{self.style_prefix}.control-line {{
             stroke: {self.stroke_metadata_colour};
             stroke-width: {self.stroke_metadata_width_px / self.img_scale:G};
@@ -659,6 +670,14 @@ HTML_TEMPLATE = '''\
                 }});
             }}
             
+            function addCursorDot(point, svgGroup) {{
+                const dot = document.createElementNS("http://www.w3.org/2000/svg", "circle");
+                dot.setAttribute('cx', point[0]);
+                dot.setAttribute('cy', point[1]);
+                dot.classList.add('cursor-dot', 'metadata-visuals');
+                svgGroup.append(dot);
+            }}
+            
             function addControlLine(p1, p2, svgGroup) {{
                 const line = document.createElementNS("http://www.w3.org/2000/svg", "line");
                 line.setAttribute('x1', p1[0]);
@@ -690,29 +709,178 @@ HTML_TEMPLATE = '''\
                 addControlLine(segmentData.points[0], segmentData.points[1], svgGroup);
                 addControlLine(segmentData.points[1], segmentData.points[2], svgGroup);
             }}
+            
+            class Handler {{
+                constructor(renderHandler, evaluator) {{
+                    this.renderHandler = renderHandler;
+                    this.evaluator = evaluator;
+                }}
+            }}
+                        
+            function evaluateCubicBezier(segmentData, t) {{
+                const [p0, p1, p2, p3] = segmentData.points;
+
+                const x = (1 - t) ** 3 * p0[0] 
+                        + 3 * (1 - t) ** 2 * t * p1[0] 
+                        + 3 * (1 - t) * t ** 2 * p2[0] 
+                        + t ** 3 * p3[0];
+                const y = (1 - t) ** 3 * p0[1] 
+                        + 3 * (1 - t) ** 2 * t * p1[1] 
+                        + 3 * (1 - t) * t ** 2 * p2[1] 
+                        + t ** 3 * p3[1];
+
+                return [x, y];
+            }}
+
+            function evaluateQuadraticBezier(segmentData, t) {{
+                const [p0, p1, p2] = segmentData.points;
+
+                const x = (1 - t) ** 2 * p0[0] 
+                        + 2 * (1 - t) * t * p1[0] 
+                        + t ** 2 * p2[0];
+                const y = (1 - t) ** 2 * p0[1] 
+                        + 2 * (1 - t) * t * p1[1] 
+                        + t ** 2 * p2[1];
+
+                return [x, y];
+            }}
+
+            function evaluateArc(segmentData, t) {{
+                const [startPoint, endPoint, centerPoint] = segmentData.points;
+
+                // Calculate initial radius
+                const radius1 = Math.sqrt(
+                    (startPoint[0] - centerPoint[0]) ** 2 + (startPoint[1] - centerPoint[1]) ** 2);
+
+                // Calculate final radius
+                const radius2 = Math.sqrt(
+                    (endPoint[0] - centerPoint[0]) ** 2 + (endPoint[1] - centerPoint[1]) ** 2);
+
+                // Interpolate radius
+                const interpolatedRadius = radius1 + (radius2 - radius1) * t;
+
+                // Calculate initial angle
+                const initialAngle = Math.atan2(
+                    startPoint[1] - centerPoint[1], startPoint[0] - centerPoint[0]);
+
+                const sweepAngle = segmentData.sweep_flag ? segmentData.sweep_angle : -segmentData.sweep_angle;
+                //const sweepAngle = segmentData.sweep_angle;
+                
+                // Calculate final angle
+                const finalAngle = sweepAngle * t + initialAngle;;
+
+                // Calculate point on arc
+                const x = centerPoint[0] + interpolatedRadius * Math.cos(finalAngle);
+                const y = centerPoint[1] + interpolatedRadius * Math.sin(finalAngle);
+
+                // addCursorDot([x, y], debugGroup);
+                return [x, y];
+            }}
+
+            function evaluateLine(segmentData, t) {{
+                const [startPoint, endPoint] = segmentData.points;
+
+                // Calculate point on line based on t
+                const x = startPoint[0] + t * (endPoint[0] - startPoint[0]);
+                const y = startPoint[1] + t * (endPoint[1] - startPoint[1]);
+
+                return [x, y];
+            }}
 
             const SEGMENT_HANDLERS = {{
-                'arcto1': handleArc,
-                'splineto': handleSpline,
-                'lineto': handleLine,
-                'qsplineto': handleQuadSpline,
+                'arcto1': new Handler(handleArc, evaluateArc),
+                'splineto': new Handler(handleSpline, evaluateCubicBezier),
+                'lineto': new Handler(handleLine, evaluateLine),
+                'qsplineto': new Handler(handleQuadSpline, evaluateQuadraticBezier),
                 // Add more shape types as needed
             }};
             
-            function handleSegment(segmentData, svgGroup) {{
+            //let debugGroup = null;
+            function handleSegment(node, segmentData, event) {{
                 const handler = SEGMENT_HANDLERS[segmentData.shape_type];
+                if (handler) {{         
+                    const svg = document.getElementById(segmentData.path_id);
+                    const group = svg.querySelector('g');
+                    const pointer = getSVGCoordinates(event, svg, group);
+                    //debugGroup = group;
+                    addCursorDot(pointer, group);
+                    const t = findClosestT(handler.evaluator, segmentData, pointer);
+                    const svgGroup = getSvgGroup(segmentData.path_id);
                 
-                if (handler) {{
-                    handler(segmentData, svgGroup);
+                    handler.renderHandler(segmentData, svgGroup);
+                    return {{ 'point': pointer, 't': t }};
                 }} else {{
                     console.error(`No handler found for shape_type: ${{segmentData.shape_type}}`);
                 }}
+                return null;
             }}
             
             function getSvgGroup(pathId) {{
                 return $(`#${{pathId}} > g`);
             }}
             
+            function findClosestT(evaluator, segmentData, point) {{
+                function distanceSquared(t) {{
+                    const evaluatedPoint = evaluator(segmentData, t);
+                    const dx = evaluatedPoint[0] - point[0];
+                    const dy = evaluatedPoint[1] - point[1];
+                    return dx * dx + dy * dy;
+                }}
+
+                const t = newtonRaphson(distanceSquared, 0.5); // Initial guess: t = 0.5
+
+                return t;
+            }}
+
+            function newtonRaphson(f, x0, tol = 1e-6, maxIter = 100) {{
+                let x = x0;
+                let fx = f(x);
+                let df = numericalDerivative(f, x);
+
+                for (let i = 0; i < maxIter; i++) {{
+                    if (Math.abs(df) < tol) {{
+                        break;
+                    }}
+
+                    const dx = -fx / df;
+                    x += dx;
+                    if (x < 0) {{
+                        x = i * 1.0 / maxIter;
+                    }} else if (x > 1) {{
+                        x = 1.0 - i * 1.0 / maxIter;
+                    }}
+                    fx = f(x);
+                    df = numericalDerivative(f, x);
+                }}
+
+                return x;
+            }}
+
+            function numericalDerivative(f, x, h = 1e-6) {{
+                return (f(x + h) - f(x)) / h;
+            }}
+            
+            function getSVGCoordinates(evt, svg, group) {{
+                // Create an SVGPoint instance to hold the mouse coordinates
+                const point = svg.createSVGPoint();
+
+                // Set the point's x and y to the mouse event's client coordinates
+                point.x = evt.clientX;
+                point.y = evt.clientY;
+
+                // Get the current transformation matrix of the SVG element
+                const ctm = group.getScreenCTM();
+
+                if (ctm === null) {{
+                    return null;
+                }}
+
+                // Apply the inverse of the CTM to the point to transform it into SVG coordinates
+                const svgPoint = point.matrixTransform(ctm.inverse());
+
+                return [svgPoint.x, svgPoint.y];
+            }}
+    
             var doclear = true;
             var timeSelected = 0;
             var lastEntered = null;
@@ -720,7 +888,7 @@ HTML_TEMPLATE = '''\
             // Run this function after the document has fully loaded
             JQ(document).ready(function() {{
                 // Add event listeners to each segment using jQuery
-                JQ('.segment').on('mouseenter', function() {{
+                JQ('.segment').on('mouseenter', function(event) {{
                     // Get segment id and use it to fetch metadata from image_metadata
                     if (this === lastEntered) {{
                         return;
@@ -729,7 +897,7 @@ HTML_TEMPLATE = '''\
                     clearSelected();
                     const segId = JQ(this).attr('id');
                     const segmentData = segment_metadata.segdict[segId];
-                    handleSegment(segmentData, getSvgGroup(segmentData.path_id));
+                    const result = handleSegment(this, segmentData, event);
                     const pathId = segmentData.path_id;
                     const metadata = image_metadata.path_items[pathId]; // Assuming segment data from image_metadata map
                     const pathList = [];
@@ -737,9 +905,17 @@ HTML_TEMPLATE = '''\
                         pathList.push(``);
                         pathList.push(anchorPath.shape_path.join(', ') + ', ' + segmentData.name);
                     }});
+                    var pointInfo = '';
+                    if (result) {{
+                        pointInfo = `Point: (${{result.point[0].toFixed(3)}}, ${{result.point[1].toFixed(3)}})\\n`
+                            + `Paraneter t: ${{result.t.toFixed(3)}}\\n`;
+                    }}
                     const segmentInfo = `name: ${{segmentData.name}}\\n`
                             + `type: ${{segmentData.shape_type}}\\n`
+                            + pointInfo
+                            + `call site: ${{segmentData.trace[0]}}:${{segmentData.trace[1]}}\\n`
                             + `Shape anchor paths:\\n${{pathList.join('\\n')}}`;
+
                     updateTextArea(segmentInfo);
                     doclear = true;
                 }});
