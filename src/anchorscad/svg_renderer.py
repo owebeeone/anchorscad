@@ -675,11 +675,11 @@ HTML_TEMPLATE = '''\
         let segment_metadata = {segment_metadata};
     
         /**
-        * Downloads an SVG element as a file.
-        *
-        * @param {{string}} svgId - The ID of the SVG element to download.
-        * @param {{string}} filename - The name of the file to be downloaded (e.g., "image.svg").
-        */
+         * Downloads an SVG element as a file.
+         *
+         * @param {{string}} svgId - The ID of the SVG element to download.
+         * @param {{string}} filename - The name of the file to be downloaded (e.g., "image.svg").
+         */
         function downloadSVG(svgId, filename) {{
             // Get the SVG element by its ID
             const svgElement = document.getElementById(svgId);
@@ -712,6 +712,56 @@ HTML_TEMPLATE = '''\
             // Clean up by removing the link and revoking the object URL
             document.body.removeChild(link);
             URL.revokeObjectURL(link.href);
+        }}
+    
+        /**
+         * Downloads an SVG element as a PNG file.
+         *
+         * @param {{string}} svgId - The ID of the SVG element to download.
+         * @param {{string}} filename - The name of the file to be downloaded (e.g., "image.png").
+         */
+        function downloadPNG(svgId, filename) {{
+            const svg = document.getElementById(svgId);
+
+            // Serialize the SVG XML
+            const serializer = new XMLSerializer();
+            let svgString = serializer.serializeToString(svg);
+
+            // Convert SVG string to a data URL
+            const svgData = 'data:image/svg+xml;charset=utf-8,' + encodeURIComponent(svgString);
+
+            // Create an Image object
+            const img = new Image();
+            
+            // Handle CORS if necessary (uncomment if your SVG uses external resources)
+            // img.crossOrigin = 'anonymous';
+
+            img.onload = function () {{
+                // Create a canvas element
+                const canvas = document.createElement('canvas');
+                canvas.width = svg.clientWidth;
+                canvas.height = svg.clientHeight;
+
+                // Draw the SVG image onto the canvas
+                const ctx = canvas.getContext('2d');
+                ctx.drawImage(img, 0, 0);
+
+                // Convert the canvas to a PNG data URL
+                const pngData = canvas.toDataURL('image/png');
+
+                // Create a temporary link to trigger the download
+                const downloadLink = document.createElement('a');
+                downloadLink.href = pngData;
+                downloadLink.download = filename;
+
+                // Append the link, click it, and remove it
+                document.body.appendChild(downloadLink);
+                downloadLink.click();
+                document.body.removeChild(downloadLink);
+            }};
+
+            // Set the source of the Image to the SVG data URL
+            img.src = svgData;
         }}
         
         function deferrred() {{
@@ -1052,11 +1102,15 @@ class HtmlRenderer:
         
         svg_str = svg_renderer.to_svg_string()
         
-        return f'''<div class="svg-path" id="{div_id}">
-    <div class="svg-container">
+        return f'''    <div class="svg-path" id="{div_id}">
+      <div class="svg-container">
         {'        '.join(svg_str.splitlines(True))}
+      </div>
+      <div class="buttons-container">
         <button class="download-button" onclick="downloadSVG('{path_id}', 'anchorscad_path.svg')">Download SVG</button>
-    </div>\n</div>'''
+        <button class="download-button" onclick="downloadPNG('{path_id}', 'anchorscad_path.png')">Download PNG</button>
+      </div>
+    </div>'''
     
     def create_html(self, name='AnchorScad Paths'):
         '''Create the html page.'''
