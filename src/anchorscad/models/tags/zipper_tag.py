@@ -30,8 +30,8 @@ class ZipperTag(ad.CompositeShape):
     layer_size: float=ad.dtfield(0.6, doc='The thickness of label material')
     epsilon: float=ad.dtfield(0.01, doc='The gap between the inner and outer tags')
 
-    substrate_material: ad.Material=ad.dtfield(ad.Material(f"substrate", priority=5))
-    label_material: ad.Material=ad.dtfield(ad.Material(f"label", priority=6))
+    substrate_material: ad.Material=ad.dtfield(ad.Material("substrate", priority=5))
+    label_material: ad.Material=ad.dtfield(ad.Material("label", priority=6))
 
     hole_r: float=ad.dtfield(2.1, doc='The radius of the hole in the tag')
     hole_h: float=ad.dtfield(

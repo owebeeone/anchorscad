@@ -925,6 +925,9 @@ HTML_TEMPLATE = '''\
                     const actualPoint = handler.evaluator(segmentData, t);
                     const svgGroup = getSvgGroup(segmentData.path_id);
                 
+                    // Remove existing visual elements.
+                    JQ(`.dot.${{segId}}`).remove();
+                    JQ(`.control-line.${{segId}}`).remove();
                     handler.renderHandler(segmentData, svgGroup, segId);
                     addCursorDot(actualPoint, group, segId);
                     return {{ 'point': actualPoint, 't': t }};
