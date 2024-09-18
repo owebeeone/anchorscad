@@ -773,60 +773,62 @@ HTML_TEMPLATE = '''\
             }}
             
             function clearSelected(includeVisuals=true) {{
-                $('.selected').removeClass('selected');
+                JQ('.selected').removeClass('selected');
                 if (includeVisuals) {{
-                    $('.metadata-visuals').remove();
+                    JQ('.metadata-visuals').remove();
                 }}
             }}
             
-            function addDots(points, svgGroup) {{
+            function addDots(points, svgGroup, segId) {{
                 points.forEach(point => {{
                     const dot = document.createElementNS("http://www.w3.org/2000/svg", "circle");
                     dot.setAttribute('cx', point[0]);
                     dot.setAttribute('cy', point[1]);
-                    dot.classList.add('dot', 'metadata-visuals');
+                    dot.classList.add('dot', 'metadata-visuals', segId);
                     svgGroup.append(dot, document.createTextNode('\\n        '));
                 }});
             }}
             
-            function addCursorDot(point, svgGroup) {{
+            function addCursorDot(point, svgGroup, segId) {{
                 const dot = document.createElementNS("http://www.w3.org/2000/svg", "circle");
                 dot.setAttribute('cx', point[0]);
                 dot.setAttribute('cy', point[1]);
-                dot.classList.add('cursor-dot', 'metadata-visuals');
+                // Remove existing cursor dots with the same ID.
+                JQ(`.cursor-dot.${{segId}}`).remove();
+                dot.classList.add('cursor-dot', 'metadata-visuals', segId);
                 svgGroup.append(dot, document.createTextNode('\\n        '));
             }}
             
-            function addControlLine(p1, p2, svgGroup) {{
+            function addControlLine(p1, p2, svgGroup, segId) {{
                 const line = document.createElementNS("http://www.w3.org/2000/svg", "line");
                 line.setAttribute('x1', p1[0]);
                 line.setAttribute('y1', p1[1]);
                 line.setAttribute('x2', p2[0]);
                 line.setAttribute('y2', p2[1]);
-                line.classList.add('control-line', 'metadata-visuals');
+                line.classList.add('control-line', 'metadata-visuals', segId);
                 svgGroup.append(line, document.createTextNode('\\n        '));
             }}
             
-            function handleArc(segmentData, svgGroup) {{
-                addDots(segmentData.points, svgGroup);
-                addControlLine(segmentData.points[0], segmentData.points[2], svgGroup);
-                addControlLine(segmentData.points[1], segmentData.points[2], svgGroup);
+            function handleArc(segmentData, svgGroup, segId) {{
+                addDots(segmentData.points, svgGroup, segId);
+                addControlLine(segmentData.points[0], segmentData.points[2], svgGroup, segId);
+                addControlLine(segmentData.points[1], segmentData.points[2], svgGroup, segId);
             }}
 
-            function handleSpline(segmentData, svgGroup) {{
-                addDots(segmentData.points, svgGroup);
-                addControlLine(segmentData.points[0], segmentData.points[1], svgGroup);
-                addControlLine(segmentData.points[2], segmentData.points[3], svgGroup);
+            function handleSpline(segmentData, svgGroup, segId) {{
+                addDots(segmentData.points, svgGroup, segId);
+                addControlLine(segmentData.points[0], segmentData.points[1], svgGroup, segId);
+                addControlLine(segmentData.points[2], segmentData.points[3], svgGroup, segId);
             }}
 
-            function handleLine(segmentData, svgGroup) {{
-                addDots(segmentData.points, svgGroup);
+            function handleLine(segmentData, svgGroup, segId) {{
+                addDots(segmentData.points, svgGroup, segId);
             }}
             
-            function handleQuadSpline(segmentData, svgGroup) {{
-                addDots(segmentData.points, svgGroup);
-                addControlLine(segmentData.points[0], segmentData.points[1], svgGroup);
-                addControlLine(segmentData.points[1], segmentData.points[2], svgGroup);
+            function handleQuadSpline(segmentData, svgGroup, segId) {{
+                addDots(segmentData.points, svgGroup, segId);
+                addControlLine(segmentData.points[0], segmentData.points[1], svgGroup, segId);
+                addControlLine(segmentData.points[1], segmentData.points[2], svgGroup, segId);
             }}
             
             class Handler {{
@@ -913,7 +915,7 @@ HTML_TEMPLATE = '''\
                 // Add more shape types as needed
             }};
             
-            function handleSegment(node, segmentData, event) {{
+            function handleSegment(node, segmentData, event, segId) {{
                 const handler = SEGMENT_HANDLERS[segmentData.shape_type];
                 if (handler) {{         
                     const svg = document.getElementById(segmentData.path_id);
@@ -923,8 +925,8 @@ HTML_TEMPLATE = '''\
                     const actualPoint = handler.evaluator(segmentData, t);
                     const svgGroup = getSvgGroup(segmentData.path_id);
                 
-                    handler.renderHandler(segmentData, svgGroup);
-                    addCursorDot(pointer, group);
+                    handler.renderHandler(segmentData, svgGroup, segId);
+                    addCursorDot(actualPoint, group, segId);
                     return {{ 'point': actualPoint, 't': t }};
                 }} else {{
                     console.error(`No handler found for shape_type: ${{segmentData.shape_type}}`);
@@ -933,7 +935,7 @@ HTML_TEMPLATE = '''\
             }}
             
             function getSvgGroup(pathId) {{
-                return $(`#${{pathId}} > g`);
+                return JQ(`#${{pathId}} > g`);
             }}
             
             function findClosestT(evaluator, segmentData, point) {{
@@ -1010,11 +1012,14 @@ HTML_TEMPLATE = '''\
                     if (this === lastEntered) {{
                         return;
                     }}
-                    $('#infoArea').addClass('selected').addClass('hovering');
-                    clearSelected();
+                    const isShift = event.shiftKey;
+                    JQ('#infoArea').addClass('selected').addClass('hovering');
+                    if (!isShift) {{
+                        clearSelected();
+                    }}
                     const segId = JQ(this).attr('id');
                     const segmentData = segment_metadata.segdict[segId];
-                    const cursorResult = handleSegment(this, segmentData, event);
+                    const cursorResult = handleSegment(this, segmentData, event, segId);
                     const pathId = segmentData.path_id;
                     const metadata = image_metadata.path_items[pathId]; // Assuming segment data from image_metadata map
                     const pathList = [];
@@ -1039,14 +1044,20 @@ HTML_TEMPLATE = '''\
                 }});
 
                     
-                JQ('.segment').on('mouseleave', function() {{
-                    if (doclear) {{
+                JQ('.segment').on('mouseleave', function(event) {{
+                    const isShift = event.shiftKey;
+                    const isSelected = JQ(this).hasClass('selected');
+                    if (doclear && !isShift) {{
                         // Clear text area when mouse leaves the segment
                         updateTextArea('');
                         clearSelected();
                         lastEntered = null;
+                    }} else if (!isSelected) {{
+                        // Remove the visual elements when the mouse leaves the segment
+                        // if the segment is not selected.
+                        JQ(`.${{JQ(this).attr('id')}}`).remove();
                     }}
-                    $('#infoArea').removeClass('hovering');
+                    JQ('#infoArea').removeClass('hovering');
                     const currentTime = Date.now();
                     const elapsed = currentTime - timeSelected;
                     if (elapsed > 1000) {{
@@ -1054,13 +1065,25 @@ HTML_TEMPLATE = '''\
                     }}
                 }});
                 
-                JQ('.segment').on('click', function() {{
+                JQ('.segment').on('click', function(event) {{
                     // Persist the text area content when clicked.
                     doclear = false;
-                    clearSelected(false);
-                    timeSelected = Date.now();
-                    $(this).addClass('selected');
-                    $('#infoArea').addClass('selected').removeClass('hovering');
+                    const isShift = event.shiftKey;
+                    if (!isShift) {{
+                        clearSelected(false);
+                    }}
+                    const isSelected = JQ(this).hasClass('selected');
+                    if (!isShift || !isSelected) {{
+                        timeSelected = Date.now();
+                        JQ(this).addClass('selected');
+                        JQ('#infoArea').addClass('selected').removeClass('hovering');
+                    }} else {{
+                        // Deselect this segment.
+                        JQ(this).removeClass('selected');
+                        const segId = JQ(this).attr('id');
+                        JQ(`.${{segId}}`).remove();  
+                    }}
+
                 }});
             }});
         }}
