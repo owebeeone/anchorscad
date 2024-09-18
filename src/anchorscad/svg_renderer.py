@@ -794,7 +794,7 @@ HTML_TEMPLATE = '''\
                 dot.setAttribute('cx', point[0]);
                 dot.setAttribute('cy', point[1]);
                 // Remove existing cursor dots with the same ID.
-                JQ(`.cursor-dot.${{segId}}`).remove();
+                JQ(`.cursor-dot`).remove();
                 dot.classList.add('cursor-dot', 'metadata-visuals', segId);
                 svgGroup.append(dot, document.createTextNode('\\n        '));
             }}
