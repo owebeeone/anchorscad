@@ -30,7 +30,7 @@ GVector([0.4999999999999999, -0.4999999999999999, 0.7071067811865476, 1.0])
 
 import numpy as np
 from typing import Callable, Tuple, Any, Union, List
-from dataclasses import dataclass
+from dataclasses import dataclass, MISSING
 from abc import ABC, abstractmethod
 
 # Exceptions for dealing with argument checking.
@@ -65,7 +65,7 @@ def to_degrees(radians: float) -> float:
     return radians * 180.0 / np.pi
 
 
-def list_of(typ: Callable[[Any], Any], len_min_max: Tuple[int, int] = (3, 3), fill_to_min: Any = None) -> Callable[[Any], list]:
+def list_of(typ: Callable[[Any], Any], len_min_max: Tuple[int, int] = (3, 3), fill_to_min: Any = MISSING) -> Callable[[Any], list]:
     '''Defines a converter for an iterable to a list of elements of a given type.
     Args:
         typ: The type of list elements.
@@ -88,11 +88,11 @@ def list_of(typ: Callable[[Any], Any], len_min_max: Tuple[int, int] = (3, 3), fi
                     'provided length too large, max is %d' % len_min_max[1])
             converted_value.append(typ(v))
         if len_min_max[0] and len(value) < len_min_max[0]:
-            if fill_to_min is None:
+            if fill_to_min is MISSING:
                 raise ConversionException(
                     'provided length (%d) too small and fill_to_min is None, min is %d'
                     % (len(converted_value), len_min_max[0]))
-            fill_converted = typ(fill_to_min)
+            fill_converted = typ(fill_to_min) if fill_to_min is not None else None
             for _ in range(len_min_max[0] - len(converted_value)):
                 converted_value.append(fill_converted)
         return converted_value

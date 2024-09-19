@@ -26,7 +26,7 @@ from anchorscad.colours import Colour
 from anchorscad.svg_renderer import HtmlRenderer
 import numpy as np
 import pythonopenscad as posc
-from typing import Any, Hashable, Dict, Tuple, Union
+from typing import Any, Hashable, Dict, List, Tuple, Union
 
 
 class CoreEception(Exception):
@@ -83,9 +83,13 @@ class ShapeNode(Node):
                          preserve=preserve, 
                          **kwds)
 
-def args(*args, **kwds):
+def args(*args, **kwds) -> Tuple[List[Any], Dict[str, Any]]:
     '''Returns a tuple or args and kwds passed to this function.'''
     return (args, frozendict(kwds))
+
+def args_add(args_tuple: Tuple[List[Any], Dict[str, Any]], **kwds):
+    '''Returns a new args tuple with the kwds added.'''
+    return (args_tuple[0], frozendict({**args_tuple[1], **kwds}))    
 
 def apply_args(other_args, *args, **kwds):
     '''Returns a tuple of args and kwds that is the combination of the

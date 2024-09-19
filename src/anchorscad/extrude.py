@@ -76,8 +76,8 @@ def strict_int_or_none(v):
 def strict_float_or_none(v):
     return strict_t_or_none(v, float)
 
-LIST_2_FLOAT_OR_NONE = l.list_of(strict_float_or_none, len_min_max=(2, 2), fill_to_min='None')
-LIST_2_INT_OR_NONE = l.list_of(strict_float_or_none, len_min_max=(2, 2), fill_to_min='None')
+LIST_2_FLOAT_OR_NONE = l.list_of(strict_float_or_none, len_min_max=(2, 2), fill_to_min=None)
+LIST_2_INT_OR_NONE = l.list_of(strict_float_or_none, len_min_max=(2, 2), fill_to_min=None)
 LIST_2_FLOAT = l.list_of(l.strict_float, len_min_max=(2, 3), fill_to_min=0.0)
 LIST_3_FLOAT = l.list_of(l.strict_float, len_min_max=(3, 3), fill_to_min=0.0)
 LIST_2X2_FLOAT = l.list_of(LIST_2_FLOAT, len_min_max=(2, 2), fill_to_min=None)
@@ -1904,13 +1904,13 @@ class PathBuilder():
     
     def spline(self, points, name=None, metadata=None, 
                cv_len=(None, None), degrees=(0, 0), radians=(0, 0), rel_len=None):
-        '''Adds a spline node to the path.
+        '''Adds a cubic Bezier spline node to the path.
         Args:
             points: Either 3 point list (first control point is the last point) or a 
                     2 point list and cv_len with the first element set to the distance 
                     the control point follows along the previous operations last direction.
             cv_len: If provided will force the length of the control point (1 an 2)
-                    to be the given length.
+                    to be the given length from the respective start and end points.
             name: The name of this node. Naming a node will make it an anchor.
             metadata: Provides parameters for rendering that override the renderer metadata.
             degrees: A 2 tuple that contains a rotation angle for control points 1 and 2
@@ -1921,8 +1921,8 @@ class PathBuilder():
                     distance from the end points. If cv_len is set it is used as a multiplier.
         '''
         assert len(self.ops) > 0, "Cannot line to without starting point"
-        degrees = LIST_2_INT_OR_NONE(degrees) if degrees else (None, None)
-        radians = LIST_2_INT_OR_NONE(radians) if radians else (None, None)
+        degrees = LIST_2_FLOAT_OR_NONE(degrees) if degrees else (None, None)
+        radians = LIST_2_FLOAT_OR_NONE(radians) if radians else (None, None)
         cv_len = LIST_2_FLOAT_OR_NONE(cv_len) if cv_len else (None, None)
         points = np.array(LIST_23X2_FLOAT(points))
         if len(points) == 2:
