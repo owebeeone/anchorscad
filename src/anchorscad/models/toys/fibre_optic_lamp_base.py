@@ -62,9 +62,16 @@ class FibreOpticLampShell(ad.CompositeShape):
 
     path_builder: ad.Node = ad.ShapeNode(FibreOpticLampBasePathBuilder)
     inner_path: ad.Path = ad.dtfield(self_default=lambda s: s.path_builder().build())
+    fn: int = ad.dtfield(64, doc='Number of facets for the extrude')
+    outer_fn: int = ad.dtfield(self_default=lambda s: s.fn, 
+                               doc='Number of facets for the outer extrude',
+                               init=True)
 
     inner_extrude_node: ad.Node = ad.ShapeNode(
-            ad.RotateExtrude, {'path_fn' : 'path_fn'}, prefix='inner_', expose_all=True)
+            ad.RotateExtrude, 
+            {'path_fn' : 'path_fn', 'fn' : 'outer_fn'}, 
+            prefix='inner_', 
+            expose_all=True)
     inner_shape: ad.Node = ad.dtfield(self_default=lambda s: s.inner_extrude_node())
 
     shell_thickness: float = 2.5
@@ -72,7 +79,10 @@ class FibreOpticLampShell(ad.CompositeShape):
         self_default=lambda s: s.inner_path.transform(offset=s.shell_thickness, metadata=s.path_metadata)
     )
     outer_extrude_node: ad.Node = ad.ShapeNode(
-            ad.RotateExtrude, {'path_fn' : 'path_fn'}, prefix='outer_', expose_all=True)
+            ad.RotateExtrude, 
+            {'path_fn' : 'path_fn', 'fn' : 'outer_fn'}, 
+            prefix='outer_', 
+            expose_all=True)
     outer_shape: ad.Node = ad.dtfield(self_default=lambda s: s.outer_extrude_node())
 
     EXAMPLE_SHAPE_ARGS = ad.args(fn=256, outer_degrees=270)
@@ -533,7 +543,8 @@ class FibreOpticLampBase(ad.CompositeShape):
 
     EXAMPLE_SHAPE_ARGS = ad.args(
         fn=64, 
-        path_fn=16, 
+        path_fn=32, 
+        outer_fn=512,
         outer_degrees=270, 
         path_metadata=None) #ad.EMPTY_ATTRS.with_fn(8))
     EXAMPLE_ANCHORS = (ad.surface_args('corner', 1),
