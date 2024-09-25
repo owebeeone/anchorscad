@@ -743,39 +743,39 @@ class ShapeNamer:
         assert False, 'This method needs to be overridden in child classes.'
         
     # Shape like functions.    
-    def solid(self, name):
+    def solid(self, name) -> NamedShape:
         return self.named_shape(name, ModeShapeFrame.SOLID)
     
-    def hole(self, name):
+    def hole(self, name) -> NamedShape:
         return self.named_shape(name, ModeShapeFrame.HOLE)
     
-    def cage(self, name):
+    def cage(self, name) -> NamedShape:
         return self.named_shape(name, ModeShapeFrame.CAGE)
     
-    def composite(self, name):
+    def composite(self, name) -> NamedShape:
         return self.named_shape(name, ModeShapeFrame.COMPOSITE)
     
-    def intersect(self, name):
+    def intersect(self, name) -> NamedShape:
         return self.named_shape(name, ModeShapeFrame.INTERSECT)
     
-    def hull(self, name):
+    def hull(self, name) -> NamedShape:
         return self.named_shape(name, ModeShapeFrame.HULL)
     
-    def minkowski(self, name):
+    def minkowski(self, name) -> NamedShape:
         return self.named_shape(name, ModeShapeFrame.MINKOWSKI)
 
-    def by_index(self, name, index, *modes):
+    def by_index(self, name, index, *modes) -> NamedShape:
         '''Select the shape mode by the index given over the provided modes.'''
         if not index:
             index = 0
         return self.named_shape(name, modes[index])
     
-    def solid_hole(self, name, is_hole):
+    def solid_hole(self, name, is_hole) -> NamedShape:
         '''Choose the mode as solid or hole determined by the is_hole parameter.'''
         return self.by_index(
             name, is_hole, ModeShapeFrame.SOLID, ModeShapeFrame.HOLE)
         
-    def solid_cage(self, name, is_cage):
+    def solid_cage(self, name, is_cage) -> NamedShape:
         '''Choose the mode as solid or cage determined by the is_cage parameter.'''
         return self.by_index(
             name, is_cage, ModeShapeFrame.SOLID, ModeShapeFrame.CAGE)
@@ -825,7 +825,7 @@ class ShapeMaker:
 class LazyNamedShape(NamedShapeBase):
     '''Provides attributes but no transformation to a maker.'''
     
-    def to_named_shape(self, shape):
+    def to_named_shape(self, shape) -> NamedShape:
         values = self._as_non_defaults_dict()
         values['shape'] = shape
         return NamedShape(**values)
@@ -867,7 +867,7 @@ class LazyShape(ShapeNamer):
         
         return self.shape_type(*args[0], **args[1])
 
-    def named_shape(self, name, mode_shape_frame):
+    def named_shape(self, name, mode_shape_frame) -> LazyNamedShape:
         return LazyNamedShape(self, mode_shape_frame, name)
 
 
@@ -1408,7 +1408,7 @@ class Maker(Shape):
                pre=None, 
                post=None, 
                args=None, 
-               anchor=None, 
+               anchor: AnchorArgs=None, 
                **kwds) -> 'Maker':
         '''Adds another maker at the anchor of the provided parameters.
         If args is provided, this is a packed set of args from core.args.

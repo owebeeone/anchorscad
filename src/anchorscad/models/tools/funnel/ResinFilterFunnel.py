@@ -31,18 +31,18 @@ BOTTLE_INSERTION_H=25
 def determine_params(r, r_inner, t_default, t, name):
     '''Given an outer radius, inner radius, thickness and default 
     thickness, determine the missing parameters.'''
-    if not r is None:
+    if r is not None:
         if r_inner is None:
             if t is None:
-                assert not t_default is None, f'Cannot determine {name}'
+                assert t_default is not None, f'Cannot determine {name}'
                 t = t_default
             r_inner = r - t
         else:
             t = r - r_inner
     else:
-        assert not r_inner is None, f'Cannot determine {name}'
+        assert r_inner is not None, f'Cannot determine {name}'
         if t is None:
-            assert not t_default is None, f'Cannot determine {name}'
+            assert t_default is not None, f'Cannot determine {name}'
             t = t_default
         r = r_inner + t
     return r, r_inner, t

@@ -190,6 +190,7 @@ class CountersunkScrew(ad.CompositeShape):
 @ad.shape
 @ad.datatree(chain_post_init=True)
 class FlatSunkScrew(CountersunkScrew):
+    '''For screws that are flat and sunk into the surface.'''
 
     def createHeadDims(self, shaft_dims):
         '''Creates a default set of flat sunk screw set of head dimensions.'''
@@ -201,7 +202,26 @@ class FlatSunkScrew(CountersunkScrew):
             head_mid_depth=self.head_sink_factor * shaft_dims.tapping_d,
             head_countersink_depth=self.head_depth_factor * shaft_dims.tapping_d / 2)
         
-        
+@ad.shape
+@ad.datatree(chain_post_init=True)
+class FlatHeadScrew(CountersunkScrew):
+    '''For screws that are flat and flush with the surface.'''
+
+    def createHeadDims(self, shaft_dims):
+        '''Creates a default set of flat sunk screw set of head dimensions.'''
+        head_dia = (self.head_depth_factor + 1) * shaft_dims.tapping_d
+        return HeadDimensions(
+            head_top_d=head_dia,
+            head_bot_d=head_dia,
+            head_protrusion_height=0.0,
+            head_mid_depth=self.head_sink_factor * shaft_dims.tapping_d,
+            head_countersink_depth=self.head_depth_factor * shaft_dims.tapping_d / 2)
+    
+    @ad.anchor('Screw head surface interface top')
+    def top(self) -> ad.GMatrix:
+        head_height = self.head_dims.overall_screw_head_height()
+        return self.maker.at('top') * ad.tranZ(-head_height)
+
         
 @ad.shape
 @ad.datatree(chain_post_init=True)

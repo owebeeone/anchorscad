@@ -1164,3 +1164,34 @@ def distance_between(pointA: GMatrix, pointB: GMatrix) -> float:
     '''Returns the distance from between 2 points.'''
     diff = pointA.get_translation() - pointB.get_translation()
     return clean(diff.length(), epsilon=1.e-20)
+
+def distance_between_point_plane(point: GMatrix, plane: GMatrix) -> float:
+    '''
+    Calculate the perpendicular distance from a point to a plane.
+
+    Parameters:
+      point: GMatrix representing the point's frame. The origin of this 
+            frame is the point.
+      plane: GMatrix representing the plane's frame. The x-y plane of 
+            this frame defines the plane.
+
+    Returns:
+      distance: The perpendicular distance from the point to the plane.
+    '''
+    # Extract the plane's normal vector (Z-axis) and normalize it
+    plane_normal = plane.get_axis(2).N  # GVector
+
+    # Extract the translation vectors
+    plane_translation = plane.get_translation()  # GVector
+    point_translation = point.get_translation()  # GVector
+
+    # Compute the dot product of the plane's normal with its translation vector
+    # This gives the plane's distance from the origin
+    distance_plane = plane_normal.dot3D(plane_translation)
+
+    # Compute the dot product of the plane's normal with the point's translation vector
+    # This gives the point's distance from the origin in the direction of the plane's normal
+    distance_point = plane_normal.dot3D(point_translation)
+
+    return distance_point - distance_plane
+

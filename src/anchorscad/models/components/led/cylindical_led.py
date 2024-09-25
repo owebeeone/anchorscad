@@ -33,6 +33,7 @@ class CylindricalLedPathBuilder:
         
         return builder.build()
 
+# The size parameters for a 5mm and 3mm LED.
 LED_ARGS_5MM=ad.args(r=5 / 2, r_base=6 / 2, h=8.6, h_base=1)
 LED_ARGS_3MM=ad.args(r=3 / 2, r_base=3.85 / 2, h=5.3, h_base=1)
 
@@ -49,12 +50,18 @@ class CylindricalLedBody(ad.CompositeShape):
     
     epsilon: float=ad.dtfield(0.001, doc='A delta to avoid Z-fighting')
     
+    # The width of the cutout for the flat on the LED. This is 2 * the side
+    # of a right-angled triangle with hypotenuse r_base and one side r.
+    # Using Pythagoras' theorem, the width is 2 * sqrt(r_base^2 - r^2).
     cut_width: float=ad.dtfield(
-        self_default=lambda s: s.epsilon + 2 * np.sqrt(s.r_base ** 2 - s.r ** 2),)
+        self_default=lambda s: s.epsilon + 2 * np.sqrt(s.r_base ** 2 - s.r ** 2),
+        doc='Width of the cutout for the flat on the LED.')
     
+    # Assemble the size parameters for ad.Box. This is automatically bound to
+    # the cut_box_node by ad.Node.
     cut_size: float=ad.dtfield(
         self_default=lambda s: (s.cut_width, s.epsilon + s.r_base - s.r, s.h_base + s.epsilon),
-        doc='Size of the cutout for the flat on the LED')
+        doc='Size (w, d, h) of the cutout for the flat on the LED')
     
     cut_box_node: ad.Node=ad.ShapeNode(ad.Box, prefix='cut_')
     

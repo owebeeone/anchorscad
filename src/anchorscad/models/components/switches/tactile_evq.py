@@ -291,6 +291,7 @@ class TactileEvqHole(ad.CompositeShape):
         self_default=lambda s: ad.scale((s.xy_scale, s.xy_scale, 1)))
     
     EXAMPLE_SHAPE_ARGS = ad.args(fn=64)
+    EXAMPLE_ANCHORS = (ad.surface_args('top'),)
     
     def build(self) -> ad.Maker:
         evq_shape = self.evq_node()
