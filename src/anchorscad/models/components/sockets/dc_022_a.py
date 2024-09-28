@@ -50,7 +50,7 @@ class DC022A(ad.CompositeShape):
     
     rear_access_hole_r: float=ad.dtfield(13.8 / 2 + EXPANSION, 
             doc='Rear access hole radius, must take mounting bolt')
-    rear_access_hole_h: float=ad.dtfield(15 + 11.2, doc='Height of rear access hole')
+    rear_access_hole_h: float=ad.dtfield(1 + 11.2, doc='Height of rear access hole')
     rear_access_hole_node: ad.Node=ad.ShapeNode(ad.Cylinder, prefix='rear_access_hole_')
     
     plug_r: float=ad.dtfield(6.3 / 2 + EXPANSION, doc='Plug radius of the socket')

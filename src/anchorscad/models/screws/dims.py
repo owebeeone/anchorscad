@@ -32,6 +32,7 @@ class HeadDimensions(object):
 
 
 SHAFT_MAP = {
+    'M1.6' : ShaftDimensions(1.6, 1.8, 1.6),
     'M2' : ShaftDimensions(2.0, 2.4, 2.0),
     'M2.6' : ShaftDimensions(2.6, 2.8, 2.61),
     'M3' : ShaftDimensions(3.0, 3.25, 2.75),

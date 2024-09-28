@@ -904,14 +904,14 @@ def _process_datatree(clz, init, repr, eq, order, unsafe_hash, frozen,
     clz.__post_init_chain__ = tuple(post_init_chain.keys())
     clz.__initialize_node_instances_done__ = False
 
-    def override_post_init(self):
+    def override_post_init(self):  # TODO: Add support for InitVars.
         if not self.__initialize_node_instances_done__:
             _field_assign(self,
                           '__initialize_node_instances_done__',
                           True)
             _initialize_node_instances(clz, self)
             
-            for post_init_func in self.__post_init_chain__:
+            for post_init_func in reversed(self.__post_init_chain__):
                 post_init_func(self)
     
     override_post_init.__is_datatree_override_post_init__ = True

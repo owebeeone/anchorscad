@@ -73,9 +73,6 @@ class ModuleBuckLm2586Hw411(ad.CompositeShape):
         
         return maker
 
-    @ad.anchor('An example anchor')
-    def example_anchor(self):
-        return self.maker.at()
     
 @ad.shape
 @ad.datatree

@@ -6,6 +6,7 @@ Created on 18 Jul 2021
 
 from typing import Tuple
 import anchorscad as ad
+from anchorscad.models.components.board.arduino_nano import ArduinoNanoClassicMountPad
 from anchorscad.models.components.led.cylindical_led import CylindricalLedBody
 from anchorscad.models.components.sockets.dc_022_a import Dc022aHousing
 import numpy as np
@@ -498,7 +499,8 @@ class FibreOpticLampBase(ad.CompositeShape):
         doc='Radius of the cut cylinder',
     )
 
-    cut_cyl_node: ad.Node = ad.ShapeNode(ad.Cylinder, prefix='cut_cyl_')
+    cut_cyl_node: ad.Node = ad.ShapeNode(
+        ad.Cylinder, {'fn' : 'outer_fn'}, prefix='cut_cyl_', expose_all=True)
 
     small_lens_hole_h: float = ad.dtfield(
         self_default=lambda s: s.shell_thickness * 1.5, doc='Height of the small lens hole'
@@ -533,23 +535,35 @@ class FibreOpticLampBase(ad.CompositeShape):
         FibreOpticLampMockLedPcbSupportBox, {'height': None}, expose_all=True)
     
     switch_pos_anchor: ad.AnchorArgs = ad.surface_args(
-        'outer', 'azimuth', 'corner', az_angle=15, degrees=173 + 80)
+        'outer', 'azimuth', 'corner', az_angle=14, degrees=173 + 80)
     
     jack_pos_anchor: ad.AnchorArgs = ad.surface_args(
         'shell', 'outer', 'base', degrees=135)
     
     buck_pad: ad.Node = ad.ShapeNode(
         ModuleBuckLm2586Hw411MountPad, 'pad_margin', prefix='buck_pad_')
+    
+    arduino_pad: ad.Node = ad.ShapeNode(
+        ArduinoNanoClassicMountPad, prefix='arduino_pad_')
 
     EXAMPLE_SHAPE_ARGS = ad.args(
-        fn=64, 
-        path_fn=32, 
-        outer_fn=512,
+        fn=32, 
+        path_fn=16, 
+        outer_fn=128,
         outer_degrees=270, 
         path_metadata=None) #ad.EMPTY_ATTRS.with_fn(8))
     EXAMPLE_ANCHORS = (ad.surface_args('corner', 1),
                        ad.surface_args('pipe', 'base'),
                        ad.surface_args('shell', 'inner', 'base'),)
+    
+    EXAMPLES_EXTENDED = {
+        'fine': ad.ExampleParams(
+            shape_args=ad.args(fn=64, path_fn=32, outer_fn=512),
+        ),
+        'draft': ad.ExampleParams(
+            shape_args=ad.args(fn=16, path_fn=8, outer_fn=64),
+        )
+    }
 
     COLOURS = ('white', 'green', 'blue', 'pink', 'purple', 'red')
 
@@ -632,7 +646,13 @@ class FibreOpticLampBase(ad.CompositeShape):
         buck_pad = self.buck_pad().solid('buck_pad') \
             .part(self.base_part).at('face_edge', 'back', 2)
 
-        maker.add_at(buck_pad, 'board_box', 'face_edge', 'back', 2, post=ad.ROTY_180)        
+        maker.add_at(buck_pad, 'board_box', 'face_edge', 'back', 2, post=ad.ROTY_180)    
+        
+        arduino_pad = self.arduino_pad().solid('arduino_pad') \
+            .part(self.base_part).at('face_edge', 'front', 0)
+            
+        maker.add_at(arduino_pad, 'board_box', 'face_edge', 'front', 0,
+                     post=ad.ROTY_180)    
         
 
         return maker
