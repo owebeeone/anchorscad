@@ -48,7 +48,7 @@ class DC022A(ad.CompositeShape):
     body_h: float=ad.dtfield(11.2, doc='Height of body of the socket')
     body_extrude_node: ad.Node=ad.ShapeNode(ad.LinearExtrude, prefix='body_')
     
-    rear_access_hole_r: float=ad.dtfield(13.8 / 2 + EXPANSION, 
+    rear_access_hole_r: float=ad.dtfield(19.8 / 2 + EXPANSION, 
             doc='Rear access hole radius, must take mounting bolt')
     rear_access_hole_h: float=ad.dtfield(1 + 11.2, doc='Height of rear access hole')
     rear_access_hole_node: ad.Node=ad.ShapeNode(ad.Cylinder, prefix='rear_access_hole_')
