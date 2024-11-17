@@ -15,16 +15,16 @@ class TextTray(ad.CompositeShape):
     '''
 
     text: str=ad.dtfield('Y', 'Text string to render.')
-    size: float=ad.dtfield(170.0, 'Height of text')
-    depth: float=ad.dtfield(20.0, 'Depth of text')
+    size: float=ad.dtfield(230.0, 'Height of text')
+    depth: float=ad.dtfield(30.0, 'Depth of text')
     
-    font: str=ad.dtfield('Comic Sans MS', 'Font name for rendering.')
+    font: str=ad.dtfield('Namaku', 'Font name for rendering.')
     
     text_node: ad.Node=ad.ShapeNode(ad.Text)
     
-    inner_delta: float=ad.dtfield(11, 'inner offset (can be negative).')
-    base_thickness: float=ad.dtfield(3, 'Thickness of the base.')
-    outer_delta: float=ad.dtfield(15, 'outer offset')
+    inner_delta: float=ad.dtfield(-1, 'inner offset (can be negative).')
+    base_thickness: float=ad.dtfield(2, 'Thickness of the base.')
+    outer_delta: float=ad.dtfield(1, 'outer offset')
     
     fn: int=ad.dtfield(64, 'Number of facets for the text.')
     
@@ -32,6 +32,33 @@ class TextTray(ad.CompositeShape):
     
     
     EXAMPLE_SHAPE_ARGS=ad.args(text='LILY')
+    
+    EXAMPLES_EXTENDED={
+        'L': ad.ExampleParams(
+            shape_args=ad.args(text='L'),
+        ),
+        'I': ad.ExampleParams(
+            shape_args=ad.args(text='I'),
+        ),
+        'Y': ad.ExampleParams(
+            shape_args=ad.args(text='Y'),
+        ),
+        'O': ad.ExampleParams(
+            shape_args=ad.args(text='O'),
+        ),
+        'N': ad.ExampleParams(
+            shape_args=ad.args(text='N'),
+        ),
+        'E': ad.ExampleParams(
+            shape_args=ad.args(text='E'),
+        ),
+        'small_I': ad.ExampleParams(
+            shape_args=ad.args(text='I', size=160),
+        ),
+        'small_S': ad.ExampleParams(
+            shape_args=ad.args(text='S', size=160),
+        )
+    }
 
     def build(self) -> ad.Maker:
         
