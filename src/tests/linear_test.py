@@ -252,7 +252,86 @@ class TestLinear(unittest.TestCase):
         
         iterable_assert(self.assertAlmostEqual, (xform * preserve_axis).A, preserve_axis)
         self.assertAlmostEqual((xform * align_preserve_axis).z, 0)
+        
+    def assertEqualAngle(self, a1: linear.Angle, a2: linear.Angle):
+        self.assertTrue(isinstance(a1, a2.__class__))
+        self.assertAlmostEqual(a1.degrees(), a2.degrees())
+        
+        
+    def testAngleDegrees(self):
+        
+        self.assertEqualAngle(linear.angle(0), linear.AngleDegrees(0))
+        self.assertEqualAngle(linear.angle(90), linear.AngleDegrees(90))
+        self.assertEqualAngle(linear.angle(angle=180), linear.AngleDegrees(180))
+        self.assertEqualAngle(linear.angle(15) + linear.angle(7), linear.AngleDegrees(22))
+        self.assertEqualAngle(linear.angle(15) - linear.angle(7), linear.AngleDegrees(8))
+        self.assertEqualAngle(-linear.angle(7), linear.AngleDegrees(-7))
 
+        self.assertEqual(linear.angle(90), linear.AngleRadians(np.pi / 2))
+        self.assertEqual(linear.angle(90), linear.AngleSinCos((1, 0)))
+
+    def testAngleRadians(self):
+        
+        self.assertEqualAngle(linear.angle(radians=0), linear.AngleRadians(0))
+        self.assertEqualAngle(linear.angle(radians=np.pi / 2), linear.AngleRadians(np.pi / 2))
+        self.assertEqualAngle(linear.angle(radians=np.pi), linear.AngleRadians(np.pi))
+        self.assertEqualAngle(
+            linear.angle(radians=0.2) + linear.angle(radians=0.1), 
+            linear.AngleRadians(0.3))
+        self.assertEqualAngle(
+            linear.angle(radians=0.4) - linear.angle(radians=0.1), 
+            linear.AngleRadians(0.3))
+        self.assertEqualAngle(-linear.angle(radians=0.3), linear.AngleRadians(-0.3))
+
+        self.assertEqual(linear.angle(radians=np.pi / 2), linear.AngleDegrees(90))
+        self.assertEqual(linear.angle(radians=np.pi / 2), linear.AngleSinCos((1, 0)))
+    
+    def sinr_cosr(self, degrees: float=None, radians:float=None, angle: linear.Angle=None) \
+            -> linear.AngleSinCos:
+        angle = linear.angle(degrees=degrees, radians=radians, angle=angle)
+        return linear.AngleSinCos(angle.sinr_cosr())
+        
+    def testAngleSinCos(self):
+        self.assertEqualAngle(linear.angle(sinr_cosr=(0, 1)), linear.AngleSinCos((0, 1)))
+        self.assertEqualAngle(linear.angle(sinr_cosr=(1, 0)), linear.AngleSinCos((1, 0)))
+        self.assertEqualAngle(linear.angle(sinr_cosr=(0, -1)), linear.AngleSinCos((0, -1)))
+        self.assertEqualAngle(
+            self.sinr_cosr(degrees=30) + self.sinr_cosr(degrees=15), 
+            self.sinr_cosr(degrees=45))
+        self.assertEqualAngle(
+            self.sinr_cosr(degrees=60) - self.sinr_cosr(degrees=15), 
+            self.sinr_cosr(degrees=45))
+        self.assertEqualAngle(
+            -self.sinr_cosr(degrees=15), self.sinr_cosr(degrees=-15))
+
+        self.assertEqual(self.sinr_cosr(radians=np.pi / 2), linear.AngleDegrees(90))
+        self.assertEqual(self.sinr_cosr(radians=np.pi / 2), linear.AngleSinCos((1, 0)))
+
+    def testAngleCosSin(self):
+        self.assertEqualAngle(linear.angle(cosr_sinr=(1, 0)), linear.AngleSinCos((0, 1)))
+        self.assertEqualAngle(linear.angle(cosr_sinr=(0, 1)), linear.AngleSinCos((1, 0)))
+        self.assertEqualAngle(linear.angle(cosr_sinr=(-1, 0)), linear.AngleSinCos((0, -1)))
+        
+    def testAngleSweep(self):
+    
+        self.assertAlmostEqual(linear.angle(45).sweepRadians(True), np.pi / 4)
+        self.assertAlmostEqual(linear.angle(-45).sweepRadians(True), 7 * np.pi / 4)
+        self.assertAlmostEqual(linear.angle(-45).sweepRadians(False), -np.pi / 4)
+        self.assertAlmostEqual(linear.angle(45).sweepRadians(False), -7 * np.pi / 4)
+        
+        self.assertAlmostEqual(self.sinr_cosr(45).sweepRadians(True), np.pi / 4)
+        self.assertAlmostEqual(self.sinr_cosr(-45).sweepRadians(True), 7 * np.pi / 4)
+        self.assertAlmostEqual(self.sinr_cosr(-45).sweepRadians(False), -np.pi / 4)
+        self.assertAlmostEqual(self.sinr_cosr(45).sweepRadians(False), -7 * np.pi / 4)
+        
+        self.assertAlmostEqual(linear.angle(-720 - 45).sweepRadians(True), 23 * np.pi / 4)
+        
+        self.assertAlmostEqual(linear.angle(0).sweepRadians(True, non_zero=True), 2 * np.pi)
+        self.assertAlmostEqual(linear.angle(0).sweepRadians(False, non_zero=True), -2 * np.pi)
+                
+        self.assertAlmostEqual(linear.angle(0).sweepRadians(True, non_zero=False), 0)
+        self.assertAlmostEqual(linear.angle(0).sweepRadians(False, non_zero=False), 0)
+        
 
     def testMirror(self):
         pass

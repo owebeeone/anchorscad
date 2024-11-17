@@ -136,10 +136,13 @@ class Header(ad.CompositeShape):
             x = self.pins_x - nx
             for y in range(1, self.pins_y + 1):
                 pin_xy = base_shape_maker.solid(('pin', x, y)).at('base')
-                maker.add_at(pin_xy, 'face_corner', 'right', 1,
-                             post=ad.ROTY_270 * ad.translate((-(nx + 0.5) * self.pitch, (y - 0.5) * self.pitch, 0)))
- 
-        
+                maker.add_at(pin_xy, 
+                             'face_corner', 'right', 1,
+                             post=ad.ROTY_270 
+                                * ad.translate(
+                                    (-(nx + 0.5) * self.pitch, 
+                                     (y - 0.5) * self.pitch, 
+                                     0)))
         return maker
 
 

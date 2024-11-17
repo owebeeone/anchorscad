@@ -15,6 +15,7 @@ import unittest
 from unittest import TestCase
 from dataclasses import dataclass
 import anchorscad.renderer as renderer
+import anchorscad.graph_model as gm
 import anchorscad.core as core
 
 
@@ -855,7 +856,29 @@ class ExtrudeTest(TestCase):
                         initial_attrs=core.ModelAttributes())
         html_renderer = sr.HtmlRenderer(result.paths.paths)
         html_renderer.write('testSvgRender3.html')
+        
+    def testConstructionRender(self):
+        
+        pathBuilder = extrude.PathBuilder()
+        pathBuilder.move([0, 0])
+        pathBuilder.line([100, 0], 'l1')
+        pathBuilder.arc_tangent_point([100, 100], name='a1')
 
+        with pathBuilder.construction() as contructionBuilder:
+            contructionBuilder.move([100, 50])
+            contructionBuilder.line([100, 0], 'cl1')
+            contructionBuilder.move([100, 50])
+            contructionBuilder.line([100, 100], 'cl2')
+            
+        path = pathBuilder.build()
+        
+        assert path.constructions
+        
+        html_renderer = sr.HtmlRenderer(
+            {path: renderer.ShapePathCollection(
+                    [renderer.ShapePath((gm.Node('test1'), gm.Node('test2')))])})
+
+        html_renderer.write('testConstructionRender.html')
 
 if __name__ == "__main__":
     unittest.main()

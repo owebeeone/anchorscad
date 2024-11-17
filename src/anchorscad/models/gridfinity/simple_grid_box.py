@@ -165,6 +165,20 @@ class MixGridBox(ad.CompositeShape):
             shape_args=ad.args(
                 x=(322 - 1.5) / 2,
                 y=(348- 1.5) / 2),
+        ),
+        'insert' : ad.ExampleParams(
+            shape_args=ad.args(
+                x=397,
+                y=240,
+                z=22,
+                wx=(1,) * 8,
+                wy=(1,) * 6,
+                bt=-0.01,
+                ),
+            anchors=(
+                ad.surface_args('box', 'centre', scale_anchor=2),
+                ad.surface_args(('hole', 3, 2), 'centre', scale_anchor=2),
+            )
         )
     }
 
@@ -230,7 +244,51 @@ class MixGridBox(ad.CompositeShape):
         '''The position of the hole at (col, row).'''
         return (self.x_pos(col), self.y_pos(row), -self.bt)
 
+
+@ad.shape
+@ad.datatree
+class MixGridBoxSeparators(ad.CompositeShape):
+
+    mix_grid_box: ad.Node=ad.ShapeNode(MixGridBox)
     
+    epsilon: float=ad.dtfield(0.2, doc='Epsilon for the cut')
+    
+    cut_size: tuple=ad.dtfield(
+        self_default=lambda s: (s.x / 2 - (s.t + s.epsilon), s.y - (s.t + s.epsilon) * 2, s.z),
+        doc='The (x,y,z) size of the cut')
+    cut_node: ad.Node=ad.dtfield(ad.ShapeNode(ad.Box, prefix='cut_'))
+    
+    EXAMPLES_EXTENDED={
+
+        'insert' : ad.ExampleParams(
+            shape_args=ad.args(
+                x=396.5 + 2 * 2.4,
+                y=239.75 + 2 * 2.4,
+                z=20.4,
+                wx=(1,) * 8,
+                wy=(1,) * 6,
+                bt=-0.01,
+                t=2.4
+                ),
+            anchors=(
+                ad.surface_args('box', 'centre', scale_anchor=2),
+                ad.surface_args('cut', 'face_centre', 'left', scale_anchor=2),
+            )
+        )
+    }
+    
+    def build(self) -> ad.Maker:
+        
+        shape = self.mix_grid_box()
+        grid_maker = shape.solid('mix_grid_box').at('face_centre', 'base', post=ad.ROTX_180 * ad.ROTZ_90)
+  
+        cut_shape = self.cut_node().solid('cut').at('face_centre', 'left')
+        
+        grid_maker.add_at(cut_shape, 'centre', post=ad.ROTX_270 * ad.ROTY_90)
+
+        maker = grid_maker.intersect('cut').at()    
+   
+        return maker 
 
 # Uncomment the line below to default to writing OpenSCAD files
 # when anchorscad_main is run with no --write or --no-write options.

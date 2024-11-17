@@ -1874,7 +1874,7 @@ class Box(Shape):
     
 
 
-TEXT_DEPTH_MAP={'centre':0.0, 'center':0.0, 'rear': -0.5, 'front':0.5}
+TEXT_DEPTH_MAP={'centre':0.5, 'center':0.5, 'rear': 0.0, 'front':1.0}
 
 def non_defaults_dict(dataclas_obj, include=None, exclude=()):
     if not (include is None or isinstance(include, tuple) or isinstance(include, dict)):
@@ -1953,22 +1953,35 @@ class Text(Shape):
                                        ARGS_REV_XLATION_TABLE, 
                                        expose_all=True), 
                           init=False)
+    offset_node: Node=dtfield(default=ShapeNode(posc.Offset, prefix='offset_'))
     
     EXAMPLE_ANCHORS=(surface_args('default', 'rear'),)
     EXAMPLE_SHAPE_ARGS=args('Text Example', depth=5)
+    EXAMPLES_EXTENDED={
+        'offset': ExampleParams(
+            shape_args=args('Offset', depth=5, offset_delta=-0.3, font='Showcard Gothic', fn=64),
+            anchors=(inner_args('default'),))
+    }
 
     def render(self, renderer):
         # Allow for proper spelling of centre.
         halign = 'center' if self.halign == 'centre' else self.halign
         valign = 'center' if self.valign == 'centre' else self.valign
-        text_obj = renderer.model.Translate([0, 0, self.depth * -0.5])(
-             renderer.model.Linear_Extrude(self.depth)(
-                 self.text_node.call_with_alt_defaults(
+        xlation: posc.Translate = renderer.model.Translate([0, 0, self.depth * -0.5])
+        text_obj = self.text_node.call_with_alt_defaults(
                      renderer.model.Text, 
                      halign=halign,
                      valign=valign,
-                     alt_defaults=renderer.get_current_attributes())))
-        return renderer.add(text_obj)
+                     alt_defaults=renderer.get_current_attributes())
+        if self.offset_delta:
+            offset = self.offset_node.call_with_alt_defaults(
+                renderer.model.Offset, 
+                delta=self.offset_delta,
+                alt_defaults=renderer.get_current_attributes())
+            text_obj = offset(text_obj)
+        extruded_text_obj = renderer.model.Linear_Extrude(self.depth)(
+            xlation(text_obj))
+        return renderer.add(extruded_text_obj)
     
     @anchor('The default position for this text. depth=(rear, centre, front)')
     def default(self, depth='centre', rd=None):
@@ -3066,6 +3079,3 @@ MAIN_DEFAULT=ModuleDefault(all=True)
 
 if __name__ == "__main__":
     anchorscad_main()
-    
-    
-    

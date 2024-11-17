@@ -620,10 +620,16 @@ class Container():
 @dataclass_json
 @dataclass(frozen=True)
 class ShapePath:
-    shape_path: tuple = field(metadata=config(
+    shape_path: Tuple[graph_model.Node, ...] = field(metadata=config(
         encoder=lambda shape_path: tuple(str(v.label) for v in shape_path)))
     
-    def to_path(self):
+    def __post_init__(self):
+        if not isinstance(self.shape_path, tuple):
+            raise ValueError('shape_path must be a tuple.')
+        for n in self.shape_path:
+            assert isinstance(n, graph_model.Node), 'shape_path must be a tuple of Nodes.'
+    
+    def to_path(self) -> Tuple[str, ...]:
         return tuple(v.label for v in self.shape_path)
     
     def __str__(self):

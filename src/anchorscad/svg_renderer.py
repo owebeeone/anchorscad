@@ -4,6 +4,7 @@ Created on 26 Sept 2022
 @author: gianni
 '''
 
+from typing import List
 import numpy as np
 import anchorscad.linear as l
 import anchorscad.datatrees as dt
@@ -33,7 +34,6 @@ def get_path_and_line_number(trace):
 def convert_to_python_floats(points):
     return tuple((float(p[0]), float(p[1])) for p in points)
 
-
 @dataclass_json
 @dt.datatree(provide_override_field=False)
 class Segment(object):
@@ -48,7 +48,8 @@ class Segment(object):
     sweep_angle: float = None  # For arcs.
     sweep_flag: int = None  # For arcs.
     id: str = dt.dtfield(self_default=lambda s: s.next_id())
-
+    css_clazz: str = 'path'
+    shape_css_clazz: str = 'shape'
     curr_idx = 0  # Ad ID generator.
 
     @classmethod
@@ -68,6 +69,43 @@ class Segments(object):
     def items(self):
         return self.segdict.items()
 
+@dt.datatree(provide_override_field=False)
+class _SvgPathRendererWith:
+    path_renderer: 'SvgPathRenderer'=dt.dtfield(repr=False)
+    path_clazz: str=dt.dtfield('construction')
+    shape_css_clazz: str=dt.dtfield('construction_shape')
+    prev_css_clazz: str=dt.dtfield(None, init=False)
+    prev_last_position: np.array=dt.dtfield(None, init=False)
+    prev_shape_css_clazz: str=dt.dtfield(None, init=False)
+    
+    _builder: List[str] = dt.dtfield(default=None, init=False, repr=False)
+    
+    def __enter__(self) -> 'SvgPathRenderer':
+        self.prev_css_clazz = self.path_renderer.css_clazz
+        self.prev_last_position = self.path_renderer.last_position
+        self.prev_shape_css_clazz = self.path_renderer.shape_css_clazz
+        
+        self._builder = self.path_renderer._builder
+        self.path_renderer._builder = None
+        
+        self.path_renderer.css_clazz = self.path_clazz
+        self.path_renderer.shape_css_clazz = self.shape_css_clazz
+        return self.path_renderer
+    
+    def __exit__(self, exc_type, exc_value, traceback):
+        self.path_renderer.finish()
+        self.path_renderer._builder = self._builder
+        self.path_renderer.css_clazz = self.prev_css_clazz
+        self.path_renderer.last_position = self.prev_last_position
+        self.path_renderer.shape_css_clazz = self.prev_shape_css_clazz
+        
+        return None
+    
+@dt.datatree(provide_override_field=False)
+class PathSegment:
+    shape_str: str
+    shape_css_clazz: str = 'shape'
+    
 
 @dt.datatree(provide_override_field=False)
 class SvgPathRenderer(object):
@@ -76,14 +114,26 @@ class SvgPathRenderer(object):
     all_segments: Segments
     last_position: np.array = None
     is_path_closed: bool = True
-    _builder: list = dt.dtfield(default=None, init=False, repr=False)
-    _paths: list = dt.dtfield(default_factory=list, init=False)
+    _builder: List[str] = dt.dtfield(default=None, init=False, repr=False)
+    _paths: List[PathSegment] = dt.dtfield(default_factory=list, init=False)
     _segs: Segments = dt.dtfield(default_factory=Segments, init=False)
-    _seg_node: dt.Node = dt.Node(Segment, 'path_id')
+    _seg_node: dt.Node = dt.Node(Segment, 'path_id', 'css_clazz',  'shape_css_clazz')
+    _path_segment_node: dt.Node = dt.Node(PathSegment, 'shape_css_clazz')
+    
+    def construction(self, 
+                     css_clazz='construction', 
+                     shape_css_class: str='construction_shape') -> _SvgPathRendererWith:
+        ''''To be used in a with statement to set the css_clazz of generated segments
+        for the duration of the with statement.'''
+        return _SvgPathRendererWith(
+            path_renderer=self, 
+            path_clazz=css_clazz,
+            shape_css_clazz=shape_css_class)
 
     def _set_last_position(self, new_last_position):
-        if self.last_position is None:
+        if self._builder is None:
             self._builder = list()
+        if self.last_position is None:
             old_pos = (0, 0)
             svg_path = ''
         else:
@@ -94,8 +144,9 @@ class SvgPathRenderer(object):
 
     def _finish_path(self):
         if self._builder:
-            self._paths.append(' '.join(self._builder))
-            #self._builder = None
+            path_segment: PathSegment = self._path_segment_node(' '.join(self._builder))
+            self._paths.append(path_segment)
+            self._builder = None
             
     def _add_seg(self, seg):
         self._segs.append(seg)
@@ -162,11 +213,11 @@ class SvgPathRenderer(object):
         self._finish_path()
         self.last_position = None
 
-    def get_paths(self):
+    def get_paths(self) -> List[PathSegment]:
         self.finish()
         return self._paths
 
-    def get_segments(self):
+    def get_segments(self) -> Segments:
         return self._segs
 
 
@@ -401,6 +452,11 @@ class SvgRenderer(object):
     stroke_metadata_colour: str = 'blue'
     stroke_metadata_width_px: float = 3.5
     stroke_metadata_dash_width_px: float = 10
+    construction_colour: str = 'deepskyblue'
+    construction_selected_colour: str = 'purple'
+    construction_selected_width_px: float = 4.5
+    construction_hover_width_px: float = 3.5
+    construction_hover_colour: str = 'orange'
     dot_metadata_colour: str = 'darkgreen'
     dot_metadata_radius_px: float = 6.5
     cursor_dot_metadata_colour: str = 'yellow'
@@ -428,6 +484,8 @@ class SvgRenderer(object):
         dt.Node(SvgGraduationRenderer), init=False)
     frame_render_node: dt.Node = dt.dtfield(
         dt.Node(SvgFrameRenderer, prefix='frame_'), init=False)
+    
+    css_clazz_for_all_segments: str = 'segment'
     
     json_indent: int = 2
     path_id: str = None
@@ -503,43 +561,70 @@ class SvgRenderer(object):
                 '</g>')
 
     def get_svg_path(self):
-        ps = self.path_render.get_paths()
+        ps : List[PathSegment] = self.path_render.get_paths()
         sc = self.stroke_colour
         sw = self.stroke_width_px / self.img_scale
         fc = self.fill_color
         paths = list(
-            f'<path d="{p}" class="shape"/>'
+            f'<path d="{p.shape_str}" class="{p.shape_css_clazz}"/>'
             for p in ps)
 
         segments = []
         for seg in self.path_render.get_segments().items():
             segments.append(
-                f'<path d="{seg[1].path}" id="{seg[1].id}" class="segment"/>')
+                f'<path d="{seg[1].path}" id="{seg[1].id}" '
+                f'class="{self.css_clazz_for_all_segments} {seg[1].css_clazz}"/>')
 
         return (paths, segments)
 
     def get_svg_styles(self):
-        shape_style = f'''{self.style_prefix}.shape {{
+        shape_style = (f'''{self.style_prefix}.shape {{
             stroke: {self.stroke_colour};
             stroke-width: {self.stroke_width_px / self.img_scale:G};
             fill: {self.fill_color};
+        }}''',
+        f'''{self.style_prefix}.construction_shape {{
+            stroke: {self.stroke_colour};
+            stroke-width: {self.stroke_width_px / self.img_scale:G};
+            fill: None;
         }}'''
-        seg_styles = (f'''{self.style_prefix}.segment {{
+        )
+        seg_styles = (
+        f'''{self.style_prefix}.path {{
             stroke: {self.stroke_colour};
             stroke-width: {self.stroke_width_px / self.img_scale:G};
             fill: none;
             pointer-events: stroke;
         }}''',
-        f'''{self.style_prefix}.segment.selected,''',
-        f'''{self.style_prefix}.segment.selected:hover {{
+        f'''{self.style_prefix}.construction {{
+            stroke: {self.construction_colour};
+            stroke-width: {self.stroke_width_px / self.img_scale:G};
+            fill: none;
+            pointer-events: stroke;
+        }}''',
+        f'''{self.style_prefix}.path.selected,''',
+        f'''{self.style_prefix}.path.selected:hover {{
             stroke: {self.stroke_selected_colour};
             stroke-width: {self.stroke_selected_width_px / self.img_scale:G};
             fill: #0000;
             pointer-events: stroke;
         }}''',
-        f'''{self.style_prefix}.segment:hover {{
+        f'''{self.style_prefix}.path:hover {{
             stroke: {self.stroke_hover_colour};
             stroke-width: {self.stroke_hover_width_px / self.img_scale:G};
+            fill: #0000;
+            pointer-events: stroke;
+        }}''',
+        f'''{self.style_prefix}.construction.selected,''',
+        f'''{self.style_prefix}.construction.selected:hover {{
+            stroke: {self.construction_selected_colour};
+            stroke-width: {self.construction_selected_width_px / self.img_scale:G};
+            fill: #0000;
+            pointer-events: stroke;
+        }}''',
+        f'''{self.style_prefix}.construction:hover {{
+            stroke: {self.construction_hover_colour};
+            stroke-width: {self.construction_hover_width_px / self.img_scale:G};
             fill: #0000;
             pointer-events: stroke;
         }}''',
@@ -558,7 +643,7 @@ class SvgRenderer(object):
             stroke-width: {self.stroke_metadata_width_px / self.img_scale:G};
             stroke-dasharray: {self.stroke_metadata_dash_width_px / self.img_scale:G};
         }}''')
-        return ("<style>", shape_style, *seg_styles, "</style>")
+        return ("<style>", *shape_style, *seg_styles, "</style>")
 
     def to_svg_string(self):
         '''Returns the SVG image as a string.'''
@@ -648,11 +733,7 @@ HTML_TEMPLATE = '''\
             z-index: 100;
         }}
         #infoArea {{
-            position: fixed;
-            top: 10px; /* Adjust as needed */
-            right: 10px; /* Adjust as needed */
             width: 50%; /* Set the width of the text area */
-            height: 40px; /* Set the height of the text area */
             z-index: 1000; /* Ensure it floats above other elements */
             background-color: #fff;
             border: 1px solid #ccc;
@@ -665,6 +746,30 @@ HTML_TEMPLATE = '''\
         }}
         #infoArea.selected {{
             height: 50%;
+        }}
+        @media print {{
+            .no-print {{
+                display: none;
+            }}
+            .print-flow {{
+                display: none;
+                position: static;
+                top: auto;
+                right: auto; 
+                height: 200px;
+                min-height: 50px;     /* Minimum height */
+                max-height: 300px;    /* Maximum height to prevent excessive growth */
+                overflow: hidden;     /* Hide scrollbars */
+                resize: none;         /* Disable manual resizing */
+            }}
+        }}
+        @media screen {{      
+            .screen-flow {{
+                position: fixed;
+                top: 10px; /* Adjust as needed */
+                right: 10px; /* Adjust as needed */
+                height: 40px; /* Set the height of the text area */
+            }}
         }}
         
     </style>
@@ -1098,6 +1203,7 @@ HTML_TEMPLATE = '''\
   <!-- Text area to display segment information -->
   <textarea 
         id="infoArea" 
+        class="print-flow screen-flow"
         placeholder="Hover over a path segment to display information. Click to select."></textarea>
   <div class="main-container">
   {svg_divs}
@@ -1132,7 +1238,7 @@ class HtmlRenderer:
       <div class="svg-container">
         {'        '.join(svg_str.splitlines(True))}
       </div>
-      <div class="buttons-container">
+      <div class="buttons-container no-print">
         <button class="download-button" onclick="downloadSVG('{path_id}', 'anchorscad_path.svg')">Download SVG</button>
         <button class="download-button" onclick="downloadPNG('{path_id}', 'anchorscad_path.png')">Download PNG</button>
       </div>

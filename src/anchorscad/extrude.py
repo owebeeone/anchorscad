@@ -7,7 +7,7 @@ Created on 7 Jan 2021
 from collections.abc import Iterable
 from abc import ABC, abstractmethod
 from types import FunctionType
-from typing import Callable, Dict, List, Tuple, Union
+from typing import Any, Callable, Dict, List, Tuple, Union, overload
 
 from frozendict import frozendict
 
@@ -57,9 +57,15 @@ class OffsetOutOfRange(Exception):
     
 class CutCausedMultiplePathsUnimplemented(Exception):
     '''Cutting a path at the Y axis caused the path to split into more than 1.'''
+    
+class NameNotFoundException(Exception):
+    '''The requested name was not found.'''
 
 
 EPSILON=1e-6
+
+POINT2=Union[Tuple[float, float], np.ndarray, l.GVector, List[float]]
+NAME=Any
 
 def strict_t_or_none(v, t):
     if v is None or v == 'None':
@@ -98,7 +104,7 @@ def _normalize(v):
         raise ValueError('Cannot normalize a zero length vector.')
     return v / d
 
-def extentsof(p):
+def extentsof(p: np.ndarray) -> np.ndarray:
     return np.array((p.min(axis=0), p.max(axis=0)))
 
 
@@ -376,6 +382,10 @@ def adder(a, b):
         return a
     return a + b
 
+def _traceback(trace_level: int=5) -> tb.FrameSummary:
+    '''Returns the frame summary for the frame_no.'''
+    return tb.extract_stack(limit=trace_level)[1 - trace_level]
+
 
 @datatree(frozen=True, provide_override_field=False)
 class OpBase(ABC):
@@ -385,8 +395,7 @@ class OpBase(ABC):
     # transformed via a matrix multiplication.
     
     trace: tb.FrameSummary=dtfield(
-        default_factory=lambda: tb.extract_stack(limit=5)[-4], 
-        init=False, 
+        default_factory=_traceback, 
         repr=False,
         compare=False)
     
@@ -423,6 +432,11 @@ class OpBase(ABC):
         return base_pos
     
     @abstractmethod
+    def lastPosition(self) -> np.ndarray:
+        '''Returns the end (t=1) position of the operation.'''
+        pass
+    
+    @abstractmethod
     def base_position(self, t: float) -> np.ndarray:
         '''Returns the pre offset position of the operation at t.'''
         pass
@@ -447,6 +461,10 @@ class OpBase(ABC):
         if self.path_modifier is None:
             return 0.0
         return self.path_modifier.offset
+    
+    @abstractmethod
+    def extremes(self) -> np.array:
+        pass
     
 
 @datatree
@@ -778,6 +796,7 @@ class Path():
     ops: Tuple[OpBase, ...]
     name_map: Dict[str, OpBase]  # frozendict
     path_modifier: PathModifier=dtfield(default=None)
+    constructions: List['Construction']=dtfield(default=None)
 
     def get_node(self, name):
         return self.name_map.get(name, None)
@@ -805,13 +824,19 @@ class Path():
             raise PathElelementNotFound(f'Unable to find path element named: "{name}"')
         return node.azimuth_t(angle, t_end, t_range)
     
-    def extents(self):
+    def extents(self, include_constructions: bool=True):
         itr = iter(self.ops)
         extnts = extentsof(next(itr).extremes())
         for op in itr:
             ops_extremes = op.extremes()
             cated = np.concatenate((ops_extremes, extnts))
             extnts = extentsof(cated)
+            
+        if include_constructions and self.constructions:
+            for c in self.constructions:
+                c_extnts = c.extremes()
+                cated = np.concatenate((c_extnts, extnts))
+                extnts = extentsof(cated)
 
         return extnts
     
@@ -928,14 +953,20 @@ class Path():
     def svg_path_render(self, svg_model):
         for op in self.ops:
             op.render_as_svg(svg_model)
+        
+        with svg_model.construction() as csvg_model:
+            for c in self.constructions:
+                for op in c.ops:
+                    op.render_as_svg(csvg_model)
 
     def transform_to_builder(self, 
-                             m, 
-                             builder=None, 
-                             suffix=None, 
-                             appender=adder,
-                             skip_first_move=None,
+                             m: l.GMatrix, 
+                             builder: Union['PathBuilder', None]=None, 
+                             suffix: Any=None, 
+                             appender: Callable[[Any, Any], Any]=adder,
+                             skip_first_move: bool=None,
                              offset: float=None,
+                             include_constructions: bool=True,
                              metadata: core.ModelAttributes=None) -> 'PathBuilder':
         '''Returns a PathBuilder with the new transformed path.
         Args:
@@ -945,7 +976,7 @@ class Path():
           appender: Function to perform appending. Default is adder.
           skip_first_move: Skips the first move operation.
         '''
-        if not builder:
+        if builder is None:
             skip_first_move = False if skip_first_move is None else skip_first_move
             path_modifier = None
             if self.path_modifier:
@@ -970,18 +1001,28 @@ class Path():
                 op = next(iterops)
                 if not op.is_move():
                     builder.add_op_with_params(
-                        op.transform(m), appender(op.name, suffix))
+                        op.transform(m), appender(op.name, suffix), trace=op.trace)
             except StopIteration:
                 pass
         
         for op in iterops:
             builder.add_op_with_params(
-                op.transform(m), appender(op.name, suffix), path_modifier=builder.path_modifier)
-
+                op.transform(m), 
+                appender(op.name, suffix), 
+                path_modifier=builder.get_path_modifier(),
+                trace=op.trace)
+            
+            
+        if include_constructions and self.constructions:
+            for c in self.constructions:
+                with builder.construction() as cb:
+                    cb.add_transformed(c, m, suffix, appender, offset, metadata)
+                
         return builder
             
     def transform(
-        self, m: l.GMatrix=l.IDENTITY, offset: float=None, metadata: core.ModelAttributes=None) -> 'Path':
+        self, m: l.GMatrix=l.IDENTITY, offset: float=None,
+        metadata: core.ModelAttributes=None) -> 'Path':
         '''Returns a new Path but transformed by m with offset path modifier.'''
         return self.transform_to_builder(m=m, offset=offset, metadata=metadata).build()
 
@@ -994,11 +1035,12 @@ def to_gvector(np_array):
     
     
 # Solution derived from https://planetcalc.com/8116/
-def solve_circle_3_points(p1, p2, p3): 
-    '''Returns the centre and radius of a circle that passes the 3 given points or and empty
-    tuple if the points are colinear.'''
+def solve_circle_3_points(
+    p1: POINT2, p2: POINT2, p3: POINT2) -> Tuple[np.ndarray, float]: 
+    '''Returns the centre and radius of a circle that passes the 
+    3 given points or tuple of (None, None) if the points are colinear.'''
     
-    p = np.array([p1, p2, p3])
+    p = np.array([p1[0:2], p2[0:2], p3[0:2]])
     
     m = np.array([
         np.concatenate((p[0] * 2, [1])),
@@ -1171,7 +1213,7 @@ class CircularArc:
 
         return result
     
-    def extents(self):
+    def extents(self) -> np.array:
         return extentsof(self.extremes())
 
     def evaluate(self, t: float, offset: float=0.0) -> np.array:
@@ -1203,18 +1245,45 @@ def optional_arrayeq(ary1, ary2):
     return np.array_equal(ary1, ary2)
 
 
-@datatree(provide_override_field=False)
-class PathBuilder():
-    '''Builds a Path from a series of points, lines, splines and arcs.'''
-    ops: List[OpBase]=dtfield(default_factory=list, init=False)
-    name_map: dict=dtfield(default_factory=dict, init=False)
-    multi: bool=False
-    path_modifier: PathModifier=None
+class PathBuilderPrimitives(ABC):
+    '''The public interface for path builder primitives. This is used for building
+    constructions as well as the path segments. PathBuilder uses this interface as 
+    well as the _ConstructionBuilder.'''
+    
+    @abstractmethod
+    def construction(self) -> '_Construction':
+        '''Returns a new construction builder.'''
+        pass
+
+    @abstractmethod
+    def last_op(self) -> OpBase:
+        '''Returns the last operation.'''
+        pass
+    
+    @abstractmethod
+    def add_op(self, op: OpBase) -> 'PathBuilderPrimitives':
+        '''Adds an operation to the path.'''
+        pass
+    
+    @abstractmethod
+    def is_multi_path(self) -> bool:
+        '''Returns True if the builder allows multiple paths.'''
+        pass
+    
+    @abstractmethod
+    def get_path_modifier(self) -> PathModifier:
+        '''Returns the path modifier.'''
+        pass
+
+    @abstractmethod
+    def get_op(self, name) -> Union[OpBase, None]:
+        '''Returns the op with the given.'''
+        pass
 
     @datatree(frozen=True)
     class _LineTo(OpBase):
         '''Line segment from current position.'''
-        point: np.array
+        point: np.array=None,
         prev_op: OpBase=dtfield(
             default=None,
             repr=False, 
@@ -1227,7 +1296,10 @@ class PathBuilder():
         path_modifier: 'PathModifier'=dtfield(default=MISSING_PATH_MODIFIER)
         
         def __post_init__(self):
+            assert self.point is not None, 'point must be set.'
             assert self.path_modifier is not MISSING_PATH_MODIFIER, 'path_modifier must be set.'
+            if self.prev_op is None:
+                assert self.prev_op is not None, 'prev_op must be set.'
             if self.direction_override is None:
                 d = self.point - self.prev_op.lastPosition()
                 if _vlen2(d) > EPSILON:
@@ -1276,7 +1348,7 @@ class PathBuilder():
             last_point = self.prev_op.lastPosition()
             return _normal_of_2d(last_point, self.direction(1) + last_point, dims)
         
-        def extremes(self):
+        def extremes(self) -> np.array:
             p0 = self.prev_op.lastPosition()
             p1 = self.point
             return np.array((p0, p1))
@@ -1308,7 +1380,7 @@ class PathBuilder():
     @datatree(frozen=True)
     class _MoveTo(OpBase):
         '''Move to position.'''
-        point: np.array=dtfield(compare=False)
+        point: np.array=dtfield(None, compare=False)
         dir: np.array=None
         prev_op: object=dtfield(
             default=None,
@@ -1319,6 +1391,7 @@ class PathBuilder():
         path_modifier: 'PathModifier'=dtfield(default=MISSING_PATH_MODIFIER)
         
         def __post_init__(self):
+            assert self.point is not None, 'point must be set.'
             assert self.path_modifier is not MISSING_PATH_MODIFIER, 'path_modifier must be set.'
             self.point.setflags(write=False)
             if self.dir is not None:
@@ -1386,7 +1459,7 @@ class PathBuilder():
     @datatree(frozen=True, provide_override_field=False)
     class _SplineToBase(OpBase):
         '''Cubic Bezier Spline to.'''
-        points: np.array
+        points: np.array=None
         prev_op: object=dtfield(
             default=None,
             repr=False, 
@@ -1399,6 +1472,7 @@ class PathBuilder():
         SPLINE_CLASS=None # Derived class must set this.
         
         def __post_init__(self):
+            assert self.points is not None, 'points must be set.'
             assert self.path_modifier is not MISSING_PATH_MODIFIER, 'path_modifier must be set.'
             self.points.setflags(write=False)
             to_cat = [[self.prev_op.lastPosition()],  self.points]
@@ -1518,9 +1592,9 @@ class PathBuilder():
     @datatree(frozen=True)
     class _ArcTo(OpBase):
         '''Draw a circular arc.'''
-        end_point: np.array
-        centre: np.array
-        path_direction: bool
+        end_point: np.array=None
+        centre: np.array=None
+        path_direction: bool=None
         prev_op: object=dtfield(
             default=None,
             repr=False, 
@@ -1531,6 +1605,9 @@ class PathBuilder():
         path_modifier: 'PathModifier'=dtfield(default=MISSING_PATH_MODIFIER)
         
         def __post_init__(self):
+            assert self.end_point is not None, 'end_point must be set.'
+            assert self.centre is not None, 'centre must be set.'
+            assert self.path_direction is not None, 'path_direction must be set.'
             assert self.path_modifier is not MISSING_PATH_MODIFIER, 'path_modifier must be set.'
             self.centre.setflags(write=False)
             self.end_point.setflags(write=False)
@@ -1658,38 +1735,30 @@ class PathBuilder():
                  self.name, 
                  self.meta_data))
 
-        
-    def add_op(self, op):
+    def _add_op_map(self, op):
         if op.name:
             if op.name in self.name_map:
                 raise DuplicateNameException(f'Duplicate name ({op.name!r}) is already used.')
             self.name_map[op.name] = op
-        self.ops.append(op)
-        return self
-    
-    def add_op_with_params(self, op_parts, op_name=None, path_modifier=None):
-        params_dict = op_parts[1]
-        params_dict['prev_op'] = self.last_op()
-        params_dict['path_modifier'] = path_modifier
-        
-        if op_name:
-            params_dict['name'] = op_name
-        return self.add_op((op_parts[0])(**params_dict))
-
-    def last_op(self):
-        return self.ops[-1] if self.ops else None
-        
-    def move(self, point, name=None, direction=None):
-        if not self.multi and self.ops:
+            
+       
+    def move(self, point, name=None, direction=None) -> 'PathBuilderPrimitives':
+        if not self.is_multi_path() and self.last_op() is not None:
             raise MoveNotAllowedException('Move is not allowed in non multi-path builder.')
         if direction is not None:
             direction = np.array(LIST_2_FLOAT(direction))
-        return self.add_op(self._MoveTo(np.array(LIST_2_FLOAT(point)),
+        return self.add_op(self._MoveTo(point=np.array(LIST_2_FLOAT(point)),
                                         dir=direction,
                                         prev_op=self.last_op(), name=name,
-                                        path_modifier=self.path_modifier))
+                                        path_modifier=self.get_path_modifier()))
                         
-    def line(self, point, name=None, metadata=None, direction_override=None):
+    def line(self, 
+                   point: Union[np.array, Tuple[float, float], List[float]],
+                   name: Any=None, 
+                   metadata: core.ModelAttributes=None, 
+                   direction_override=None,
+                   _trace_level: int=4
+                   ) -> 'PathBuilderPrimitives':
         '''A line from the current point to the given point is added.
         Args:
             point: The absolute end point of this line.
@@ -1698,20 +1767,23 @@ class PathBuilder():
             direction_override: The reported direction of the line. If None, the direction is
                 calculated from the previous point.
         '''
-        assert len(self.ops) > 0, "Cannot line to without starting point"
+        assert self.last_op(), "Cannot line to without starting point"
+
         if direction_override is not None:
             direction_override = np.array(LIST_2_FLOAT(point))
     
-        return self.add_op(self._LineTo(np.array(LIST_2_FLOAT(point)), 
-                                        prev_op=self.last_op(), name=name,
-                                        meta_data=metadata,
-                                        direction_override=direction_override,
-                                        path_modifier=self.path_modifier))
+        return self.add_op(self._LineTo(point=np.array(LIST_2_FLOAT(point)), 
+                            prev_op=self.last_op(),
+                            name=name,
+                            meta_data=metadata,
+                            direction_override=direction_override,
+                            path_modifier=self.get_path_modifier(),
+                            trace=_traceback(_trace_level)))
     
     def line_wop(self, prev_op_func: Callable[[OpBase], Tuple[float, float]], 
-                 name=None, metadata=None, direction_override=None):
+                 name=None, metadata=None, direction_override=None) -> 'PathBuilderPrimitives':
         '''A line from the current point to the point returned by calling prev_op_func
-        with the most recent.
+        with the most recent op.
         Args:
             prev_op_func: A function that takes the last operation and returns a point.
             name: The name of this node. Naming a node will make it an anchor.
@@ -1721,19 +1793,19 @@ class PathBuilder():
         '''
         
         point = prev_op_func(self.last_op())
-        return self.line(point, name, metadata, direction_override)
+        return self.line(point, name, metadata, direction_override, _trace_level=5)
 
         
     def stroke(self,
                length,
-               angle: Union[float, l.Angle]=0,
+               angle: Union[float, l.Angle]=None,
                degrees=None, 
                radians=None, 
                sinr_cosr=None,
                xform=None, 
                abs_angle: Union[float, l.Angle]=None,
                name=None,
-               metadata=None):
+               metadata=None) -> 'PathBuilderPrimitives':
         '''A line from the current point to a length away given
         by following the tangent from the previous op transformed by rotating
         by angle or a GMatrix transform.
@@ -1766,24 +1838,24 @@ class PathBuilder():
                 d_vector = d_vector * 0.001
                 point = self.last_op().lastPosition()
 
-        return self.add_op(self._LineTo(point, 
+        return self.add_op(self._LineTo(point=point, 
                                         prev_op=self.last_op(),
                                         name=name,
                                         direction_override=d_vector.A[:2],
                                         meta_data=metadata,
-                                        path_modifier=self.path_modifier))
+                                        path_modifier=self.get_path_modifier()))
             
     def relative_line(self,
                relative_pos,
                name=None,
-               metadata=None):
+               metadata=None) -> 'PathBuilderPrimitives':
         '''A line from the current point to the relative X,Y position given.'''
         point = (np.array(LIST_2_FLOAT(relative_pos)) 
                  + self.last_op().lastPosition())
-        return self.add_op(self._LineTo(point[:2], 
+        return self.add_op(self._LineTo(point=point[:2], 
                                         prev_op=self.last_op(), name=name,
                                         meta_data=metadata,
-                                        path_modifier=self.path_modifier))
+                                        path_modifier=self.get_path_modifier()))
         
     def _rotate(self, direction: l.GVector, degrees: float, radians: float, sinr_cosr:float, 
                 xform: l.GMatrix) -> l.GVector:
@@ -1815,7 +1887,7 @@ class PathBuilder():
     
     def rspline(self, length_or_rpoint, cv_len=(1, 1), degrees=(0, 0, 0),
                 radians=(None, None, None), sinr_cosr=(None, None, None), 
-                xform=(None, None, None), name=None, metadata=None, rel_len=None):
+                xform=(None, None, None), name=None, metadata=None, rel_len=None) -> 'PathBuilderPrimitives':
         '''Like [spline] but the control points are relative to the last point and direction.
         In a similar vein to [stroke], it will determine the end point by following the previous
         direction rotated by the given angle. The control point 1 and 2 angle is provided by
@@ -1887,7 +1959,7 @@ class PathBuilder():
 
         return self.spline(points_2d, name, metadata, rel_len)
     
-    def qspline(self, points, name=None, metadata=None):
+    def qspline(self, points, name=None, metadata=None) -> 'PathBuilderPrimitives':
         '''A quadratic spline from the current point to the given points.
         Points consists of a control point (points[0]) and an end point (points[1]).
         '''
@@ -1895,15 +1967,15 @@ class PathBuilder():
         points = np.array(LIST_2X2_FLOAT(points))
         return self.add_op(
             self._QuadraticSplineTo(
-                points, 
+                points=points, 
                 prev_op=self.last_op(), 
                 name=name, 
                 meta_data=metadata,
-                path_modifier=self.path_modifier))
+                path_modifier=self.get_path_modifier()))
         
     
     def spline(self, points, name=None, metadata=None, 
-               cv_len=(None, None), degrees=(0, 0), radians=(0, 0), rel_len=None):
+               cv_len=(None, None), degrees=(0, 0), radians=(0, 0), rel_len=None) -> 'PathBuilderPrimitives':
         '''Adds a cubic Bezier spline node to the path.
         Args:
             points: Either 3 point list (first control point is the last point) or a 
@@ -1950,11 +2022,11 @@ class PathBuilder():
         cv2 = self.squeeze_and_rot(cv3, cv2, cv_len[1], degrees[1], radians[1])
         
         points = np.array(LIST_3X2_FLOAT([cv1, cv2, cv3]))
-        return self.add_op(self._SplineTo(points,
+        return self.add_op(self._SplineTo(points=points,
                                           prev_op=self.last_op(), 
                                           name=name, 
                                           meta_data=metadata,
-                                          path_modifier=self.path_modifier))
+                                          path_modifier=self.get_path_modifier()))
         
     def arc_tangent_radius_sweep(self,
                                  radius,
@@ -1968,7 +2040,7 @@ class PathBuilder():
                                  direction=None, 
                                  sinr_cosr=None,
                                  name=None,
-                                 metadata=None):
+                                 metadata=None) -> 'PathBuilderPrimitives':
         '''Defines a circular arc starting at the previous operator's end point
         with the given direction and sweeping the given sweep angle.'''
         start = self.last_op().lastPosition()
@@ -2006,18 +2078,20 @@ class PathBuilder():
         
         
         return self.add_op(self._ArcTo(
-            last, centre, path_direction, 
+            end_point=last, 
+            centre=centre,
+            path_direction=path_direction, 
             prev_op=self.last_op(), 
             name=name, 
             meta_data=metadata, 
-            path_modifier=self.path_modifier))
+            path_modifier=self.get_path_modifier()))
 
     def arc_centre_sweep(self,
                          centre, 
                          sweep_angle_degrees=0,
                          sweep_angle_radians=None,
                          name=None,
-                         metadata=None):
+                         metadata=None) -> 'PathBuilderPrimitives':
         '''Defines a circular arc starting at the previous operator's end point
         and sweeping the given angle about the given centre.'''
         start = self.last_op().lastPosition()
@@ -2039,21 +2113,27 @@ class PathBuilder():
         sin_e = sin_s * cos_sweep + sin_sweep * cos_s
         last = np.array([cos_e * radius + centre[0], sin_e * radius + centre[1]])
         
-        path_direction = sweep_angle_degrees >= 0
-
-        return self.add_op(self._ArcTo(last, 
-                                       centre, 
-                                       path_direction, 
+        path_direction = sweep_angle_radians >= 0
+        
+        return self.add_op(self._ArcTo(end_point=last, 
+                                       centre=centre, 
+                                       path_direction=path_direction, 
                                        prev_op=self.last_op(), 
                                        name=name, 
                                        meta_data=metadata,
-                                       path_modifier=self.path_modifier))
+                                       path_modifier=self.get_path_modifier()))
         
         
-    def arc_points_radius(self, last, radius, is_left=True, direction=None, name=None, metadata=None):
+    def arc_points_radius(self, 
+            end: POINT2, 
+            radius: float, 
+            is_left:bool =True, 
+            direction: Union[bool, None] = None, 
+            name:NAME =None,
+            metadata:core.ModelAttributes=None) -> 'PathBuilderPrimitives':
         '''Defines a circular arc starting at the previous operator's end point
-        and ending at last with the given radius.'''
-        last = np.array(last)
+        and ending at "end" with the given radius.'''
+        last = np.array(end)
         start = self.last_op().lastPosition()
         centre, _ = solve_circle_points_radius(start, last, radius, is_left)
         if centre is None:
@@ -2061,15 +2141,16 @@ class PathBuilder():
                 f'Unable to fit circle, radius={radius}, start={start} last={last}.')
         if direction is None:
             direction = not is_left
-        return self.add_op(self._ArcTo(last,
-                                       centre,
-                                       direction,
+        return self.add_op(self._ArcTo(end_point=last,
+                                       centre=centre,
+                                       path_direction=direction,
                                        prev_op=self.last_op(), 
                                        name=name,
                                        meta_data=metadata,
-                                       path_modifier=self.path_modifier))
+                                       path_modifier=self.get_path_modifier()))
     
-    def arc_points(self, middle, last, name=None, direction=None, metadata=None):
+    def arc_points(self, middle, last, name=None, direction=None, 
+                   metadata=None) -> 'PathBuilderPrimitives':
         '''Defines a circular arc starting at the previous operator's end point
         and passing through middle and ending at last.'''
         last = np.array(last)
@@ -2104,16 +2185,16 @@ class PathBuilder():
                 if middle_delta > end_delta:
                     path_direction = False
         
-        return self.add_op(self._ArcTo(last, 
-                                       centre,
-                                       path_direction,
+        return self.add_op(self._ArcTo(end_point=last, 
+                                       centre=centre,
+                                       path_direction=path_direction,
                                        prev_op=self.last_op(),
                                        name=name,
                                        meta_data=metadata,
-                                       path_modifier=self.path_modifier))
+                                       path_modifier=self.get_path_modifier()))
     
     def arc_tangent_point(self, last, degrees=0, radians=None, direction=None, 
-                          name=None, metadata=None):
+                          name=None, metadata=None) -> 'PathBuilderPrimitives':
         '''Defines a circular arc starting at the previous operator's end point
         and ending at last. The tangent (vector given by the direction parameter or
         if not provided by the last segment's direction vector) may be optionally
@@ -2140,9 +2221,45 @@ class PathBuilder():
         path_direction = (t_dir.dot3D(c_dir) > 0)
         
         return self.add_op(self._ArcTo(
-            last, centre, path_direction, 
+            end_point=last, 
+            centre=centre, 
+            path_direction=path_direction, 
             prev_op=self.last_op(), name=name, meta_data=metadata,
-            path_modifier=self.path_modifier))
+            path_modifier=self.get_path_modifier()))
+        
+    def arc_line_to_arc_centre_radius(self, 
+            radius: float, 
+            end_centre: np.array,
+            end_radius: float,
+            end_side: bool=False, 
+            angle: Union[float, l.Angle]=0, 
+            direction: np.array=None, 
+            side: bool=False, # True is left side
+            name: Any=None, 
+            metadata=None) -> 'PathBuilderPrimitives':
+        '''Defines 2 segments, a circular arc starting at the previous operator's end point
+        with the given radius and a line that is tangent to the aforementioned arc and
+        the arc defined by the end_centre and end_radius. The second arc is not added by this
+        method, only the first arc and the tangent line between the two arcs.
+        
+        Note that the 
+        
+        Args:
+            radius: The radius of the first arc.
+            end_centre: The centre of the second arc (not added by this method).
+            end_radius: The radius of the second arc (not added by this method).
+            end_side: If True the arc will be on the left side of end_centre.
+            angle: The angle to rotate the previous end point direction by.
+            direction: If given, overrides the previous end point direction.
+            side: If True the arc will be on the left side of the previous end point.
+            name: The name of this node. Naming a node will make it an anchor but the
+                name of the arc (first segment) is made as a tuple of this name and 'arc',
+                i.e. ('arc', name) and similarly for the line, ('line', name).
+            metadata: Provides parameters for rendering that overrides the metadata 
+                provided by the renderer.
+        '''
+        
+        angle = l.angle(angle)
     
     def squeeze_and_rot(self, point, control, cv_len, degrees, radians):
         if cv_len is None and not degrees and not radians:
@@ -2159,13 +2276,181 @@ class PathBuilder():
             g_rel = l.rotZ(degrees=degrees) * g_rel
             
         return (gpoint + g_rel).A[0:len(point)]
+    
+    def at(self, name: Any, t: float, apply_offset: bool=True) -> np.ndarray:
+        '''Returns the point on the path at the given t value.'''
+        op: OpBase = self.get_op(name)
+        if not op:
+            raise NameNotFoundException(f'Name {name!r} not found.')
+        return op.position(t, apply_offset)
+    
+    def direction_at(self, name: Any, t: float) -> np.ndarray:
+        '''Returns the direction on the path at the given t value.'''
+        op: OpBase = self.get_op(name)
+        if not op:
+            raise NameNotFoundException(f'Name {name!r} not found.')
+        return op.direction_normalized(t)
         
 
+@datatree(frozen=True)
+class Construction:
+    ops: List[OpBase]=None
+    
+    def extremes(self) -> np.ndarray:
+        itr = iter(self.ops)
+        extnts = extentsof(next(itr).extremes())
+        for op in itr:
+            ops_extremes = op.extremes()
+            cated = np.concatenate((ops_extremes, extnts))
+            extnts = extentsof(cated)
+        return extnts
+
+
+@datatree(frozen=True)
+class _Construction(PathBuilderPrimitives):
+    
+    pathBuilder: 'PathBuilder'
+    ops: List[OpBase]=dtfield(default_factory=list, init=False)
+    
+    def construction(self) -> '_Construction':
+        raise NotImplementedError('Cannot nest constructions.')
+    
+    def is_multi_path(self) -> bool:
+        '''Constructions allow multiple paths.'''
+        return True
+
+    def last_op(self) -> OpBase:
+        '''Returns the last operation.'''
+        return self.ops[-1] if self.ops else None
+    
+    def get_path_modifier(self) -> PathModifier:
+        '''Returns the path modifier.'''
+        return self.pathBuilder.get_path_modifier()
+    
+    def add_op(self, op: OpBase) -> 'PathBuilderPrimitives':
+        '''Adds an operation to the path.'''
+        self.pathBuilder._add_op_map(op)
+        self.ops.append(op)
+        return self
+    
+    def add_op_with_params(self, op_parts, op_name=None, path_modifier=None, trace=None):
+        params_dict = op_parts[1]
+        params_dict['prev_op'] = self.last_op()
+        params_dict['path_modifier'] = path_modifier
+        
+        if op_name:
+            params_dict['name'] = op_name
+        if trace:
+            params_dict['trace'] = trace
+        return self.add_op((op_parts[0])(**params_dict))
+    
+    def __enter__(self) -> '_Construction':
+        return self
+    
+    def __exit__(self, exc_type, exc_value, traceback):
+        discard: bool = exc_value is not None
+        self.pathBuilder._end_construction(self, discard=discard)
+
+        return None # Do not suppress exceptions.
+    
+    def extremes(self) -> np.ndarray:
+        itr = iter(self.ops)
+        extnts = extentsof(next(itr).extremes())
+        for op in itr:
+            ops_extremes = op.extremes()
+            cated = np.concatenate((ops_extremes, extnts))
+            extnts = extentsof(cated)
+        return extnts
+    
+    def add_transformed(self, 
+                  construction: Construction,
+                  m: l.GMatrix, 
+                  builder: 'PathBuilderPrimitives', 
+                  suffix: Any=None, 
+                  appender: Callable[[Any, Any], Any]=adder):
+        '''Transforms the Ops in the priced construction with the given matrix
+        into the given builder.'''
+        
+        for op in construction.ops:
+            self.add_op_with_params(
+                op.transform(m), 
+                appender(op.name, suffix), 
+                path_modifier=builder.get_path_modifier(),
+                trace=op.trace)
+            
+    def get_op(self, name) -> OpBase | None:
+        return self.pathBuilder.get_op(name)
+    
+
+@datatree(provide_override_field=False)
+class PathBuilder(PathBuilderPrimitives):
+    '''Builds a Path from a series of points, lines, splines and arcs.'''
+    ops: List[OpBase]=dtfield(default_factory=list, init=False)
+    constructions: List[Construction]=dtfield(
+        default_factory=list, init=False,
+        doc='Constructions. These are not included in the path but are rendered in SVG.')
+    name_map: Dict[Any, OpBase]=dtfield(default_factory=dict, init=False)
+    
+    construction_stack: List[_Construction]=dtfield(default_factory=list, init=False)
+    
+    multi: bool=False
+    path_modifier: PathModifier=None
+    
+    def is_multi_path(self) -> bool:
+        '''Returns True if the builder allows multiple paths.'''
+        return self.multi
+    
+    def get_path_modifier(self) -> PathModifier:
+        '''Returns the path modifier.'''
+        return self.path_modifier
+        
+    def construction(self) -> _Construction:
+        '''Returns a construction context manager used inside 'with' statements.'''
+        c = _Construction(self)
+        self.construction_stack.append(c)
+        return c
+
+    def _end_construction(self, c: _Construction, discard: bool):
+        assert c == self.construction_stack[-1], 'Construction stack mismatch.'
+        self.construction_stack.pop()
+        if discard:
+            # Remove the names from the name map. (Exception was raised.)
+            for op in c.ops:
+                self.name_map.pop(op.name, None)
+        else:
+            self.constructions.append(Construction(tuple(c.ops)))
+            
+    def add_op(self, op) -> 'PathBuilder':
+        self._add_op_map(op)
+        self.ops.append(op)
+        return self
+    
+    def get_op(self, name) -> OpBase | None:
+        return self.name_map.get(name, None)
+    
+    def add_op_with_params(self, op_parts, op_name=None, path_modifier=None, trace=None):
+        params_dict = op_parts[1]
+        params_dict['prev_op'] = self.last_op()
+        params_dict['path_modifier'] = path_modifier
+        
+        if op_name:
+            params_dict['name'] = op_name
+        if trace:
+            params_dict['trace'] = trace
+        return self.add_op((op_parts[0])(**params_dict))
+
+    def last_op(self):
+        return self.ops[-1] if self.ops else None
+ 
     def get_node(self, name):
         return self.name_map.get(name, None)
     
     def build(self):
-        return Path(tuple(self.ops), frozendict(self.name_map), path_modifier=self.path_modifier)
+        return Path(
+            tuple(self.ops), 
+            frozendict(self.name_map), 
+            path_modifier=self.get_path_modifier(),
+            constructions=tuple(self.constructions))
     
 
 class ExtrudedShape(core.Shape):
