@@ -27,7 +27,7 @@ class LidPath:
                         direction=False,
                         name='small_lid_arc')
             .line((self.big_lid_w, 0), 'lip_rhs')
-            .arc_points_radius(last=(-self.big_lid_w, 0),
+            .arc_points_radius((-self.big_lid_w, 0),
                                radius=self.big_lid_r,
                                name='big_lid_arc')
             .line((-self.small_lid_w, 0), 'lip_lhs')
