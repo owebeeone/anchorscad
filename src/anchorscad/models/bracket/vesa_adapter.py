@@ -32,8 +32,11 @@ class VesaAdapter(ad.CompositeShape):
     A flat plate for adapting a VESA mount to a smaller VESA mount.
     '''
 
-    outer_vesa_centres: float = 200
-    inners: Tuple[VesaInnerSpec, ...] = (VesaInnerSpec(100, (0, -30)), VesaInnerSpec(75, (0, -30)))
+    outer_vesa_centres: float = ad.dtfield(200, doc='VESA mount centres')
+    inners: Tuple[VesaInnerSpec, ...] = ad.dtfield(
+        (VesaInnerSpec(100, (0, -30)), VesaInnerSpec(75, (0, -30))),
+        doc='The inner VESA mount specifications. This may contain multiple specs.',
+    )
 
     t: float = ad.dtfield(8, doc='Thickness of the adapter')
 
