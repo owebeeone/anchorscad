@@ -27,7 +27,7 @@ class VesaInnerSpec:
 @ad.datatree
 class VesaAdapter(ad.CompositeShape):
     '''
-    <description>
+    A flat plate for adapting a VESA mount to a smaller VESA mount.
     '''
     outer_vesa_centres: float = 200
     inners: Tuple[VesaInnerSpec, ...] = (VesaInnerSpec(100, (0, -30)), 
@@ -37,7 +37,7 @@ class VesaAdapter(ad.CompositeShape):
     
     bsb_bevel_radius=ad.dtfield(10, doc='Plate bevel radius')
     bsb_size: tuple = ad.dtfield(
-        doc='The (x,y,z) size of ShapeName',
+        doc='The (x,y,z) size of vesa adapter',
         self_default=lambda s: (
             s.outer_vesa_centres + s.bsb_bevel_radius * 2, 
             s.outer_vesa_centres + s.bsb_bevel_radius * 2, 
