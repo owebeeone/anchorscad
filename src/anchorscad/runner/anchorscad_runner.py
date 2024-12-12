@@ -36,20 +36,24 @@ PATH_SEPARATOR = ';' if platform.system() == 'Windows' else ':'
 
 
 def make_openscad_stl_command_line(
-    openscad_properties, stl_file, f3mf_file, png_file, scad_file, imgsize):
+    openscad_properties: OpenscadProperties, 
+    stl_file: str, 
+    f3mf_file: str, 
+    png_file: str, 
+    scad_file: str, 
+    imgsize: str) -> Tuple[str]:
     stl_options = ('-o', stl_file) if stl_file else ()
     f3mf_options = ('-o', f3mf_file) if f3mf_file else ()
     png_options = ('-o', png_file) if png_file else ()
-    dev_options = ('--enable', 'manifold') if 'manifold' in openscad_properties.features else ()
-    dev_options += ('--enable', 'lazy-union') if 'lazy-union' in openscad_properties.features else ()
+    dev_options = openscad_properties.dev_options()
+    
     return (openscad_properties.exe,) + stl_options + f3mf_options + dev_options + png_options + (
         '--autocenter',
         '--view',
         'axes',
         '--imgsize',
-        imgsize,
-        scad_file
-        )
+        imgsize,scad_file,)
+
 
 def file_path_splt(fpath):
     if not fpath:
