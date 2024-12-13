@@ -170,8 +170,11 @@ class CubicSpline():
     
         b2_4ac = b * b - 4 * a * c
         if b2_4ac < 0:
-            # Complex roots - no answer.
-            return ()
+            if b2_4ac > -EPSILON: # Could be a rounding error, so treat as 0.
+                b2_4ac = 0
+            else:
+                # Complex roots - no answer.
+                return ()
     
         sqrt_b2_4ac = np.sqrt(b2_4ac)
         two_a = 2 * a
@@ -2882,7 +2885,7 @@ class LinearExtrude(ExtrudedShape):
                     .spline([
                         (100 * _SCALE, 100 * _SCALE), 
                         (100 * _SCALE, 100 * _SCALE), 
-                        (0, _SCALE * 50)], name='curve')
+                        (0, _SCALE * 50)], name='curveX')
                     .line([_SCALE * 50, 0], 'linear1')
                     .build(),
                 h=40 * _SCALE,
@@ -2892,21 +2895,21 @@ class LinearExtrude(ExtrudedShape):
             anchors=(
                 core.surface_args('linear1', 0.5, 0),
                 # core.surface_args('linear1', 0.5, 25 * _SCALE),
-                core.surface_args('curve', 0, 0),
-                core.surface_args('curve', 0.1, 0),
-                core.surface_args('curve', 0.2, 0),
-                core.surface_args('curve', 0.3, 0),
-                core.surface_args('curve', 0.4, 0),
-                core.surface_args('curve', 0.5, 0),
-                core.surface_args('curve', 0.6, 0),
-                core.surface_args('curve', 1, 0),
-                core.surface_args('curve', 1, 120),
-                core.surface_args('azimuth', 'curve', az_angle=0, rh=1),
-                core.surface_args('azimuth', 'curve', az_angle=2, rh=1 ),
-                core.surface_args('azimuth', 'curve', az_angle=20, rh=1),
-                core.surface_args('azimuth', 'curve', az_angle=30, rh=1),
-                core.surface_args('azimuth', 'curve', az_angle=40, rh=1),
-                core.surface_args('azimuth', 'curve', az_angle=140, rh=1),
+                core.surface_args('curveX', 0, 0),
+                core.surface_args('curveX', 0.1, 0),
+                core.surface_args('curveX', 0.2, 0),
+                core.surface_args('curveX', 0.3, 0),
+                core.surface_args('curveX', 0.4, 0),
+                core.surface_args('curveX', 0.5, 0),
+                core.surface_args('curveX', 0.6, 0),
+                core.surface_args('curveX', 1, 0),
+                core.surface_args('curveX', 1, 120),
+                core.surface_args('azimuth', 'curveX', az_angle=0, rh=1),
+                core.surface_args('azimuth', 'curveX', az_angle=2, rh=1 ),
+                core.surface_args('azimuth', 'curveX', az_angle=20, rh=1),
+                core.surface_args('azimuth', 'curveX', az_angle=30, rh=1),
+                core.surface_args('azimuth', 'curveX', az_angle=40, rh=1),
+                core.surface_args('azimuth', 'curveX', az_angle=140, rh=1),
                 )),
         }
 
