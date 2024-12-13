@@ -608,8 +608,10 @@ class Segment:
 
     def isparallel(self, other: 'Segment', tolerance=EPSILON):
         '''Returns true if the two segments are parallel.'''
-        return np.abs(np.cross(self.points[1] - self.points[0], 
-                               other.points[1] - other.points[0])) < tolerance
+        v1 = self.points[1] - self.points[0]
+        v2 = other.points[1] - other.points[0]
+        cross = v1[0]*v2[1] - v1[1]*v2[0]
+        return np.abs(cross) < tolerance
     
     def iscolinear(self, other: 'Segment', tolerance=EPSILON):
         '''Returns true if the two segments are colinear.'''
@@ -617,8 +619,10 @@ class Segment:
     
     def ispointon(self, point: np.ndarray, tolerance=EPSILON):
         '''Returns true if the point is on the segment.'''
-        return np.abs(np.cross(self.points[1] - self.points[0], 
-                               point - self.points[0])) < tolerance
+        v1 = self.points[1] - self.points[0]
+        v2 = point - self.points[0]
+        cross = v1[0]*v2[1] - v1[1]*v2[0]
+        return np.abs(cross) < tolerance
         
     def rebuild_segment(self, 
             ranges: List[np.ndarray], direction: np.ndarray, origin: np.ndarray) -> 'Segment':
