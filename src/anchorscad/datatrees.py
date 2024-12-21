@@ -6,9 +6,9 @@ Created on 8 Dec 2021
 Wrapper over Python's dataclass that allows for the composition of classes
 by injecting constructor parameters or function parameters into a datatree
 annotated class with a Node type hint. The Node fields transform into factories
-that use the injected fields as defaults to construct the class (or call the 
-function). Field names can be mapped to different names, prefixed or suffixed 
-or excluded. 
+that use the injected fields as defaults to construct the class (or call the
+function). Field names can be mapped to different names, prefixed or suffixed
+or excluded.
 
 Example:
 
@@ -22,7 +22,7 @@ class A:
 class B:
     x: int=3
     a_node: Node=Node(A, 'a', {'b': 'c'}, 'x')
-    
+
 b = B(c=5)
 a = b.a_node()
 
@@ -37,7 +37,7 @@ b.c == 5
 a.b == 5
 
 # The x field in B is mapped to the x field in A
-# but the default value is now the value of the x 
+# but the default value is now the value of the x
 # field in B.
 a.x == 3
 
@@ -46,17 +46,17 @@ injected into B. The field 'a' is mapped to 'a' and the field 'b' is mapped
 to 'c'. Hence B contains 4 fields (but only 3 parameters to the constructor
 because by default Node fields are not included in the constructor parameters),
 a_node, a, c and x. The a_node field is a factory that creates an instance of A
-that has the 'a' init parameter default set to the value of the field 
-'a' in B and the default value of the init parameter 'b' is set to the value 
+that has the 'a' init parameter default set to the value of the field
+'a' in B and the default value of the init parameter 'b' is set to the value
 of the field 'c' in B etc.
 
-Datatree is particularly useful when composing a class from other classes or 
-functions where the fields or constructor or function parameters 
+Datatree is particularly useful when composing a class from other classes or
+functions where the fields or constructor or function parameters
 become member fields of the composing class. Datatree will automate the
-generation of these fields to become dataclass members. datatree will pull 
-constructor field definitions of Node declarations and add annotations to 
-the enclosed datatree class including any default values or other 
-dataclasses.field properties. This is especially useful when constructing 
+generation of these fields to become dataclass members. datatree will pull
+constructor field definitions of Node declarations and add annotations to
+the enclosed datatree class including any default values or other
+dataclasses.field properties. This is especially useful when constructing
 complex relationships that require a large number of parameters.
 '''
 
@@ -101,15 +101,15 @@ class IllegalMetadataClass(Exception):
 
 class SpecifiedMultipleDefaults(Exception):
     '''Attempting to specify default and self_default parameters.'''
-    
+
+
 class _OrderedSet(OrderedSet):
-    
     def union(self, other):
         result = _OrderedSet(self)
         for item in other:
             result.add(item)
         return result
-    
+
     def intersection(self, other):
         result = _OrderedSet()
         for item in self:
@@ -121,8 +121,7 @@ class _OrderedSet(OrderedSet):
 def _update_name_map(clz, name_map, from_name, to_value, description):
     '''Updates the given map but does not allow collision.'''
     if from_name in name_map:
-        raise NameCollision(
-            f'{description} {from_name} specified multiple times in {clz.__name__}')
+        raise NameCollision(f'{description} {from_name} specified multiple times in {clz.__name__}')
     name_map[from_name] = to_value
 
 
@@ -135,7 +134,7 @@ def _update_name_multi_map(clz, name_map, from_name, to_value):
 
 
 def _dupes_and_allset(itr):
-    '''Returns a tuple containing a set of duplicates and a set of all non 
+    '''Returns a tuple containing a set of duplicates and a set of all non
     duplicated items in itr.'''
     seen = _OrderedSet()
     return _OrderedSet((x for x in itr if x in seen or seen.add(x))), seen
@@ -144,6 +143,7 @@ def _dupes_and_allset(itr):
 @dataclass
 class AnnotationDetails:
     '''A dataclass/annotation pair.'''
+
     field: object
     anno_type: type
 
@@ -174,13 +174,13 @@ class FieldMetadataBase:
     '''Datatree metadata object.'''
 
     def get_doc(self):
-        raise IllegalMetadataClass(
-            f'Class must override get_doc() {self.__class__.__name__}')
+        raise IllegalMetadataClass(f'Class must override get_doc() {self.__class__.__name__}')
 
 
 @dataclass(frozen=True)
 class FieldMetadata(FieldMetadataBase):
     '''Provides a docstring for a field.'''
+
     doc: str
 
     def get_doc(self):
@@ -191,6 +191,7 @@ class FieldMetadata(FieldMetadataBase):
 @dataclass(frozen=True)
 class NodeFieldMetadata(FieldMetadataBase):
     '''Provides a docstring for a Node field.'''
+
     node_doc: str
     field_metadata: FieldMetadata
 
@@ -208,16 +209,17 @@ def _get_abbreviated_source(func, max_size=75):
     src = ' '.join(s.strip() for s in CLEANER_REGEX.split(src) if s.strip())
     return (src[:max_size] + '...') if len(src) > (3 + max_size) else src
 
+
 @dataclass(frozen=True, repr=False)
 class BindingDefault:
-    '''Like the dataclass field default_factory parameter but called after 
-    the regular __init__ function is finished and with the class instance 
+    '''Like the dataclass field default_factory parameter but called after
+    the regular __init__ function is finished and with the class instance
     (self) as the first parameter.'''
+
     self_default: FunctionType
 
     def __repr__(self):
-        return (f'{self.__class__.__name__}'
-                f'({_get_abbreviated_source(self.self_default)})')
+        return f'{self.__class__.__name__}' f'({_get_abbreviated_source(self.self_default)})'
 
 
 def field_docs(obj, field_name):
@@ -236,22 +238,22 @@ def field_docs(obj, field_name):
 
 _Node = None  # Forward declaration for Node. This is set later.
 
+
 def dtfield(default=MISSING, doc=None, self_default=None, init=MISSING, **kwargs):
     '''Like dataclasses.field but also supports doc parameter.
     Args:
       default: The default value for the field.
       doc: A docstring associated with the field.
-      self_default: A default factory taking a self parameter. 
+      self_default: A default factory taking a self parameter.
       Includes all fields allowed by dataclasses.field().
     '''
     metadata = kwargs.pop('metadata', {})
     metadata[METADATA_DOCS_NAME] = FieldMetadata(doc)
     if self_default:
         if default is not MISSING:
-            raise SpecifiedMultipleDefaults(
-                'Cannot specify default and self_default.')
+            raise SpecifiedMultipleDefaults('Cannot specify default and self_default.')
         default = BindingDefault(self_default)
-        
+
     if init is MISSING:
         # Don't make self_default and Node fields init by self_default.
         types = (_Node, BindingDefault) if _Node is not None else BindingDefault
@@ -274,18 +276,17 @@ class Node:
     from a class initializer (or function) is translated from fields in the
     composition class.
     '''
-    clz_or_func: type = dtfield(
-        doc='A class or function for parameter binding.')
+
+    clz_or_func: type = dtfield(doc='A class or function for parameter binding.')
     use_defaults: bool = dtfield(
-        doc='Allows use of defaults otherwise defaults should be '
-            'specified elsewhere.')
-    suffix: str = dtfield(
-        doc='Suffix to apply to injected field names.')
-    prefix: str = dtfield(
-        doc='Prefix to apply to injected field names.')
+        doc='Allows use of defaults otherwise defaults should be ' 'specified elsewhere.'
+    )
+    suffix: str = dtfield(doc='Suffix to apply to injected field names.')
+    prefix: str = dtfield(doc='Prefix to apply to injected field names.')
     expose_all: bool = dtfield(
         doc='Forces the mapping of all fields even if the expose_spec '
-            ' excluded the class or function parameter name.')
+        ' excluded the class or function parameter name.'
+    )
     init_signature: tuple = field(default=None, repr=False)
     expose_map: dict = field(default=None, repr=False)
     expose_rev_map: dict = field(default=None, repr=False)
@@ -301,33 +302,41 @@ class Node:
 
     ALT_DEFAULT_ALLOW_SET = None
 
-    def __init__(self,
-                 clz_or_func,
-                 *expose_spec,
-                 use_defaults=True,
-                 suffix='',
-                 prefix='',
-                 expose_all=None,
-                 expose_if_avail=None,
-                 preserve=None,
-                 exclude=(),
-                 node_doc: str = None):
-        '''Args:
+    def __init__(
+        self,
+        clz_or_func,
+        *expose_spec,
+        use_defaults=True,
+        suffix='',
+        prefix='',
+        expose_all=None,
+        expose_if_avail=None,
+        preserve=None,
+        exclude=(),
+        node_doc: str = None,
+    ):
+        """Initialize a Node instance for parameter binding.
+
+        Args:
             clz_or_func: A class or function for parameter binding.
             *expose_spec: A list of names and dictionaries for mapping. If these
-              are specified, only these fields are mapped unless expose_all is
-              set.
-            use_defaults: Allows use of defaults otherwise defaults should be
-              specified elsewhere.
-            suffix: Suffix to apply to injected field names not otherwise mapped.
-            prefix: Prefix to apply to injected field names not otherwise mapped.
-            expose_all: Forces the mapping of all fields even if the expose_spec
-              excluded the class or function parameter name.
-            expose_if_avail: The set of field to expose if they're available.
-            preserve: A set of names that are not prefixed or suffixed.
-            exclude: A set of field names to exclude otherwise would be included by expose_all.
-            node_doc: Documentation for the node field.
-        '''
+                are specified, only these fields are mapped unless expose_all is set.
+            use_defaults (bool, optional): Whether to use defaults from the source class.
+                Defaults to True.
+            suffix (str, optional): Suffix to apply to injected field names not otherwise
+                mapped. Defaults to ''.
+            prefix (str, optional): Prefix to apply to injected field names not otherwise
+                mapped. Defaults to ''.
+            expose_all (bool, optional): Forces the mapping of all fields even if the
+                expose_spec excluded the class or function parameter name. Defaults to None.
+            expose_if_avail (set, optional): The set of fields to expose if they're
+                available. Defaults to None.
+            preserve (set, optional): A set of names that are not prefixed or suffixed.
+                Defaults to None.
+            exclude (tuple, optional): A set of field names to exclude that would otherwise
+                be included by expose_all. Defaults to ().
+            node_doc (str, optional): Documentation for the node field. Defaults to None.
+        """
         _field_assign(self, 'clz_or_func', _ClzOrFuncWrapper(clz_or_func))
         _field_assign(self, 'use_defaults', use_defaults)
         expose_all = not expose_spec if expose_all is None else expose_all
@@ -344,31 +353,26 @@ class Node:
             expose_if_avail = self.DEFAULT_EXPOSE_IF_AVAIL
 
         fields_specified = tuple(f for f in expose_spec if isinstance(f, str))
-        maps_specified = tuple(
-            f for f in expose_spec if not isinstance(f, str))
+        maps_specified = tuple(f for f in expose_spec if not isinstance(f, str))
         fields_in_maps = tuple(f for m in maps_specified for f in m.keys())
-        dupes, all_specified = _dupes_and_allset(
-            fields_specified + fields_in_maps)
+        dupes, all_specified = _dupes_and_allset(fields_specified + fields_in_maps)
         if dupes:
-            raise NameCollision(
-                f'Field names have multiple specifiers {dupes!r}')
+            raise NameCollision(f'Field names have multiple specifiers {dupes!r}')
 
         params = self.init_signature.parameters
         init_fields = _OrderedSet(params.keys())
         if self.expose_all:
             # Add all the fields not already specified.
-            all_fields = _OrderedSet(name
-                             for name in init_fields
-                             if name != OVERRIDE_FIELD_NAME and name not in exclude)
-            fields_specified = _OrderedSet(fields_specified).union(
-                all_fields - all_specified)
+            all_fields = _OrderedSet(
+                name for name in init_fields if name != OVERRIDE_FIELD_NAME and name not in exclude
+            )
+            fields_specified = _OrderedSet(fields_specified).union(all_fields - all_specified)
 
         elif expose_if_avail:
-            all_fields = _OrderedSet(name
-                             for name in init_fields
-                             if name != OVERRIDE_FIELD_NAME)
+            all_fields = _OrderedSet(name for name in init_fields if name != OVERRIDE_FIELD_NAME)
             fields_specified = _OrderedSet(fields_specified).union(
-                all_fields.intersection(expose_if_avail) - all_specified)
+                all_fields.intersection(expose_if_avail) - all_specified
+            )
 
         expose_dict = {}
         expose_rev_dict = {}
@@ -384,13 +388,13 @@ class Node:
                 if from_id not in init_fields:
                     raise MappedFieldNameNotFound(
                         f'Field name "{from_id}" is not an '
-                        f'{clz_or_func.__name__}.__init__ parameter name')
-                _update_name_map(
-                    clz_or_func, expose_dict, from_id, to_id, 'Field name')
+                        f'{clz_or_func.__name__}.__init__ parameter name'
+                    )
+                _update_name_map(clz_or_func, expose_dict, from_id, to_id, 'Field name')
                 anno_detail = self.make_anno_detail(
-                    from_id, clz_or_func.__dataclass_fields__[from_id], clz_or_func.__annotations__)
-                _update_name_multi_map(
-                    clz_or_func, expose_rev_dict, to_id, anno_detail)
+                    from_id, clz_or_func.__dataclass_fields__[from_id], clz_or_func.__annotations__
+                )
+                _update_name_multi_map(clz_or_func, expose_rev_dict, to_id, anno_detail)
 
             for map_specified in maps_specified:
                 # The dictionary has a set of from:to pairs.
@@ -398,27 +402,26 @@ class Node:
                     if from_id not in init_fields:
                         raise MappedFieldNameNotFound(
                             f'Field name "{from_id}" mapped to "{to_id}" '
-                            f'is not an {clz_or_func.__name__}.__init__ parameter name')
-                    _update_name_map(
-                        clz_or_func, expose_dict, from_id, to_id, 'Field name')
+                            f'is not an {clz_or_func.__name__}.__init__ parameter name'
+                        )
+                    _update_name_map(clz_or_func, expose_dict, from_id, to_id, 'Field name')
                     anno_detail = self.make_anno_detail(
-                        from_id, clz_or_func.__dataclass_fields__[from_id], clz_or_func.__annotations__)
-                    _update_name_multi_map(
-                        clz_or_func, expose_rev_dict, to_id, anno_detail)
+                        from_id,
+                        clz_or_func.__dataclass_fields__[from_id],
+                        clz_or_func.__annotations__,
+                    )
+                    _update_name_multi_map(clz_or_func, expose_rev_dict, to_id, anno_detail)
         else:  # Not a dataclass type, can be a function.
-
             for from_id in fields_specified:
                 to_id = prefix + from_id + suffix
                 if from_id not in init_fields:
                     raise MappedFieldNameNotFound(
                         f'Field name "{from_id}" is not an '
-                        f'{clz_or_func.__name__}.__init__ parameter name')
-                _update_name_map(
-                    clz_or_func, expose_dict, from_id, to_id, 'Field name')
-                anno_detail = AnnotationDetails.from_init_param(
-                    from_id, params)
-                _update_name_multi_map(
-                    clz_or_func, expose_rev_dict, to_id, anno_detail)
+                        f'{clz_or_func.__name__}.__init__ parameter name'
+                    )
+                _update_name_map(clz_or_func, expose_dict, from_id, to_id, 'Field name')
+                anno_detail = AnnotationDetails.from_init_param(from_id, params)
+                _update_name_multi_map(clz_or_func, expose_rev_dict, to_id, anno_detail)
 
             for map_specified in maps_specified:
                 # The dictionary has a set of from:to pairs.
@@ -426,13 +429,11 @@ class Node:
                     if from_id not in init_fields:
                         raise MappedFieldNameNotFound(
                             f'Field name "{from_id}" mapped to "{to_id}" '
-                            f'is not an {clz_or_func.__name__}.__init__ parameter name')
-                    _update_name_map(
-                        clz_or_func, expose_dict, from_id, to_id, 'Field name')
-                    anno_detail = AnnotationDetails.from_init_param(
-                        from_id, params)
-                    _update_name_multi_map(
-                        clz_or_func, expose_rev_dict, to_id, anno_detail)
+                            f'is not an {clz_or_func.__name__}.__init__ parameter name'
+                        )
+                    _update_name_map(clz_or_func, expose_dict, from_id, to_id, 'Field name')
+                    anno_detail = AnnotationDetails.from_init_param(from_id, params)
+                    _update_name_multi_map(clz_or_func, expose_rev_dict, to_id, anno_detail)
 
         _field_assign(self, 'expose_map', frozendict(expose_dict))
         _field_assign(self, 'expose_rev_map', frozendict(expose_rev_dict))
@@ -444,7 +445,7 @@ class Node:
 
     def get_rev_map(self):
         return self.expose_rev_map
-    
+
     def get_map(self):
         return self.expose_map
 
@@ -453,23 +454,18 @@ def _make_dataclass_field(field_obj, use_default, node_doc):
     '''Creates a dataclasses Field for the given parameters.
     Args:
       field_obj: the current Field object.
-      use_default: If True, the default of the Field is used otherwise the 
+      use_default: If True, the default of the Field is used otherwise the
           default is excluded.
       node_doc: The docstring for the wrapping Node field.
     '''
-    value_map = dict((name, getattr(field_obj, name))
-                     for name in FIELD_FIELD_NAMES)
+    value_map = dict((name, getattr(field_obj, name)) for name in FIELD_FIELD_NAMES)
 
     # Fix docs in the metadata.
     metadata = value_map.get('metadata', None)
-    metadata_docs = (None
-                     if metadata is None
-                     else metadata.get(METADATA_DOCS_NAME, None))
+    metadata_docs = None if metadata is None else metadata.get(METADATA_DOCS_NAME, None)
     if metadata_docs:
-        new_metadata = {METADATA_DOCS_NAME:
-                        NodeFieldMetadata(node_doc, metadata_docs)}
-        new_metadata.update(
-            (k, v) for k, v in metadata.items() if k != METADATA_DOCS_NAME)
+        new_metadata = {METADATA_DOCS_NAME: NodeFieldMetadata(node_doc, metadata_docs)}
+        new_metadata.update((k, v) for k, v in metadata.items() if k != METADATA_DOCS_NAME)
         value_map['metadata'] = new_metadata
 
     default_val = value_map['default']
@@ -485,6 +481,7 @@ def _make_dataclass_field(field_obj, use_default, node_doc):
 @dataclass
 class InjectedFieldInfo:
     '''The source of an injected field.'''
+
     node_field_name: str
     node_name: str
     node: Node
@@ -493,17 +490,18 @@ class InjectedFieldInfo:
 @dataclass
 class InjectedFieldDetails:
     '''Details of an injected field and its bindings.'''
+
     field_name: str
-    sources: List[InjectedFieldInfo]=field(default_factory=list, init=False)
-    
+    sources: List[InjectedFieldInfo] = field(default_factory=list, init=False)
+
 
 @dataclass
 class InjectedFields:
     '''Details of the injected fields and their bindings.'''
+
     clz: type
-    injections: Dict[str, InjectedFieldDetails]=\
-                field(default_factory=dict, init=False)
-    
+    injections: Dict[str, InjectedFieldDetails] = field(default_factory=dict, init=False)
+
     def _add(self, field_name: str, details: InjectedFieldInfo):
         '''Adds an instance of an injected field.'''
         if not field_name:
@@ -515,7 +513,7 @@ class InjectedFields:
         else:
             pass
         ifd.sources.append(details)
-        
+
     def __str__(self) -> str:
         info = []
         field_names = sorted(self.injections.keys())
@@ -528,15 +526,13 @@ class InjectedFields:
                 info.append(f'    {node_field_name}: {node.clz_or_func!r}')
         return '\n'.join(info)
 
-    def _deep_info_helper(
-            self, node: Node, field_name: str, prefix: str, info: list):
+    def _deep_info_helper(self, node: Node, field_name: str, prefix: str, info: list):
         prefix += '    '
         level = get_injected_fields(node.clz_or_func.clz_or_func)
         if field_name in level.injections:
             for source in level.injections[field_name].sources:
                 info.append(f'{prefix}{source.node_field_name}: {source.node.clz_or_func!r}')
                 self._deep_info_helper(source.node, source.node_field_name, prefix, info)
-
 
     def deep_str(self) -> str:
         '''Returns a string representation of the injected fields and their
@@ -551,13 +547,13 @@ class InjectedFields:
                 node = source.node
                 node_field_name = source.node_field_name
                 info.append(f'{prefix}{node_field_name}: {node.clz_or_func!r}')
-                self._deep_info_helper(
-                    source.node, source.node_field_name, prefix, info)
-                
+                self._deep_info_helper(source.node, source.node_field_name, prefix, info)
+
         return '\n'.join(info)
 
     def generate_html_page(self, url_generator) -> str:
         import html
+
         def _html_row(field_name, details, is_nested):
             rows = ''
             for source in details.sources:
@@ -566,18 +562,26 @@ class InjectedFields:
                 if hasattr(source.node.clz_or_func, 'clz_or_func'):
                     next_level = get_injected_fields(source.node.clz_or_func.clz_or_func)
                     if source.node_field_name in next_level.injections:
-                        nested_table_content = _html_row(source.node_field_name, next_level.injections[source.node_field_name], True)
-                rows += ("""
+                        nested_table_content = _html_row(
+                            source.node_field_name,
+                            next_level.injections[source.node_field_name],
+                            True,
+                        )
+                rows += (
+                    """
                 <tr>
                 """
-                +
-                ('<td>&nbsp;</td>' if is_nested else f"""    <td>{field_name}</td>
-                """)
-                +
-                f"""    <td>{source.node_field_name}</td>
+                    + (
+                        '<td>&nbsp;</td>'
+                        if is_nested
+                        else f"""    <td>{field_name}</td>
+                """
+                    )
+                    + f"""    <td>{source.node_field_name}</td>
                     <td><a href='{link}'>{source.node.clz_or_func!r}</a></td>
                 </tr>
-                """)
+                """
+                )
                 if nested_table_content:
                     rows += f"""
                     <tr>
@@ -639,7 +643,7 @@ class InjectedFields:
         </html>
         """
         return html_content
-    
+
     def __bool__(self) -> bool:
         return bool(self.injections)
 
@@ -647,24 +651,23 @@ class InjectedFields:
 def _get_injected_fields(clz) -> InjectedFields:
     nodes = getattr(clz, DATATREE_SENTIENEL_NAME, {})
     injected_fields = InjectedFields(clz)
-    
+
     for node_name, node in nodes.items():
         if not isinstance(node, Node):
             continue
         for field_name, injected_name in node.get_map().items():
-            injected_fields._add(
-                injected_name,
-                InjectedFieldInfo(field_name, node_name, node)
-            )
+            injected_fields._add(injected_name, InjectedFieldInfo(field_name, node_name, node))
     return injected_fields
+
 
 # Cache the injected fields for each class.
 _INJECTED_FIELDS_CACHE = {}
 
+
 def get_injected_fields(clz) -> InjectedFields:
     '''Returns information about the injected fields for the given class.
     This can be used to find how fields are injected and bound. In particular,
-    a number of Node fields can inject the same field name. This will also 
+    a number of Node fields can inject the same field name. This will also
     provide all the Node fields will bind to a field.
     Args:
       clz: The class to inspect.
@@ -674,6 +677,7 @@ def get_injected_fields(clz) -> InjectedFields:
         result = _get_injected_fields(clz)
         _INJECTED_FIELDS_CACHE[clz] = result
     return result
+
 
 def _apply_node_fields(clz):
     '''Adds new fields from Node annotations.'''
@@ -694,7 +698,7 @@ def _apply_node_fields(clz):
         else:
             # By default don't compare node fields as they don't add
             # any value.
-            field_params = {'default':anno_default, 'compare':False}            
+            field_params = {'default': anno_default, 'compare': False}
             if isinstance(anno_default, Node):
                 # By default don't make Node parameters initializer fields.
                 field_params['init'] = False
@@ -712,9 +716,8 @@ def _apply_node_fields(clz):
                     new_annos[rev_map_name] = anno_detail.anno_type
                     if not hasattr(clz, rev_map_name):
                         field_default, node_default = _make_dataclass_field(
-                            anno_detail.field,
-                            anno_default.use_defaults,
-                            anno_default.node_doc)
+                            anno_detail.field, anno_default.use_defaults, anno_default.node_doc
+                        )
                         setattr(clz, rev_map_name, field_default)
                         if node_default:
                             nodes[rev_map_name] = node_default
@@ -732,12 +735,15 @@ def _apply_node_fields(clz):
     setattr(clz, DATATREE_SENTIENEL_NAME, nodes)
     return clz
 
+
 _Node = Node
+
 
 @dataclass(frozen=True, repr=False)
 class BoundNode:
-    '''The result of binding a Node to a class instance. Once a datatree 
+    '''The result of binding a Node to a class instance. Once a datatree
     object is created, all Node fields become BoundNode fields.'''
+
     parent: object = field(compare=False)
     name: str
     node: Node = field(compare=False)
@@ -763,14 +769,14 @@ class BoundNode:
         # 1. Override (if any)
         # 2. Passed in parameters
         # 3. Parent field values
-        passed_bind = node.node.init_signature.bind_partial(
-            *args, **kwds).arguments
-        ovrde = (node.parent.override.get_override(node.name)
-                 if hasattr(node.parent, 'override') and node.parent.override
-                 else MISSING)
+        passed_bind = node.node.init_signature.bind_partial(*args, **kwds).arguments
+        ovrde = (
+            node.parent.override.get_override(node.name)
+            if hasattr(node.parent, 'override') and node.parent.override
+            else MISSING
+        )
         if ovrde is not MISSING:
-            ovrde_bind = ovrde.bind_signature(
-                node.node.init_signature)
+            ovrde_bind = ovrde.bind_signature(node.node.init_signature)
 
             for k, v in passed_bind.items():
                 if k not in ovrde_bind:
@@ -787,10 +793,11 @@ class BoundNode:
         for fr, to in node.node.expose_map.items():
             if fr not in ovrde_bind:
                 val = getattr(node.parent, to)
-                if (val is None
-                    and ((alt_default_allow_set is None)
-                         or (fr in alt_default_allow_set))
-                        and hasattr(alt_defaults, to)):
+                if (
+                    val is None
+                    and ((alt_default_allow_set is None) or (fr in alt_default_allow_set))
+                    and hasattr(alt_defaults, to)
+                ):
                     # Pull the attribute from alt_defaults if
                     # its available and otherwise we have None.
                     val = getattr(alt_defaults, to)
@@ -808,7 +815,6 @@ class Exposures:
 
 
 class Overrides:
-
     def __init__(self, kwds):
         self.kwds = kwds
 
@@ -866,17 +872,29 @@ def _initialize_node_instances(clz, instance):
 
 # Provide dataclass compatiability post python 3.8.
 # Default values for the dataclass function post Python 3.8.
-_POST_38_DEFAULTS = dtargs(match_args=True, kw_only=False, slots=False).kwds
+_POST_38_DEFAULTS = dtargs(match_args=True, kw_only=False, slots=False, weakref_slot=False).kwds
 
 
-def _process_datatree(clz, init, repr, eq, order, unsafe_hash, frozen,
-                      match_args, kw_only, slots, chain_post_init, provide_override_field):
-
+def _process_datatree(
+    clz,
+    init,
+    repr,
+    eq,
+    order,
+    unsafe_hash,
+    frozen,
+    match_args,
+    kw_only,
+    slots,
+    weakref_slot,
+    chain_post_init,
+    provide_override_field,
+):
     if OVERRIDE_FIELD_NAME in clz.__annotations__:
         if clz.__annotations__[OVERRIDE_FIELD_NAME] != Overrides:
             raise ReservedFieldNameException(
-                f'Reserved field name {OVERRIDE_FIELD_NAME} used by class '
-                f'{clz.__name__}')
+                f'Reserved field name {OVERRIDE_FIELD_NAME} used by class ' f'{clz.__name__}'
+            )
     if provide_override_field:
         clz.__annotations__[OVERRIDE_FIELD_NAME] = Overrides
         setattr(clz, OVERRIDE_FIELD_NAME, field(default=None, repr=False))
@@ -887,8 +905,7 @@ def _process_datatree(clz, init, repr, eq, order, unsafe_hash, frozen,
         # them in a tuple of functions to call.
         for bclz in clz.__mro__[1:-1]:
             if hasattr(bclz, '__post_init_chain__'):
-                post_init_chain.update(
-                    dict().fromkeys(bclz.__post_init_chain__))
+                post_init_chain.update(dict().fromkeys(bclz.__post_init_chain__))
 
             if hasattr(bclz, '__post_init__'):
                 post_init_func = getattr(bclz, '__post_init__')
@@ -906,34 +923,58 @@ def _process_datatree(clz, init, repr, eq, order, unsafe_hash, frozen,
 
     def override_post_init(self):  # TODO: Add support for InitVars.
         if not self.__initialize_node_instances_done__:
-            _field_assign(self,
-                          '__initialize_node_instances_done__',
-                          True)
+            _field_assign(self, '__initialize_node_instances_done__', True)
             _initialize_node_instances(clz, self)
-            
+
             for post_init_func in reversed(self.__post_init_chain__):
                 post_init_func(self)
-    
+
     override_post_init.__is_datatree_override_post_init__ = True
     clz.__post_init__ = override_post_init
 
     _apply_node_fields(clz)
 
-    values_post_38 = dtargs(match_args=match_args,
-                            kw_only=kw_only, slots=slots).kwds
+    # Create dict of only the post-Python 3.8 dataclass parameters that differ from defaults.
+    # This ensures compatibility with older Python versions while still supporting newer parameters
+    # when they're explicitly set to non-default values.
+    values_post_38 = dtargs(
+        match_args=match_args, kw_only=kw_only, slots=slots, weakref_slot=weakref_slot
+    ).kwds
     values_post_38_differ = dict(
-        ((k, v) for k, v in values_post_38.items() if v != _POST_38_DEFAULTS[k]))
+        ((k, v) for k, v in values_post_38.items() if v != _POST_38_DEFAULTS[k])
+    )
 
-    dataclass(clz, init=init, repr=repr, eq=eq, order=order,
-              unsafe_hash=unsafe_hash, frozen=frozen, **values_post_38_differ)
+    dataclass(
+        clz,
+        init=init,
+        repr=repr,
+        eq=eq,
+        order=order,
+        unsafe_hash=unsafe_hash,
+        frozen=frozen,
+        **values_post_38_differ,
+    )
 
     return clz
 
 
-def datatree(clz=None, /, *, init=True, repr=True, eq=True, order=False,
-             unsafe_hash=False, frozen=False, match_args=True,
-             kw_only=False, slots=False, chain_post_init=False,
-             provide_override_field=True):
+def datatree(
+    clz=None,
+    /,
+    *,
+    init=True,
+    repr=True,
+    eq=True,
+    order=False,
+    unsafe_hash=False,
+    frozen=False,
+    match_args=True,
+    kw_only=False,
+    slots=False,
+    weakref_slot=False,
+    chain_post_init=False,
+    provide_override_field=True,
+):
     '''Python decorator similar to dataclasses.dataclass providing parameter injection,
     injection, binding and overrides for parameters deeper inside a tree of objects.
     Args:
@@ -956,8 +997,20 @@ def datatree(clz=None, /, *, init=True, repr=True, eq=True, order=False,
 
     def wrap(clz):
         return _process_datatree(
-            clz, init, repr, eq, order, unsafe_hash, frozen, match_args, kw_only, 
-            slots, chain_post_init, provide_override_field)
+            clz,
+            init,
+            repr,
+            eq,
+            order,
+            unsafe_hash,
+            frozen,
+            match_args,
+            kw_only,
+            slots,
+            weakref_slot,
+            chain_post_init,
+            provide_override_field,
+        )
 
     # See if we're being called as @datatree or @datatree().
     if clz is None:

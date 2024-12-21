@@ -29,7 +29,10 @@ GVector([0.4999999999999999, -0.4999999999999999, 0.7071067811865476, 1.0])
 '''
 
 import numbers
-from types import NoneType
+try:    
+    from types import NoneType
+except ImportError:
+    NoneType = None.__class__
 import numpy as np
 from typing import Callable, Tuple, Any, Union, List
 from dataclasses import dataclass, MISSING

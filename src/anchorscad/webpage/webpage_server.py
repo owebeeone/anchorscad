@@ -121,7 +121,7 @@ class MyHttpRequestHandler(http.server.SimpleHTTPRequestHandler):
 
 
 def start_server(server_conf: ServerConfig):
-    handler = lambda *args, **kwargs: MyHttpRequestHandler(*args, server_conf=server_conf, **kwargs)
+    def handler(*args, **kwargs): MyHttpRequestHandler(*args, server_conf=server_conf, **kwargs)
     
     host = server_conf.host
     port = server_conf.port

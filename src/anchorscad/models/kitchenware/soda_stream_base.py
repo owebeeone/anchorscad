@@ -74,7 +74,6 @@ class SodaStreamBase(ad.CompositeShape):
     
     drain_count: int=ad.dtfield(12, doc='Number of drain holes')
     
-    
     EXAMPLE_SHAPE_ARGS=ad.args(fn=128)
     EXAMPLE_ANCHORS=()
 
