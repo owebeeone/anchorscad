@@ -60,15 +60,8 @@ dataclasses.field properties. This is especially useful when constructing
 complex relationships that require a large number of parameters.
 '''
 
-from dataclasses import (
-    dataclass, 
-    field, 
-    Field, 
-    InitVar, 
-    MISSING,
-    fields
-)
-from typing import List, Dict, Union
+from dataclasses import dataclass, field, Field, InitVar, MISSING
+from typing import List, Dict
 from frozendict import frozendict
 from sortedcollections import OrderedSet
 from types import FunctionType
@@ -450,14 +443,14 @@ class Node:
             typ = annotations[from_id]
         else:
             typ = dataclass_field.type
-        
-        # Unwrap initvars as regular field since we need to bind to the field 
+
+        # Unwrap initvars as regular field since we need to bind to the field
         # when the BoundNode is called.
         if typ is InitVar:
             typ = object
         elif isinstance(typ, InitVar):
             typ = typ.type
-        
+
         return AnnotationDetails(dataclass_field, typ)
 
     def get_rev_map(self):
@@ -694,6 +687,7 @@ def get_injected_fields(clz) -> InjectedFields:
         result = _get_injected_fields(clz)
         _INJECTED_FIELDS_CACHE[clz] = result
     return result
+
 
 def _apply_node_fields(clz):
     '''Adds new fields from Node annotations.'''
@@ -942,11 +936,12 @@ def _process_datatree(
     for base_cls in reversed(clz.__mro__[:-1]):  # Skip object
         if hasattr(base_cls, '__annotations__'):
             for name, type_hint in base_cls.__annotations__.items():
-                if (isinstance(type_hint, InitVar) or 
-                    (isinstance(type_hint, str) and 'InitVar' in type_hint)):
+                if isinstance(type_hint, InitVar) or (
+                    isinstance(type_hint, str) and 'InitVar' in type_hint
+                ):
                     if name not in init_vars:  # Avoid duplicates
                         init_vars.append(name)
-    
+
     def override_post_init(self, *args, **kwargs):
         """Custom post_init that handles InitVars and Node initialization."""
         # Always initialize nodes first
@@ -961,16 +956,13 @@ def _process_datatree(
             for post_init_func in reversed(self.__post_init_chain__):
                 sig = inspect.signature(post_init_func)
                 params = list(sig.parameters.keys())[1:]  # Skip 'self'
-                
-                # Get the class this post_init belongs to
-                func_class = post_init_func.__qualname__.split('.')[0]
-                
+
                 # Get only the parameters this class's post_init expects
                 valid_args = []
                 for param in params:
                     if param in init_var_values:
                         valid_args.append(init_var_values[param])
-                    
+
                 post_init_func(self, *valid_args)
 
     # Mark as our override
@@ -1068,18 +1060,19 @@ def datatree(
 
 def _map_post_init_params(cls, post_init_chain):
     """Creates mapping info for each post_init in the chain.
-    
-    Returns a list of tuples (func, param_names) where param_names are 
+
+    Returns a list of tuples (func, param_names) where param_names are
     the parameters that function expects from cls's InitVar fields.
     """
     # Get all InitVar fields from the most derived class
     init_var_fields = []
     if hasattr(cls, '__annotations__'):
         for name, type_hint in cls.__annotations__.items():
-            if (isinstance(type_hint, InitVar) or
-                (isinstance(type_hint, str) and 'InitVar' in type_hint)):
+            if isinstance(type_hint, InitVar) or (
+                isinstance(type_hint, str) and 'InitVar' in type_hint
+            ):
                 init_var_fields.append(name)
-                
+
     # Create mapping for each post_init function
     chain_mappings = []
     for post_init_func in post_init_chain:
@@ -1089,8 +1082,9 @@ def _map_post_init_params(cls, post_init_chain):
         # Only include params that exist in init_var_fields
         valid_params = [p for p in params if p in init_var_fields]
         chain_mappings.append((post_init_func, valid_params))
-        
+
     return chain_mappings
+
 
 def _call_post_init_chain(self, chain_mappings, **init_var_values):
     """Calls each post_init function with its mapped parameters."""
@@ -1099,18 +1093,19 @@ def _call_post_init_chain(self, chain_mappings, **init_var_values):
         args = [init_var_values[name] for name in param_names]
         func(self, *args)
 
+
 def _create_post_init_function(cls, post_init_chain):
     """Creates a custom __post_init__ function with named parameters."""
     chain_mappings = _map_post_init_params(cls, post_init_chain)
-    
+
     # Get all InitVar parameter names
     all_params = set()
     for _, params in chain_mappings:
         all_params.update(params)
-    
+
     # Create function definition with explicit parameters
     params = ['self'] + list(all_params)
-    
+
     # Create function body
     body_lines = [
         'if not self.__initialize_node_instances_done__:',
@@ -1118,19 +1113,22 @@ def _create_post_init_function(cls, post_init_chain):
         '    _initialize_node_instances(cls, self)',
         '',
         '    # Create dict of InitVar values',
-        '    init_var_values = {']
-    
+        '    init_var_values = {',
+    ]
+
     # Add each parameter to init_var_values dict
     for param in all_params:
         body_lines.append(f"        '{param}': {param},")
-    
-    body_lines.extend([
-        '    }',
-        '',
-        '    # Call chain with mapped values',
-        '    _call_post_init_chain(self, chain_mappings, **init_var_values)'
-    ])
-    
+
+    body_lines.extend(
+        [
+            '    }',
+            '',
+            '    # Call chain with mapped values',
+            '    _call_post_init_chain(self, chain_mappings, **init_var_values)',
+        ]
+    )
+
     # Create the function using existing _create_fn
     local_vars = {
         'cls': cls,
@@ -1139,20 +1137,16 @@ def _create_post_init_function(cls, post_init_chain):
         '_call_post_init_chain': _call_post_init_chain,
         'chain_mappings': chain_mappings,
     }
-    
-    override_post_init = _create_fn(
-        '__post_init__',
-        params,
-        body_lines,
-        locals=local_vars
-    )
-    
+
+    override_post_init = _create_fn('__post_init__', params, body_lines, locals=local_vars)
+
     override_post_init.__is_datatree_override_post_init__ = True
     return override_post_init
 
+
 def _create_fn(name, args, body_lines, *, globals=None, locals=None):
     """Creates a function dynamically.
-    
+
     Args:
         name: Function name
         args: List of argument names
@@ -1164,18 +1158,18 @@ def _create_fn(name, args, body_lines, *, globals=None, locals=None):
         locals = {}
     if globals is None:
         globals = {}
-        
+
     # Convert args list to string
     args_str = ', '.join(args)
-    
+
     # Convert body lines to properly indented string
     body = '\n'.join(f'    {line}' for line in body_lines)
-    
+
     # Create the complete function text
     func_text = f'def {name}({args_str}):\n{body}'
-    
+
     # Create the function
     exec_locals = {}
     exec(func_text, globals, exec_locals)
-    
+
     return exec_locals[name]
