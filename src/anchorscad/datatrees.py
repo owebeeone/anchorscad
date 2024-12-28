@@ -942,32 +942,8 @@ def _process_datatree(
                     if name not in init_vars:  # Avoid duplicates
                         init_vars.append(name)
 
-    def override_post_init(self, *args, **kwargs):
-        """Custom post_init that handles InitVars and Node initialization."""
-        # Always initialize nodes first
-        if not self.__initialize_node_instances_done__:
-            _field_assign(self, '__initialize_node_instances_done__', True)
-            _initialize_node_instances(clz, self)
-
-            # Create mapping of parameter names to values
-            init_var_values = dict(zip(init_vars, args))
-
-            # Then call post_init chain with InitVar parameters
-            for post_init_func in reversed(self.__post_init_chain__):
-                sig = inspect.signature(post_init_func)
-                params = list(sig.parameters.keys())[1:]  # Skip 'self'
-
-                # Get only the parameters this class's post_init expects
-                valid_args = []
-                for param in params:
-                    if param in init_var_values:
-                        valid_args.append(init_var_values[param])
-
-                post_init_func(self, *valid_args)
-
-    # Mark as our override
-    override_post_init.__is_datatree_override_post_init__ = True
-    clz.__post_init__ = override_post_init
+    # Create the override post_init function with proper parameter handling
+    clz.__post_init__ = _create_post_init_function(clz, clz.__post_init_chain__)
 
     _apply_node_fields(clz)
 
@@ -1059,28 +1035,25 @@ def datatree(
 
 
 def _map_post_init_params(cls, post_init_chain):
-    """Creates mapping info for each post_init in the chain.
-
-    Returns a list of tuples (func, param_names) where param_names are
-    the parameters that function expects from cls's InitVar fields.
-    """
-    # Get all InitVar fields from the most derived class
-    init_var_fields = []
-    if hasattr(cls, '__annotations__'):
-        for name, type_hint in cls.__annotations__.items():
-            if isinstance(type_hint, InitVar) or (
-                isinstance(type_hint, str) and 'InitVar' in type_hint
-            ):
-                init_var_fields.append(name)
+    """Creates mapping info for each post_init in the chain."""
+    # Get all InitVar fields in order of declaration
+    init_vars = []
+    # Go through MRO in normal order to get base class InitVars first
+    for base_cls in cls.__mro__[-2::-1]:  # Skip object, go from base to derived
+        if hasattr(base_cls, '__annotations__'):
+            for name, type_hint in base_cls.__annotations__.items():
+                if isinstance(type_hint, InitVar) or (
+                    isinstance(type_hint, str) and 'InitVar' in type_hint
+                ):
+                    if name not in init_vars:  # Avoid duplicates
+                        init_vars.append(name)
 
     # Create mapping for each post_init function
     chain_mappings = []
     for post_init_func in post_init_chain:
         sig = inspect.signature(post_init_func)
-        # Get parameter names after 'self'
-        params = list(sig.parameters.keys())[1:]
-        # Only include params that exist in init_var_fields
-        valid_params = [p for p in params if p in init_var_fields]
+        params = list(sig.parameters.keys())[1:]  # Skip 'self'
+        valid_params = [p for p in params if p in init_vars]
         chain_mappings.append((post_init_func, valid_params))
 
     return chain_mappings
@@ -1088,8 +1061,7 @@ def _map_post_init_params(cls, post_init_chain):
 
 def _call_post_init_chain(self, chain_mappings, **init_var_values):
     """Calls each post_init function with its mapped parameters."""
-    for func, param_names in reversed(chain_mappings):
-        # Build args list for this post_init
+    for func, param_names in chain_mappings:
         args = [init_var_values[name] for name in param_names]
         func(self, *args)
 
@@ -1158,6 +1130,17 @@ def _create_fn(name, args, body_lines, *, globals=None, locals=None):
         locals = {}
     if globals is None:
         globals = {}
+
+    # Add required functions and variables to globals
+    globals.update(
+        {
+            '_field_assign': _field_assign,
+            '_initialize_node_instances': _initialize_node_instances,
+            '_call_post_init_chain': _call_post_init_chain,
+            'cls': locals.get('cls'),  # Get cls from locals if provided
+            'chain_mappings': locals.get('chain_mappings'),  # Add chain_mappings
+        }
+    )
 
     # Convert args list to string
     args_str = ', '.join(args)
