@@ -60,8 +60,8 @@ dataclasses.field properties. This is especially useful when constructing
 complex relationships that require a large number of parameters.
 '''
 
-from dataclasses import dataclass, field, Field, MISSING
-from typing import List, Dict
+from dataclasses import dataclass, field, Field, InitVar, MISSING
+from typing import List, Dict, Union
 from frozendict import frozendict
 from sortedcollections import OrderedSet
 from types import FunctionType
@@ -440,8 +440,18 @@ class Node:
 
     def make_anno_detail(self, from_id, dataclass_field, annotations):
         if from_id in annotations:
-            return AnnotationDetails(dataclass_field, annotations[from_id])
-        return AnnotationDetails(dataclass_field, dataclass_field.type)
+            typ = annotations[from_id]
+        else:
+            typ = dataclass_field.type
+        
+        # Unwrap initvars as regular field since we need to bind to the field 
+        # when the BoundNode is called.
+        if typ is InitVar:
+            typ = object
+        elif isinstance(typ, InitVar):
+            typ = typ.type
+        
+        return AnnotationDetails(dataclass_field, typ)
 
     def get_rev_map(self):
         return self.expose_rev_map
@@ -678,14 +688,13 @@ def get_injected_fields(clz) -> InjectedFields:
         _INJECTED_FIELDS_CACHE[clz] = result
     return result
 
-
 def _apply_node_fields(clz):
     '''Adds new fields from Node annotations.'''
     annotations = clz.__annotations__
     new_annos = {}  # New set of annos to build.
 
     # The order in which items are added to the new_annos dictionary is important.
-    # Here we maintain the same order of the original with the new exposed fields
+    # Here we maintain the same order of the original with the new exposed/injected fields
     # interspersed between the Node annotated fields.
     nodes = {}
     for name, anno in annotations.items():
@@ -696,12 +705,11 @@ def _apply_node_fields(clz):
         if isinstance(anno_default, Field):
             anno_default = anno_default.default
         else:
-            # By default don't compare node fields as they don't add
-            # any value.
-            field_params = {'default': anno_default, 'compare': False}
+            field_params = {'default': anno_default}
             if isinstance(anno_default, Node):
-                # By default don't make Node parameters initializer fields.
+                # By default don't make Node parameters initializer fields nor compare node fields.
                 field_params['init'] = False
+                field_params['compare'] = False
             setattr(clz, name, field(**field_params))
 
         if isinstance(anno_default, Node):
@@ -926,7 +934,7 @@ def _process_datatree(
             _field_assign(self, '__initialize_node_instances_done__', True)
             _initialize_node_instances(clz, self)
 
-            for post_init_func in reversed(self.__post_init_chain__):
+            for post_init_func in self.__post_init_chain__:
                 post_init_func(self)
 
     override_post_init.__is_datatree_override_post_init__ = True
