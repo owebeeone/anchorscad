@@ -60,7 +60,14 @@ dataclasses.field properties. This is especially useful when constructing
 complex relationships that require a large number of parameters.
 '''
 
-from dataclasses import dataclass, field, Field, InitVar, MISSING
+from dataclasses import (
+    dataclass, 
+    field, 
+    Field, 
+    InitVar, 
+    MISSING,
+    fields
+)
 from typing import List, Dict, Union
 from frozendict import frozendict
 from sortedcollections import OrderedSet
@@ -929,14 +936,44 @@ def _process_datatree(
     clz.__post_init_chain__ = tuple(post_init_chain.keys())
     clz.__initialize_node_instances_done__ = False
 
-    def override_post_init(self):  # TODO: Add support for InitVars.
+    # Get InitVar fields from entire inheritance chain
+    init_vars = []
+    # Go through MRO in reverse to get base class InitVars first
+    for base_cls in reversed(clz.__mro__[:-1]):  # Skip object
+        if hasattr(base_cls, '__annotations__'):
+            for name, type_hint in base_cls.__annotations__.items():
+                if (isinstance(type_hint, InitVar) or 
+                    (isinstance(type_hint, str) and 'InitVar' in type_hint)):
+                    if name not in init_vars:  # Avoid duplicates
+                        init_vars.append(name)
+    
+    def override_post_init(self, *args, **kwargs):
+        """Custom post_init that handles InitVars and Node initialization."""
+        # Always initialize nodes first
         if not self.__initialize_node_instances_done__:
             _field_assign(self, '__initialize_node_instances_done__', True)
             _initialize_node_instances(clz, self)
 
-            for post_init_func in self.__post_init_chain__:
-                post_init_func(self)
+            # Create mapping of parameter names to values
+            init_var_values = dict(zip(init_vars, args))
 
+            # Then call post_init chain with InitVar parameters
+            for post_init_func in reversed(self.__post_init_chain__):
+                sig = inspect.signature(post_init_func)
+                params = list(sig.parameters.keys())[1:]  # Skip 'self'
+                
+                # Get the class this post_init belongs to
+                func_class = post_init_func.__qualname__.split('.')[0]
+                
+                # Get only the parameters this class's post_init expects
+                valid_args = []
+                for param in params:
+                    if param in init_var_values:
+                        valid_args.append(init_var_values[param])
+                    
+                post_init_func(self, *valid_args)
+
+    # Mark as our override
     override_post_init.__is_datatree_override_post_init__ = True
     clz.__post_init__ = override_post_init
 
@@ -1027,3 +1064,118 @@ def datatree(
 
     # We're called as @datatree without parens.
     return wrap(clz)
+
+
+def _map_post_init_params(cls, post_init_chain):
+    """Creates mapping info for each post_init in the chain.
+    
+    Returns a list of tuples (func, param_names) where param_names are 
+    the parameters that function expects from cls's InitVar fields.
+    """
+    # Get all InitVar fields from the most derived class
+    init_var_fields = []
+    if hasattr(cls, '__annotations__'):
+        for name, type_hint in cls.__annotations__.items():
+            if (isinstance(type_hint, InitVar) or
+                (isinstance(type_hint, str) and 'InitVar' in type_hint)):
+                init_var_fields.append(name)
+                
+    # Create mapping for each post_init function
+    chain_mappings = []
+    for post_init_func in post_init_chain:
+        sig = inspect.signature(post_init_func)
+        # Get parameter names after 'self'
+        params = list(sig.parameters.keys())[1:]
+        # Only include params that exist in init_var_fields
+        valid_params = [p for p in params if p in init_var_fields]
+        chain_mappings.append((post_init_func, valid_params))
+        
+    return chain_mappings
+
+def _call_post_init_chain(self, chain_mappings, **init_var_values):
+    """Calls each post_init function with its mapped parameters."""
+    for func, param_names in reversed(chain_mappings):
+        # Build args list for this post_init
+        args = [init_var_values[name] for name in param_names]
+        func(self, *args)
+
+def _create_post_init_function(cls, post_init_chain):
+    """Creates a custom __post_init__ function with named parameters."""
+    chain_mappings = _map_post_init_params(cls, post_init_chain)
+    
+    # Get all InitVar parameter names
+    all_params = set()
+    for _, params in chain_mappings:
+        all_params.update(params)
+    
+    # Create function definition with explicit parameters
+    params = ['self'] + list(all_params)
+    
+    # Create function body
+    body_lines = [
+        'if not self.__initialize_node_instances_done__:',
+        '    _field_assign(self, "__initialize_node_instances_done__", True)',
+        '    _initialize_node_instances(cls, self)',
+        '',
+        '    # Create dict of InitVar values',
+        '    init_var_values = {']
+    
+    # Add each parameter to init_var_values dict
+    for param in all_params:
+        body_lines.append(f"        '{param}': {param},")
+    
+    body_lines.extend([
+        '    }',
+        '',
+        '    # Call chain with mapped values',
+        '    _call_post_init_chain(self, chain_mappings, **init_var_values)'
+    ])
+    
+    # Create the function using existing _create_fn
+    local_vars = {
+        'cls': cls,
+        '_field_assign': _field_assign,
+        '_initialize_node_instances': _initialize_node_instances,
+        '_call_post_init_chain': _call_post_init_chain,
+        'chain_mappings': chain_mappings,
+    }
+    
+    override_post_init = _create_fn(
+        '__post_init__',
+        params,
+        body_lines,
+        locals=local_vars
+    )
+    
+    override_post_init.__is_datatree_override_post_init__ = True
+    return override_post_init
+
+def _create_fn(name, args, body_lines, *, globals=None, locals=None):
+    """Creates a function dynamically.
+    
+    Args:
+        name: Function name
+        args: List of argument names
+        body_lines: List of function body lines
+        globals: Global namespace
+        locals: Local namespace
+    """
+    if locals is None:
+        locals = {}
+    if globals is None:
+        globals = {}
+        
+    # Convert args list to string
+    args_str = ', '.join(args)
+    
+    # Convert body lines to properly indented string
+    body = '\n'.join(f'    {line}' for line in body_lines)
+    
+    # Create the complete function text
+    func_text = f'def {name}({args_str}):\n{body}'
+    
+    # Create the function
+    exec_locals = {}
+    exec(func_text, globals, exec_locals)
+    
+    return exec_locals[name]
