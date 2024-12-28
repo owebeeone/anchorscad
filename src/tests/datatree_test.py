@@ -394,8 +394,8 @@ class Test(unittest.TestCase):
             def __post_init__(self):
                 self.a_obj = self.nodeA()
         
-        self.assertEqual(B(), B(aa_a=11, bb=44, aa_keep1=33))
-        self.assertEqual(A(a=11, b=11, keep1=33), 
+        self.assertEqual(B(), B(aa_a=1, bb=2, aa_keep1=3))
+        self.assertEqual(A(a=11, b=44, keep1=33), 
                          B(aa_a=11, bb=44, aa_keep1=33).a_obj)
         self.assertFalse(hasattr(B(), 'aa_b'))
         self.assertFalse(hasattr(B(), 'aa_keep2'))
