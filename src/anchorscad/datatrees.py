@@ -60,8 +60,10 @@ dataclasses.field properties. This is especially useful when constructing
 complex relationships that require a large number of parameters.
 '''
 
-from dataclasses import dataclass, field, Field, InitVar, MISSING
-from typing import List, Dict
+from dataclasses import dataclass, field, Field, InitVar, MISSING, _FIELD_INITVAR
+from functools import wraps
+import sys
+from typing import List, Dict, Tuple, Any, Callable
 from frozendict import frozendict
 from sortedcollections import OrderedSet
 from types import FunctionType
@@ -73,6 +75,7 @@ FIELD_FIELD_NAMES = tuple(inspect.signature(field).parameters.keys())
 DATATREE_SENTIENEL_NAME = '__datatree_nodes__'
 OVERRIDE_FIELD_NAME = 'override'
 METADATA_DOCS_NAME = 'dt_docs'
+ORIGINAL_POST_INIT_NAME = '__original_post_init__'
 
 
 class ReservedFieldNameException(Exception):
@@ -908,26 +911,12 @@ def _process_datatree(
         clz.__annotations__[OVERRIDE_FIELD_NAME] = Overrides
         setattr(clz, OVERRIDE_FIELD_NAME, field(default=None, repr=False))
 
-    post_init_chain = dict()
-    if chain_post_init:
-        # Collect all the __post_init__ functions being inherited and place
-        # them in a tuple of functions to call.
-        for bclz in clz.__mro__[1:-1]:
-            if hasattr(bclz, '__post_init_chain__'):
-                post_init_chain.update(dict().fromkeys(bclz.__post_init_chain__))
-
-            if hasattr(bclz, '__post_init__'):
-                post_init_func = getattr(bclz, '__post_init__')
-                if not hasattr(post_init_func, '__is_datatree_override_post_init__'):
-                    post_init_chain[post_init_func] = None
-
-    if hasattr(clz, '__post_init__'):
-        post_init_func = getattr(clz, '__post_init__')
+    # Move the user defined __post_init__ to __original_post_init__
+    post_init_func = clz.__dict__.get('__post_init__', None)
+    if post_init_func is not None:
         if not hasattr(post_init_func, '__is_datatree_override_post_init__'):
-            if post_init_func not in post_init_chain:
-                post_init_chain[post_init_func] = None
+            setattr(clz, ORIGINAL_POST_INIT_NAME, post_init_func)
 
-    clz.__post_init_chain__ = tuple(post_init_chain.keys())
     clz.__initialize_node_instances_done__ = False
 
     # Get InitVar fields from entire inheritance chain
@@ -943,7 +932,7 @@ def _process_datatree(
                         init_vars.append(name)
 
     # Create the override post_init function with proper parameter handling
-    clz.__post_init__ = _create_post_init_function(clz, clz.__post_init_chain__)
+    clz.__post_init__ = _create_post_init_function(clz, post_init_func, chain_post_init)
 
     _apply_node_fields(clz)
 
@@ -1034,94 +1023,213 @@ def datatree(
     return wrap(clz)
 
 
-def _map_post_init_params(cls, post_init_chain):
-    """Creates mapping info for each post_init in the chain."""
-    # Get all InitVar fields in order of declaration
-    init_vars = []
-    # Go through MRO in normal order to get base class InitVars first
-    for base_cls in cls.__mro__[-2::-1]:  # Skip object, go from base to derived
-        if hasattr(base_cls, '__annotations__'):
-            for name, type_hint in base_cls.__annotations__.items():
-                if isinstance(type_hint, InitVar) or (
-                    isinstance(type_hint, str) and 'InitVar' in type_hint
-                ):
-                    if name not in init_vars:  # Avoid duplicates
-                        init_vars.append(name)
+@dataclass(frozen=True)
+class _PostInitClasses:
+    """
+    mro_index: the index of the class in the MRO
+    post_init_func: the post-init function
+    post_init_name: the name of the post-init function in the current class
+    fields: the fields of the base class
+    """
 
-    # Create mapping for each post_init function
-    chain_mappings = []
-    for post_init_func in post_init_chain:
-        sig = inspect.signature(post_init_func)
-        params = list(sig.parameters.keys())[1:]  # Skip 'self'
-        valid_params = [p for p in params if p in init_vars]
-        chain_mappings.append((post_init_func, valid_params))
-
-    return chain_mappings
+    mro_index: int
+    post_init_func: Callable | None
+    post_init_name: str
+    fields: dict[str, tuple[Field, '_PostInitParameter']]
 
 
-def _call_post_init_chain(self, chain_mappings, **init_var_values):
-    """Calls each post_init function with its mapped parameters."""
-    for func, param_names in chain_mappings:
-        args = [init_var_values[name] for name in param_names]
-        func(self, *args)
+@dataclass(frozen=True)
+class _PostInitParameter:
+    """
+    name: the field name
+    is_in_self: from the final class clz's viewpoint, is this a normal field
+                stored on self or an InitVar that won't appear on self?
+    """
+
+    name: str
+    is_in_self: bool
 
 
-def _create_post_init_function(cls, post_init_chain):
+def _is_initvar(ann_type: Any) -> bool:
+    """
+    Returns True if 'ann_type' is exactly 'InitVar' or 'InitVar[...]'.
+    """
+    return ann_type is InitVar or type(ann_type) is InitVar
+
+
+def _get_post_init_parameter_map(
+    clz: type, post_init_new_name: str, post_init_orig_name: str
+) -> dict[int, list[_PostInitParameter]]:
+    """
+    Returns a map of all the post-init parameters for a class and its
+    base classes.
+    """
+    fields: dict[str, tuple[Field, _PostInitParameter]] = {}
+    dataclass_parents: list[_PostInitClasses] = []
+
+    for i, b in tuple(enumerate(clz.__mro__))[-2:0:-1]:
+        orig_post_init_func = b.__dict__.get(post_init_new_name, None)
+        override_post_init_func = b.__dict__.get(post_init_orig_name, None)
+        base_dataclass_fields = getattr(b, '__dataclass_fields__', None)
+        base_fields: dict[str, tuple[Field, _PostInitParameter]] = {}
+        if base_dataclass_fields is not None:
+            for f in base_dataclass_fields.values():
+                v = (f, _PostInitParameter(f.name, f._field_type is not _FIELD_INITVAR))
+                if not v[1].is_in_self:
+                    base_fields[f.name] = v
+                fields[f.name] = v
+            if orig_post_init_func is not None:
+                # This is a datatree class with a renamed __post_init__ function.
+                # When chaining we will pass initvar parameters to this post-init function.
+                dataclass_parents.append(
+                    _PostInitClasses(i, orig_post_init_func, post_init_new_name, base_fields)
+                )
+
+            elif override_post_init_func is not None and not hasattr(
+                override_post_init_func, '__is_datatree_override_post_init__'
+            ):
+                # The base class has a __post_init__ and is a dataclass (not a datatree).
+                # When chaining we can pass initvar parameters to this post-init function.
+                dataclass_parents.append(
+                    _PostInitClasses(i, override_post_init_func, post_init_orig_name, base_fields)
+                )
+        elif override_post_init_func is not None:
+            # The base class has a __post_init__ function but is not a dataclass.
+            # When chaining we can call this function without any parameters.
+            dataclass_parents.append(
+                _PostInitClasses(i, override_post_init_func, post_init_orig_name, {})
+            )
+
+    cls_annotations = clz.__dict__.get('__annotations__', {})
+
+    for name, typ in cls_annotations.items():
+        fields[name] = (None, _PostInitParameter(name, not _is_initvar(typ)))
+
+    result: dict[type, tuple[list[_PostInitParameter], str]] = {}
+    for post_init_class in dataclass_parents:
+        b = clz.__mro__[post_init_class.mro_index]
+        post_init_params: list[_PostInitParameter] = [
+            fields[f.name][1]
+            for f in b.__dataclass_fields__.values()
+            if f._field_type is _FIELD_INITVAR
+        ] if hasattr(b, '__dataclass_fields__') else []
+        result[post_init_class.mro_index] = (post_init_params, post_init_class.post_init_name)
+
+    result[0] = ([t[1] for t in fields.values() if not t[1].is_in_self], post_init_new_name)
+
+    return result
+
+
+def _create_chain_post_init_text(
+    clz: type, post_init_new_name: str, post_init_orig_name: str, chain_post_init: bool
+) -> tuple[dict[str, Any], list[str], list[str]]:
+    """
+    Creates a chain of post-init functions for a class.
+    This assumes that the post-init functions are moved to another entry in the same class
+    named post_init_name.
+
+    The advantage of this approach is that the post-init functions are called without
+    repitition in case of diamond inheritance. If each class has a post-init function
+    that calls the post-init function of the next class in the chain, then the post-init
+    function of the deepest class will be called multiple times.
+    """
+    locals = {'clz': clz}
+    mapping = _get_post_init_parameter_map(clz, post_init_new_name, post_init_orig_name)
+    header_text = []
+    body_text = []
+    params_derived = mapping[0][0]
+    pnames = ('self',) + tuple(p.name for p in params_derived if not p.is_in_self)
+    header_text.append(f"def {post_init_orig_name}({', '.join(pnames)}):")
+    body_text.append("    mro = clz.__mro__")
+    if chain_post_init:
+        for mro_index, params_funcname in mapping.items():
+            if mro_index == 0:
+                continue
+            names = ('self',) + tuple(
+                f"self.{p.name}" if p.is_in_self else p.name for p in params_funcname[0]
+            )
+            body_text.append(
+                f"    mro[{mro_index}].{params_funcname[1]}({', '.join(names)})"
+                f" # {clz.__mro__[mro_index].__name__}")
+
+    # Call the original post-init function if it exists as post_init_name.
+    if post_init_new_name in clz.__dict__:
+        body_text.append(f"    mro[0].{post_init_new_name}({', '.join(pnames)})")
+    elif not chain_post_init:
+        # Find the post-init function in MRO order. Here we don't call all the post-init functions.
+        # We just call the first one we find which is the way the dataclass works. However,
+        # here we also fix the signature of the post-init.
+        for mro_index in range(1, len(clz.__mro__)):
+            if mro_index in mapping:
+                params, funcname = mapping[mro_index]
+                names = ('self',) + tuple(
+                    f"self.{p.name}" if p.is_in_self else p.name for p in params
+                )
+                body_text.append(
+                    f"    mro[{mro_index}].{funcname}({', '.join(names)})"
+                    f" # {clz.__mro__[mro_index].__name__}")
+                break
+
+    return locals, header_text, body_text
+
+
+def _create_post_init_function(clz, wrap_fn=None, chain_post_init=False):
     """Creates a custom __post_init__ function with named parameters."""
-    chain_mappings = _map_post_init_params(cls, post_init_chain)
 
-    # Get all InitVar parameter names
-    all_params = set()
-    for _, params in chain_mappings:
-        all_params.update(params)
+    if clz.__module__ in sys.modules:
+        globals = sys.modules[clz.__module__].__dict__
+    else:
+        globals = {}
 
-    # Create function definition with explicit parameters
-    params = ['self'] + list(all_params)
+    locals, header_text, body_text = _create_chain_post_init_text(
+        clz, ORIGINAL_POST_INIT_NAME, '__post_init__', chain_post_init
+    )
 
-    # Create function body
-    body_lines = [
-        'if not self.__initialize_node_instances_done__:',
-        '    _field_assign(self, "__initialize_node_instances_done__", True)',
-        '    _initialize_node_instances(cls, self)',
-        '',
-        '    # Create dict of InitVar values',
-        '    init_var_values = {',
+    wrap_decorator = []
+    if wrap_fn is not None:
+        wrap_decorator = ["@wraps(wapped_function)"]
+
+    init_code = [
+        "    if not self.__initialize_node_instances_done__:",
+        "        _field_assign(self, '__initialize_node_instances_done__', True)",
+        "        _initialize_node_instances(clz, self)",
     ]
 
-    # Add each parameter to init_var_values dict
-    for param in all_params:
-        body_lines.append(f"        '{param}': {param},")
-
-    body_lines.extend(
-        [
-            '    }',
-            '',
-            '    # Call chain with mapped values',
-            '    _call_post_init_chain(self, chain_mappings, **init_var_values)',
-        ]
-    )
+    header_lines = wrap_decorator + header_text
+    body_lines = init_code + body_text
 
     # Create the function using existing _create_fn
     local_vars = {
-        'cls': cls,
+        'wraps': wraps,
+        'wapped_function': wrap_fn,
         '_field_assign': _field_assign,
         '_initialize_node_instances': _initialize_node_instances,
-        '_call_post_init_chain': _call_post_init_chain,
-        'chain_mappings': chain_mappings,
     }
 
-    override_post_init = _create_fn('__post_init__', params, body_lines, locals=local_vars)
+    all_locals = {**locals, **local_vars}
 
+    override_post_init = _create_fn(
+        '__post_init__', header_lines, body_lines, locals=all_locals, globals=globals
+    )
+
+    # Mark the function as a datatree post-init function
     override_post_init.__is_datatree_override_post_init__ = True
     return override_post_init
 
 
-def _create_fn(name, args, body_lines, *, globals=None, locals=None):
+def _create_fn(
+    name: str,
+    header_lines: list[str],
+    body_lines: list[str],
+    *,
+    globals: dict[str, Any] = None,
+    locals: dict[str, Any] = None,
+):
     """Creates a function dynamically.
 
     Args:
         name: Function name
-        args: List of argument names
+        header_lines: List of function header lines
         body_lines: List of function body lines
         globals: Global namespace
         locals: Local namespace
@@ -1131,28 +1239,21 @@ def _create_fn(name, args, body_lines, *, globals=None, locals=None):
     if globals is None:
         globals = {}
 
-    # Add required functions and variables to globals
-    globals.update(
-        {
-            '_field_assign': _field_assign,
-            '_initialize_node_instances': _initialize_node_instances,
-            '_call_post_init_chain': _call_post_init_chain,
-            'cls': locals.get('cls'),  # Get cls from locals if provided
-            'chain_mappings': locals.get('chain_mappings'),  # Add chain_mappings
-        }
-    )
-
-    # Convert args list to string
-    args_str = ', '.join(args)
+    local_vars = ', '.join(locals.keys())
 
     # Convert body lines to properly indented string
-    body = '\n'.join(f'    {line}' for line in body_lines)
+    body = '\n'.join(f'    {line}' for line in header_lines + body_lines)
 
-    # Create the complete function text
-    func_text = f'def {name}({args_str}):\n{body}'
+    func_text = f"def __create_fn__({local_vars}):\n{body}\n    return {name}"
 
     # Create the function
     exec_locals = {}
+    # print("\n" * 3)
+    # print(f"# {locals['clz'].__name__}")
+    # print(func_text)
+    # print("\n" * 3)
     exec(func_text, globals, exec_locals)
 
-    return exec_locals[name]
+    function = exec_locals['__create_fn__'](**locals)
+
+    return function

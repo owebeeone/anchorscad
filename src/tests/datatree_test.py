@@ -198,7 +198,7 @@ class Test(unittest.TestCase):
             def __post_init__(self):
                 self.s.append('B')
                 
-        self.assertEqual(B().s, ['A1', 'A2', 'B'])
+        self.assertEqual(B().s, ['A2', 'A1', 'B'])
         self.assertEqual(B().leaf(), LeafType2(leaf_a=10, leaf_b=20, override=None))
         
     def test_multiple_inheritance_mix_dataclass_datatree(self):
@@ -228,7 +228,7 @@ class Test(unittest.TestCase):
             def __post_init__(self):
                 self.s.append('B')
                 
-        self.assertEqual(B().s, ['A1', 'A2', 'B'])
+        self.assertEqual(B().s, ['A2', 'A1', 'B'])
         self.assertEqual(B().leaf(), LeafType2(leaf_a=10, leaf_b=20, override=None))
         
        
@@ -263,7 +263,7 @@ class Test(unittest.TestCase):
             def __post_init__(self):
                 self.s.append('C')
                 
-        self.assertEqual(C().s, ['A1', 'A2', 'C'])
+        self.assertEqual(C().s, ['A2', 'A1', 'C'])
         self.assertEqual(C().leaf(), LeafType2(leaf_a=10, leaf_b=20, override=None))
     
     def test_multiple_inheritance_no_post_init_no_chain(self):
