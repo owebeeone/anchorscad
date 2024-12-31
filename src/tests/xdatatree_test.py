@@ -5,7 +5,7 @@ from anchorscad.xdatatrees import xdatatree, xfield, Attribute, Metadata, \
 from anchorscad.threemf_config import SERIALIZATION_SPEC as CONFIG_SERIALIZATION_SPEC
 from anchorscad.threemf_model import SERIALIZATION_SPEC as MODEL_SERIALIZATION_SPEC
 
-from anchorscad.xdatatree_utils import FullDeserializeChecker, TransformConverter, \
+from anchorscad.xdatatree_utils import TransformConverter, \
     VectorConverter, MatrixConverter
 
 from anchorscad import GMatrix, GVector, datatree, dtfield
