@@ -63,7 +63,7 @@ complex relationships that require a large number of parameters.
 from dataclasses import dataclass, field, Field, InitVar, MISSING, _FIELD_INITVAR
 from functools import wraps
 import sys
-from typing import List, Dict, Tuple, Any, Callable
+from typing import List, Dict, Any, Callable, Generic, Optional, TypeVar
 from frozendict import frozendict
 from sortedcollections import OrderedSet
 from types import FunctionType
@@ -77,6 +77,7 @@ OVERRIDE_FIELD_NAME = 'override'
 METADATA_DOCS_NAME = 'dt_docs'
 ORIGINAL_POST_INIT_NAME = '__original_post_init__'
 
+T = TypeVar('T')
 
 class ReservedFieldNameException(Exception):
     f'''The name '{OVERRIDE_FIELD_NAME}' is reserved for use by datatree.'''
@@ -274,13 +275,13 @@ class _ClzOrFuncWrapper:
 
 
 @dataclass(frozen=True)
-class Node:
+class Node(Generic[T]):
     '''A specifier for a datatree node. This specifies how fields
     from a class initializer (or function) is translated from fields in the
     composition class.
     '''
 
-    clz_or_func: type = dtfield(doc='A class or function for parameter binding.')
+    clz_or_func: type[T] | Callable[..., T] = dtfield(doc='A class or function for parameter binding.')
     use_defaults: bool = dtfield(
         doc='Allows use of defaults otherwise defaults should be ' 'specified elsewhere.'
     )
@@ -461,6 +462,11 @@ class Node:
 
     def get_map(self):
         return self.expose_map
+    
+    def __call__(self, *args, **kwargs) -> T:
+        # This is a type specifier, not a callable.
+        # These entries are transformed into BoundNode instances at initialization.
+        assert False, "Node.__call__ should not be called, this is a type specifier."
 
 
 def _make_dataclass_field(field_obj, use_default, node_doc):
@@ -490,7 +496,7 @@ def _make_dataclass_field(field_obj, use_default, node_doc):
         value_map.pop('default_factory', None)
     return field(**value_map), None
 
-
+        
 @dataclass
 class InjectedFieldInfo:
     '''The source of an injected field.'''
@@ -961,7 +967,7 @@ def _process_datatree(
 
 
 def datatree(
-    clz=None,
+    clz: Optional[type[T]] = None,
     /,
     *,
     init=True,
@@ -975,8 +981,8 @@ def datatree(
     slots=False,
     weakref_slot=False,
     chain_post_init=False,
-    provide_override_field=True,
-):
+    provide_override_field=False
+) -> Callable[[type[T]], type[T]]:
     '''Python decorator similar to dataclasses.dataclass providing parameter injection,
     injection, binding and overrides for parameters deeper inside a tree of objects.
     Args:
@@ -1248,6 +1254,7 @@ def _create_fn(
 
     # Create the function
     exec_locals = {}
+    # Uncomment to debug.
     # print("\n" * 3)
     # print(f"# {locals['clz'].__name__}")
     # print(func_text)

@@ -16,7 +16,7 @@ class LeafType1():
     leaf_a: float=1
     leaf_b: float=2
     
-@datatree
+@datatree(provide_override_field=True)
 class LeafType2():
     
     leaf_a: float=10
@@ -46,7 +46,7 @@ class LeafType5():
             return self.a == other.a and self.b == other.b
         return False
 
-@datatree
+@datatree(provide_override_field=True)
 class Overridable:
     
     leaf_a: float=53  # Overrides the default value for all classes.
@@ -237,7 +237,7 @@ class Test(unittest.TestCase):
         @datatree(chain_post_init=True)
         class A1():
             a1: float=1
-            leaf: Node=dtfield(Node(LeafType2), init=True)
+            leaf: Node[LeafType2]=dtfield(Node(LeafType2), init=True)
             s: list=field(default_factory=lambda : list())
             
             def __post_init__(self):
@@ -333,7 +333,7 @@ class Test(unittest.TestCase):
 
         @datatree
         class B():
-            node_A: Node=dtfield(Node(A), init=True)
+            node_A: Node[A]=dtfield(Node(A), init=True)
             
             def __post_init__(self):
                 self.s.append('B')    
