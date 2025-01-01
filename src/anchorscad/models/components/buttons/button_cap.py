@@ -172,7 +172,7 @@ class EngravedButtonCap(ad.CompositeShape):
                                 halign='center', 
                                 valign='center',
                                 font="Segoe UI Symbol:style=Bold"),
-        engrave_shape_anchor=ad.surface_args(pre=ad.scale([1., 1, 1])),
+        engrave_shape_anchor=ad.surface_args(pre=ad.scale([1., 1, 1]), post=ad.tranZ(3)),
         fn=64)
     EXAMPLE_ANCHORS=()
 
@@ -199,6 +199,6 @@ class EngravedButtonCap(ad.CompositeShape):
         return maker
 
 
-MAIN_DEFAULT=ad.ModuleDefault(True, write_path_files=True)
+MAIN_DEFAULT=ad.ModuleDefault(all=True)
 if __name__ == '__main__':
     ad.anchorscad_main(False)
