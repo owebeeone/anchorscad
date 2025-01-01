@@ -55,7 +55,7 @@ class CarriageBushing(ad.CompositeShape):
     hole_path: ad.Path=ad.dtfield(self_default=lambda s: s.hole_path_node().build())
     hole_node: ad.Node=ad.dtfield(ad.ShapeNode(ad.RotateExtrude, {'path': 'hole_path'}))
     
-    EXAMPLE_SHAPE_ARGS=ad.args(h=10, fn=256)
+    EXAMPLE_SHAPE_ARGS=ad.args(fn=256)
     EXAMPLE_ANCHORS=(
         ad.surface_args('face_centre', 'top'),)
 
