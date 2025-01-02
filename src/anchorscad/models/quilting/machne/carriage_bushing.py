@@ -38,9 +38,9 @@ class CarriageBushing(ad.CompositeShape):
     '''
     Carriage bushing for the Gammill quilting machine.
     '''
-    w: float=ad.dtfield(34.7, doc='width of the bushing block.')
-    h: float=ad.dtfield(40, doc='Length of the bushing block.')  # noqa: E741
-    r: float=ad.dtfield(22 / 2, doc='Radius of the bushing hole.')
+    w: float=ad.dtfield(34.2, doc='width of the bushing block.')
+    h: float=ad.dtfield(30, doc='Length of the bushing block.')  # noqa: E741
+    r: float=ad.dtfield(21.9 / 2, doc='Radius of the bushing hole.')
     bevel_radius: float=ad.dtfield(4, doc='Radius of the bevels on the bushing block.')
     
     
@@ -58,6 +58,11 @@ class CarriageBushing(ad.CompositeShape):
     EXAMPLE_SHAPE_ARGS=ad.args(fn=256)
     EXAMPLE_ANCHORS=(
         ad.surface_args('face_centre', 'top'),)
+    
+    EXAMPLES_EXTENDED={
+        'test': ad.ExampleParams(
+            shape_args=ad.args(h=10, fn=256))
+    }
 
     def build(self) -> ad.Maker:
         # Add your shape building code here...
