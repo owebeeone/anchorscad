@@ -8,10 +8,9 @@ from anchorscad.threemf_model import SERIALIZATION_SPEC as MODEL_SERIALIZATION_S
 from anchorscad.xdatatree_utils import TransformConverter, \
     VectorConverter, MatrixConverter
 
-from anchorscad import GMatrix, GVector, datatree, dtfield
+from datatrees import datatree, dtfield
 
-from typing import List, Union, Tuple
-import re
+from typing import List, Tuple
 import lxml.etree as etree 
 import numpy as np
 

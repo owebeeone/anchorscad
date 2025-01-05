@@ -17,7 +17,7 @@ import os
 from typing import Dict
 import lxml.etree as etree 
 import argparse
-from xdatatrees import XmlParserOptions
+from anchorscad.xdatatrees import XmlParserOptions
 
 from anchorscad.threemf_config import SERIALIZATION_SPEC as CONFIG_SPEC
 from anchorscad.threemf_model import SERIALIZATION_SPEC as MODEL_SPEC

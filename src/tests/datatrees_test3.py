@@ -7,7 +7,7 @@ Created on 2024-01-20
 import unittest
 
 from frozendict import frozendict
-from anchorscad.datatrees import datatree, Node
+from datatrees import datatree, Node
 from dataclasses import InitVar, field
 
 

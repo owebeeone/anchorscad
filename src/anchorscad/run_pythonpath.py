@@ -25,7 +25,7 @@ export {env}='{ppath}'
 
 For vscode .env
 WORKSPACE_FOLDER={workspace}
-PYTHONPATH=${{WORKSPACE_FOLDER}}/src;${{WORKSPACE_FOLDER}}/pythonopenscad/src;${{PYTHONPATH}}
+PYTHONPATH=${{WORKSPACE_FOLDER}}/src;${{WORKSPACE_FOLDER}}/pythonopenscad/src;${{WORKSPACE_FOLDER}}/datatrees/src;${{PYTHONPATH}}
 
 For git bash:
 export {env}='{ppath}'

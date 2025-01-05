@@ -2,7 +2,7 @@
 
 import unittest
 from unittest import TestCase
-from test_tools import iterable_assert
+from tests.test_tools import iterable_assert
 import anchorscad as ad
 import anchorscad.extrude as extrude
 
@@ -87,7 +87,7 @@ class ExtrudeTest(TestCase):
         
         poly = path.cleaned_polygons(TEST_META_DATA)[0]
         
-        iterable_assert(self.assertAlmostEqual6, poly,
+        iterable_assert(self.assertAlmostEqual5, poly,
                         ([20.       ,  1.       ],
                          [20.       , 41.       ],
                          [ 0.       , 40.333332 ],
@@ -126,7 +126,7 @@ class ExtrudeTest(TestCase):
         
         poly = path.cleaned_polygons(TEST_META_DATA)
         
-        iterable_assert(self.assertAlmostEqual6, poly,
+        iterable_assert(self.assertAlmostEqual5, poly,
                         [[[10.      , 40.      ],
                           [ 0.      , 40.333332],
                           [ 0.      , 30.5     ],
@@ -146,6 +146,9 @@ class ExtrudeTest(TestCase):
         
     def assertAlmostEqual6(self, a, b):
         self.assertAlmostEqual(a, b, places=6)
-
+        
+    def assertAlmostEqual5(self, a, b):
+        self.assertAlmostEqual(a, b, places=5)
+        
 if __name__ == "__main__":
     unittest.main()

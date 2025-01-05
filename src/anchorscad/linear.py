@@ -1,7 +1,7 @@
 '''
 Linear algebra tools for 3D transformations.
 
-This is not a generic 3D matrix library but is design to work with the limitations of
+This is not a generic 3D matrix library but is designed to work with the limitations of
 OpenScad's multmatrix transform function. It will perform all linear non skewing 3D
 linear transformations.
 
@@ -36,14 +36,18 @@ except ImportError:
 import numpy as np
 from typing import Callable, Tuple, Any, Union, List
 from dataclasses import dataclass, MISSING
-from anchorscad.datatrees import _field_assign
 from abc import ABC, abstractmethod
+import builtins
+
+
+def _field_assign(obj, name, value):
+    '''Field assignment that works on frozen objects.'''
+    builtins.object.__setattr__(obj, name, value)
+
 
 # Exceptions for dealing with argument checking.
 class BaseException(Exception):
     '''Base exception functionality'''
-    def __init__(self, message):
-        self.message = message
 
 
 class ConversionException(BaseException):
@@ -69,7 +73,6 @@ def to_radians(degs: float) -> float:
 def to_degrees(radians: float) -> float:
     '''Convert radians to degrees.'''
     return radians * 180.0 / np.pi
-
 
 def list_of(typ: Callable[[Any], Any], len_min_max: Tuple[int, int] = (3, 3), fill_to_min: Any = MISSING) -> Callable[[Any], list]:
     '''Defines a converter for an iterable to a list of elements of a given type.

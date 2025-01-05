@@ -7,7 +7,7 @@ Created on 26 Sept 2022
 from typing import List
 import numpy as np
 import anchorscad.linear as l
-import anchorscad.datatrees as dt
+import datatrees as dt
 from dataclasses_json import dataclass_json, config
 from dataclasses import dataclass
 import os

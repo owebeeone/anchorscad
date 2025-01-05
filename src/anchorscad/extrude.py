@@ -12,7 +12,7 @@ from typing import Any, Callable, Dict, List, Tuple, Union, overload
 from frozendict import frozendict
 
 import anchorscad.core as core
-from anchorscad.datatrees import datatree, dtfield
+from datatrees import datatree, dtfield
 from dataclasses import replace
 import anchorscad.linear as l
 from anchorscad.path_utils import remove_colinear_points

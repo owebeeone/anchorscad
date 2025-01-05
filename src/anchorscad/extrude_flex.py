@@ -12,16 +12,13 @@ the extrusion process.
 '''
 
 import anchorscad.core as core
-from anchorscad.datatrees import datatree, dtfield
+from datatrees import datatree, dtfield
 from anchorscad.extrude import ExtrudedShape, Path, PathBuilder, PolyhedronBuilder, \
     LinearExtrude, UnknownOperationException, MappedPolygon
 import anchorscad.linear as l
 
-from anchorscad.datatrees import datatree, dtfield
 import numpy as np
 from typing import List, Tuple, Callable
-
-import numpy as np
 import manifold3d as m3d
 
 

@@ -1,6 +1,6 @@
 '''
 Provides annotations over datatrees to create xml deserializer/serializers 
-to convert xml->datatree (python objects) and back i.e., datatree<->xml.
+to convert xml->datatree (python objects) and back i.e., datatree->xml.
 
 '''
 
@@ -1077,12 +1077,12 @@ def xdatatree(clz=None, /, *, init=True, repr=True, eq=True, order=False,
             clz, init, repr, eq, order, unsafe_hash, frozen, match_args, 
             kw_only, slots, chain_post_init)
 
-    # See if we're being called as @datatree or @datatree().
+    # See if we're being called as @xdatatree or @xdatatree().
     if clz is None:
         # We're called with parens.
         return wrap
 
-    # We're called as @datatree without parens.
+    # We're called as @xdatatree without parens.
     return wrap(clz)
 
 

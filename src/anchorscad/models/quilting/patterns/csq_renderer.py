@@ -4,7 +4,7 @@
 @uthor: 	gianni
 '''
 
-import anchorscad.datatrees as dt
+import datatrees as dt
 import numpy as np
 from anchorscad.svg_renderer import Segments, Segment
 

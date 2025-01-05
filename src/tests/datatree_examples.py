@@ -6,6 +6,10 @@ Created on 11 Apr 2022
 import inspect
 import re
 
+
+
+from datatrees import datatree, Node, BindingDefault, dtfield, field, dtargs, override
+
 SP='[ \n\t]'
 CLEANER_REGEX=re.compile(
     f'(?:{SP}*describe{SP}*\()?(?:{SP}*lambda{SP}*:)?((?:.|\n)*)(?:{SP}*)?[\)]')
@@ -22,9 +26,6 @@ def describe(func):
 def doc(msg):
     print('---' + msg)
 
-
-from anchorscad.datatrees import datatree, Node, BindingDefault, dtfield, field, \
-                                 dtargs, override
 
 
 @datatree

@@ -7,3 +7,9 @@ dill
 sortedcontainers
 sortedcollections
 graphviz
+Pillow
+matplotlib
+svgelements
+svgpathtools
+lxml
+numpstl

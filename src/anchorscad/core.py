@@ -20,13 +20,19 @@ from frozendict import frozendict
 from abc import abstractmethod
 
 from anchorscad import linear as l
-from anchorscad.datatrees import Node, BoundNode, datatree, dtfield,\
-                                 METADATA_DOCS_NAME, _field_assign, get_injected_fields
+from datatrees import Node, BoundNode, datatree, dtfield,\
+                      METADATA_DOCS_NAME, get_injected_fields
 from anchorscad.colours import Colour
 from anchorscad.svg_renderer import HtmlRenderer
 import numpy as np
 import pythonopenscad as posc
 from typing import Any, Hashable, Dict, List, Tuple, Union
+import builtins
+
+
+def _field_assign(obj, name, value):
+    '''Field assignment that works on frozen objects.'''
+    builtins.object.__setattr__(obj, name, value)
 
 
 class CoreEception(Exception):

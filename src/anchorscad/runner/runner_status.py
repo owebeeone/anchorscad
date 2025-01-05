@@ -7,10 +7,7 @@ Created on 22 Jan 2022
 from collections import defaultdict
 from dataclasses import dataclass, field
 from dataclasses_json import dataclass_json
-from typing import Dict, List, Optional, Tuple
-from debugpy.common.json import default
-
-List = list
+from typing import Optional
 
 @dataclass_json
 @dataclass
@@ -51,7 +48,7 @@ class RunnerExampleResults(object):
     path_html_file: Optional[str]=None # The HTML file for the 2D extrusion paths
     shape_pickle_file: Optional[str]=None # The pickled shape object.
     injected_fields_html_file: Optional[str]=None # The datatree field provenance HTML file.
-    parts_model_files: Dict[str, RunnerExamplePartResults]=field(
+    parts_model_files: dict[str, RunnerExamplePartResults]=field(
          default_factory=lambda : defaultdict(RunnerExamplePartResults))
 
 
@@ -63,7 +60,7 @@ class RunnerShapeResults(object):
     '''
     class_name: str
     examples_with_error_output_count: int=0
-    example_results: List[RunnerExampleResults]=field(default_factory=list)
+    example_results: list[RunnerExampleResults]=field(default_factory=list)
 
 
 @dataclass_json
@@ -84,10 +81,11 @@ class RunnerModuleStatus(object):
     Status type for a module run.
     '''
     module_name: str
-    shape_results: List[RunnerShapeResults]
-    examples_with_error_output: List[RunnerModuleExampleRef]
+    shape_results: list[RunnerShapeResults]
+    examples_with_error_output: list[RunnerModuleExampleRef]
     exit_status: Optional[int]=None
     incomplete: bool=False
+    module_load_error: list[str]=None
  
 @dataclass_json
 @dataclass
@@ -95,10 +93,10 @@ class RunnerStatus(object):
     '''
     Status type for a complete run.
     '''
-    dirs: List[str]
+    dirs: list[str]
     elapsed_time: float
-    module_status: List[RunnerModuleStatus]
-    examples_with_error_output: List[RunnerModuleExampleRef]
+    module_status: list[RunnerModuleStatus]
+    examples_with_error_output: list[RunnerModuleExampleRef]
 
    
 

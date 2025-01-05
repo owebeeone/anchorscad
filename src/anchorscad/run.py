@@ -43,6 +43,12 @@ try:
 except:  # noqa: E722
     POSC_AVAIL = False
     
+try:
+    import datatrees  as dt  # noqa: F401
+    DT_AVAIL = True
+except:  # noqa: E722
+    DT_AVAIL = False
+    
 
 PATH_SEPARATOR = ';' if platform.system() == 'Windows' else ':'
 PYTHON_PATH = 'PYTHONPATH'
@@ -56,25 +62,44 @@ def log_message(message):
         sys.stderr.write(message + '\n')
         
         
-class MissingPythonOpenScad(Exception):
-    '''Could not find module pythonopenscad.'''
+class MissingModule(Exception):
+    '''Could not find module.'''
         
 OTHER_POSC_LOCATIONS=(
     Path('../pythonopenscad/src/pythonopenscad/'),
     Path('../../pythonopenscad/src/pythonopenscad/'),
     )
+
+OTHER_DATATREES_LOCATIONS=(
+    Path('../datatrees/src/datatrees/'),
+    Path('../../datatrees/src/datatrees/'),
+    )
+
+
+def find_module(path_to_module, name, relative_dirs):
+    for p in relative_dirs:
+        posc_path = Path(path_to_module, p)
+        if posc_path.is_dir():
+            return os.path.abspath(posc_path.parents[0])
+    
+    raise MissingModule(f'Unable to import {name}')
+
 def find_posc(path_to_module, relative_dirs=OTHER_POSC_LOCATIONS):
     '''If pythonopenscad is not in the path, look for it in some other
     location and if found, return it's path. If pythonopenscad is able
     to load, return None.'''
     if POSC_AVAIL:
         return None  # Nothing needs to be done.
-    for p in OTHER_POSC_LOCATIONS:
-        posc_path = Path(path_to_module, p)
-        if posc_path.is_dir():
-            return os.path.abspath(posc_path.parents[0])
-    
-    raise MissingPythonOpenScad('Unable to import pythonopenscad')
+    return find_module(path_to_module, 'pythonopenscad', relative_dirs)
+
+def find_datatrees(path_to_module, relative_dirs=OTHER_DATATREES_LOCATIONS):
+    '''If datatrees is not in the path, look for it in some other
+    location and if found, return it's path. If pythonopenscad is able
+    to load, return None.'''
+    if DT_AVAIL and False:
+        return None  # Nothing needs to be done.
+    return find_module(path_to_module, 'datatrees', relative_dirs)
+
 
 @dataclass
 class RunAnchorSCADModule:
@@ -119,6 +144,21 @@ class RunAnchorSCADModule:
                 self.env[PYTHON_PATH] = new_ppath
             else:
                 self.env[PYTHON_PATH] = str(posc_path.parents[1])
+                
+                    
+        dt_path = find_datatrees(self.get_anchorscad_path())
+        if dt_path:
+            self.python_path_ok = False
+            ppath = self.env.get(PYTHON_PATH, None)
+            if ppath:
+                ppath_list = list(Path(i) for i in ppath.split(PATH_SEPARATOR))
+                ppath_list.append(dt_path)
+                
+                new_ppath = PATH_SEPARATOR.join(str(p) for p in ppath_list)
+                log_message(new_ppath)
+                self.env[PYTHON_PATH] = new_ppath
+            else:
+                self.env[PYTHON_PATH] = str(dt_path.parents[1])
 
     
     def run(self):
@@ -129,12 +169,15 @@ class RunAnchorSCADModule:
             sys.stderr.write(
                 f'Error: {ANCHORSAD_RUNNER_TAG} environment variable is set. '
                 f'This indicates a failure to properly set {PYTHON_PATH}.')
-            return 1
+            raise Exception(f'{ANCHORSAD_RUNNER_TAG} environment variable is set. '
+                f'This indicates a failure to properly set {PYTHON_PATH}.')
         
         command = (
             sys.executable,
             inspect.getfile(self.module),
             ) + tuple(self.argv[1:])
+        
+        print(command)
         
         self.env[ANCHORSAD_RUNNER_TAG] = 'T'
         

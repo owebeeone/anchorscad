@@ -1,6 +1,6 @@
 
 import os
-from stl.mesh import Mesh
+from stl import Mesh
 import numpy as np
 from anchorscad.colours import Colour
 from dataclasses import dataclass, field

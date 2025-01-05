@@ -8,11 +8,9 @@ Tools for building outlines and access holes.
 
 from dataclasses import dataclass
 
-from anchorscad.datatrees import datatree
-from anchorscad.linear import tranX, tranY, tranZ, ROTX_180, \
-                                   ROTY_180, translate, GVector
-import anchorscad.core as core
-import numpy as np
+from anchorscad import datatree, tranZ, ROTX_180, \
+                        ROTY_180, translate, GVector
+import anchorscad as ad
 import anchorscad.models.basic.connector.hdmi.hdmi_outline as hdmi
 from anchorscad.models.screws.holes import SelfTapHole
 import anchorscad.models.basic.box_side_bevels as bbox
@@ -28,7 +26,7 @@ def box_expander(expansion_size=None, actual_size=None, post=None):
             expanded_size = GVector(actual_size)
         else:
             expanded_size = GVector(expansion_size) + box.size
-        new_shape = core.Box(expanded_size.A3)
+        new_shape = ad.Box(expanded_size.A3)
         post_xform = Z_DELTA * ROTX_180
         if post:
             post_xform = post *  post_xform
@@ -40,8 +38,8 @@ def box_expander(expansion_size=None, actual_size=None, post=None):
 def cyl_expander(expansion_r, post=None):
     def expander(maker, name, anchor, cyl):
         expanded_r = expansion_r + cyl.r_base
-        params = core.non_defaults_dict(cyl, include=('fn', 'fa', 'fs'))
-        new_shape = core.Cylinder(h=cyl.h, r=expanded_r, **params)
+        params = ad.non_defaults_dict(cyl, include=('fn', 'fa', 'fs'))
+        new_shape = ad.Cylinder(h=cyl.h, r=expanded_r, **params)
         post_xform = Z_DELTA * ROTX_180
         if post:
             post_xform = post *  post_xform
@@ -70,104 +68,104 @@ class ShapeFactory:
         return self.clazz(*self.shape_args[0], **params)
     
     
-SIDE_ANCHOR=core.args('face_corner', 4, 0)
-FRONT_ANCHOR=core.args('face_corner', 4, 1)
-BOX_ANCHOR=core.args('face_edge', 1, 0)
-OBOX_ANCHOR=core.args('face_centre', 3)
-IBOX_ANCHOR=core.args('face_centre', 4)
-CYL_ANCHOR=core.args('surface', 0, -90)
-OCYL_ANCHOR=core.args('base')
+SIDE_ANCHOR=ad.args('face_corner', 4, 0)
+FRONT_ANCHOR=ad.args('face_corner', 4, 1)
+BOX_ANCHOR=ad.args('face_edge', 1, 0)
+OBOX_ANCHOR=ad.args('face_centre', 3)
+IBOX_ANCHOR=ad.args('face_centre', 4)
+CYL_ANCHOR=ad.args('surface', 0, -90)
+OCYL_ANCHOR=ad.args('base')
         
 ETHERNET = ShapeFactory(
-    core.Box, core.args([16.2, 21.25, 13.7]), 
+    ad.Box, ad.args([16.2, 21.25, 13.7]), 
     [0, 3.0, 0], 
     BOX_ANCHOR, 
     OBOX_ANCHOR, 
     box_expander([0.3] * 3))
 
 POWER_SW = ShapeFactory(
-    core.Cylinder, core.args(r=2, h=4), 
+    ad.Cylinder, ad.args(r=2, h=4), 
     [0, 2.7, 1], 
     CYL_ANCHOR, 
     OCYL_ANCHOR, 
     cyl_expander(1))
 
 USBA=ShapeFactory(
-    core.Box, core.args([15,  17.5, 16.4]), 
+    ad.Box, ad.args([15,  17.5, 16.4]), 
     [0, 3.0, 0], 
     BOX_ANCHOR,
     OBOX_ANCHOR, 
     box_expander([0.3] * 3))
 
 MICRO_HDMI=ShapeFactory(
-    core.Box, core.args([7.1,  8, 3.6]), 
+    ad.Box, ad.args([7.1,  8, 3.6]), 
     [0, 1.8, -0.5], 
     BOX_ANCHOR, 
     OBOX_ANCHOR, 
     box_expander([5, 0, 4.5]))
 
 HDMI_A=ShapeFactory(
-    hdmi.HdmiOutline, core.args(), 
+    hdmi.HdmiOutline, ad.args(), 
     [0, 1.8, 0.2], 
     BOX_ANCHOR, 
     OBOX_ANCHOR, 
     box_expander(actual_size=[21, 10, 10.6]))
 
 USBC=ShapeFactory(
-    core.Box, core.args([9,  7.5, 3.3]), 
+    ad.Box, ad.args([9,  7.5, 3.3]), 
     [0, 1.8, -(4.14 - 2.83 - 1.44)], 
     BOX_ANCHOR, 
     OBOX_ANCHOR, 
     box_expander([5, 0, 4]))
 
 USBMICRO=ShapeFactory(
-    core.Box, core.args([8.0, 5.6, 3]), 
+    ad.Box, ad.args([8.0, 5.6, 3]), 
     [0, 1.8, 0], 
     BOX_ANCHOR, 
     OBOX_ANCHOR, 
     box_expander([5, 0, 4]))
 
 AUDIO=ShapeFactory(
-    core.Cylinder, core.args(h=15, r=3), 
+    ad.Cylinder, ad.args(h=15, r=3), 
     [0, 2.7, 0], 
     CYL_ANCHOR, 
     OCYL_ANCHOR, 
     cyl_expander(2))
 
 MICRO_SD=ShapeFactory(
-    core.Box, core.args([12,  11.35, 1.4]), 
+    ad.Box, ad.args([12,  11.35, 1.4]), 
     [0, -3, 0], 
     BOX_ANCHOR, 
     OBOX_ANCHOR, 
     box_expander([1, 1, 6], post=translate([0, -3, 0])))
 
 CPU_PACKAGE=ShapeFactory(
-    core.Box, 
-    core.args([15,  15, 2.4]),
+    ad.Box, 
+    ad.args([15,  15, 2.4]),
     [0, 0, 0], 
-    core.args('face_edge', 1, 0, 1), 
+    ad.args('face_edge', 1, 0, 1), 
     IBOX_ANCHOR, 
     no_op)
 
 CPU_PACKAGE_PI5=ShapeFactory(
-    core.Box, 
-    core.args([17,  17, 2.4]),
+    ad.Box, 
+    ad.args([17,  17, 2.4]),
     [0, 0, 0], 
-    core.args('face_edge', 1, 0, 1), 
+    ad.args('face_edge', 1, 0, 1), 
     IBOX_ANCHOR, 
     no_op)
 
 HEADER_100=ShapeFactory(
-    core.Box, 
-    core.args([51,  5.1, 8.7]), [0, -1.75, 0], 
-    core.args('face_edge', 1, 0, 1), 
+    ad.Box, 
+    ad.args([51,  5.1, 8.7]), [0, -1.75, 0], 
+    ad.args('face_edge', 1, 0, 1), 
     IBOX_ANCHOR, 
     no_op)
 
 HEADER_100_CENTRE=ShapeFactory(
-    core.Box, 
-    core.args([51,  5.1, 8.7]), [0, -1.75, 0], 
-    core.args('face_edge', 1, 0), 
+    ad.Box, 
+    ad.args([51,  5.1, 8.7]), [0, -1.75, 0], 
+    ad.args('face_edge', 1, 0), 
     IBOX_ANCHOR, 
     no_op)
 
@@ -175,18 +173,18 @@ DELTA=0.02
 
 @dataclass
 class OutlineLayout:
-    main_anchor: core.AnchorArgs
+    main_anchor: ad.AnchorArgs
     accessor_specs: tuple
     
 @dataclass
 class OutlineHoleSpec:
     r: float
     r_support: float
-    base_anchor_args: core.AnchorArgs
+    base_anchor_args: ad.AnchorArgs
     
     
     def mount_hole(self, depth, params):
-        return core.Cylinder(h=depth * 2 * DELTA, r=self.r, **params)
+        return ad.Cylinder(h=depth * 2 * DELTA, r=self.r, **params)
     
     def screw_hole(self, tap_len, dia, thru_len, params):
         return SelfTapHole(
@@ -203,14 +201,14 @@ class OutlineHolePos:
     
 
 @datatree
-class BaseOutline(core.CompositeShape):
+class BaseOutline(ad.CompositeShape):
     '''
     A generic board outline.
     '''
-    board_size: tuple=core.dtfield(None, 'The board size in mm')
-    bevel_radius: float=core.dtfield(None, 'The bevel radius in mm')
-    box_node: core.Node=core.dtfield(
-        core.ShapeNode(bbox.BoxSideBevels,
+    board_size: tuple=ad.dtfield(None, 'The board size in mm')
+    bevel_radius: float=ad.dtfield(None, 'The bevel radius in mm')
+    box_node: ad.Node=ad.dtfield(
+        ad.ShapeNode(bbox.BoxSideBevels,
                        'bevel_radius',
                        {'size': 'board_size'}),
         doc='The board shape node',
@@ -227,27 +225,27 @@ class BaseOutline(core.CompositeShape):
             for name, model, xform in outline_layout.accessor_specs:
                 o_anchor = model.anchor2
                 anchor_specs.append(
-                    core.surface_args(name, *o_anchor[0], **o_anchor[1]))
+                    ad.surface_args(name, *o_anchor[0], **o_anchor[1]))
         return tuple(anchor_specs)
     
     @classmethod
     def mount_hole_anchor_spec(cls, i):
-        return core.surface_args(('mount_hole', i), 'top')
+        return ad.surface_args(('mount_hole', i), 'top')
     
     @classmethod
     def get_default_example_params(cls):
-        return core.ExampleParams(
+        return ad.ExampleParams(
                 cls.EXAMPLE_SHAPE_ARGS,
                 tuple(
                     cls.mount_hole_anchor_spec(i)
                       for i in range(len(cls.HOLE_POSITIONS))
                 ) + cls.make_access_anchors(cls.ALL_ACCESS_ITEMS))
 
-    def build(self) -> core.Maker:
+    def build(self) -> ad.Maker:
         board_shape = self.box_node()
         maker = board_shape.solid('board').at('face_centre', 'top')
 
-        params = core.non_defaults_dict_include(self, include=('fn', 'fa', 'fs'))
+        params = ad.non_defaults_dict_include(self, include=('fn', 'fa', 'fs'))
 
         for i, t in enumerate(self.HOLE_POSITIONS):
             mount_hole = t.spec.mount_hole(self.board_size[2], params)
