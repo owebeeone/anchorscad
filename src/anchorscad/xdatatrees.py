@@ -462,28 +462,28 @@ class _XFieldParams:
     
     def __post_init__(self):
         assert self.ftype in UNSPECIFIED_OR_NONE or isinstance(self.ftype, XmlDataType), \
-            f'ftype must be an instance of XmlDataType, Attribute, Element or Metadata'
+            'ftype must be an instance of XmlDataType, Attribute, Element or Metadata'
         assert self.ename in UNSPECIFIED_OR_NONE or isinstance(self.ename, str), \
-            f'ename must be a string'
+            'ename must be a string'
         assert self.exmlns in UNSPECIFIED_OR_NONE or isinstance(self.exmlns, str), \
-            f'exmlns must be a string'
+            'exmlns must be a string'
         assert self.ename_transform in UNSPECIFIED_OR_NONE  \
             or isinstance(self.ename_transform, PythonNameToXmlNameProvider) \
             or issubclass(self.ename_transform, PythonNameToXmlNameProvider), \
-            f'ename_transform must be an instance of KeyOrNameConverter'
+            'ename_transform must be an instance of KeyOrNameConverter'
         assert self.aname in UNSPECIFIED_OR_NONE or isinstance(self.aname, str), \
-            f'aname must be a string'
+            'aname must be a string'
         assert self.axmlns in UNSPECIFIED_OR_NONE or isinstance(self.axmlns, str), \
-            f'axmlns must be a string'
+            'axmlns must be a string'
         assert self.aname_transform in UNSPECIFIED_OR_NONE  \
             or isinstance(self.aname_transform, PythonNameToXmlNameProvider) \
             or issubclass(self.aname_transform, PythonNameToXmlNameProvider), \
-            f'aname_transform must be an instance of KeyOrNameConverter'
+            'aname_transform must be an instance of KeyOrNameConverter'
         assert self.exclude in UNSPECIFIED_OR_NONE or isinstance(self.exclude, bool), \
-            f'exclude must be a bool'
+            'exclude must be a bool'
         assert self.other_params in UNSPECIFIED_OR_NONE or isinstance(self.other_params, dict), \
-            f'other_params must be a dict'
-        if not self.other_params is UNSPECIFIED:
+            'other_params must be a dict'
+        if self.other_params is not UNSPECIFIED:
             invalid_params = set(self.other_params.keys()).difference(_ALLOWED_XFIELD_PARAMS)
             assert not invalid_params, f'_XFieldParams Invalid other_params {invalid_params}'
         assert self.builder in UNSPECIFIED_OR_NONE or issubclass(self.builder, ValueCollector), \
@@ -812,8 +812,16 @@ def xfield(ftype: 'XmlDataType' = UNSPECIFIED,
     '''Like datatrees.dtfield but also supports annotations for xml parsing.
     Args:
       ftype: The type of the xml data. One of Attribute, Element or Metadata.
-      ename: Optional, the name of the xml element.
-      ename_transform: The transform to apply to the class name.
+      xmlns: Optional, the namespace for the xml data for element or attribute.
+      exmlns: Optional, the namespace for the xml element if it is an element.
+      ename: Optional, the name of the xml element if it is an element.
+      ename_transform: The transform to apply to the element name.
+      axmlns: The namespace for the xml attribute if it is an attribute.
+      aname: Optional, the name of the xml attribute if it is an attribute.
+      aname_transform: The transform to apply to the attribute name if it is an attribute.
+      exclude: If true, the field is not included in the serialization.
+      builder: The value collector to use for the field.
+      **kwargs: Additional parameters for dataclasses.dtfield or dataclasses.field.
     '''
     # Validate the parameters.
     invalid_params = set(kwargs.keys()).difference(_ALLOWED_XFIELD_PARAMS)

@@ -13,3 +13,5 @@ svgelements
 svgpathtools
 lxml
 numpstl
+datatrees
+xdatatrees
