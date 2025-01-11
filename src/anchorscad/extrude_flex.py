@@ -15,7 +15,7 @@ import anchorscad.core as core
 from datatrees import datatree, dtfield
 from anchorscad.extrude import ExtrudedShape, Path, PathBuilder, PolyhedronBuilder, \
     LinearExtrude, UnknownOperationException, MappedPolygon
-import anchorscad.linear as l
+import anchorscad_lib.linear as l
 
 import numpy as np
 from typing import List, Tuple, Callable

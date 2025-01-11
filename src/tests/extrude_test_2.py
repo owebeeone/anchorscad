@@ -9,7 +9,7 @@ import unittest
 
 import anchorscad as ad
 import anchorscad.extrude as extrude
-from tests.test_tools import iterable_assert
+from anchorscad_lib.test_tools import iterable_assert
 import numpy as np
 
 

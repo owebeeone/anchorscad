@@ -7,7 +7,7 @@ Created on 5 Dec 2021
 from dataclasses import dataclass
 import anchorscad.core as core
 import anchorscad.extrude as e
-import anchorscad.linear as l
+import anchorscad_lib.linear as linear
 
 @core.shape
 @dataclass
@@ -43,7 +43,7 @@ class PolyhedraExtrusionTest(core.CompositeShape):
         shape = e.LinearExtrude(path, size[2], use_polyhedrons=True)
         shape_cage = core.Box(size)
         maker = shape_cage.cage('cage').at('face_corner', 0, 0)
-        maker.add_at(shape.solid('shape').at('rhs', post=l.ROTY_270), 
+        maker.add_at(shape.solid('shape').at('rhs', post=linear.ROTY_270), 
                      'face_corner', 0, 0)
         return maker
 

@@ -3,7 +3,7 @@ Created on 31 Dec 2021
 
 @author: gianni
 '''
-import cgi
+import html
 from dataclasses import dataclass, field
 import re
 
@@ -125,7 +125,7 @@ class DirectedGraph:
             label = node.get_label()
             tip = node.get_clazz_name()
             tipd = {'tooltip': tip} if tip else {}
-            escape_path = cgi.html.escape(node.get_path_str())
+            escape_path = html.escape(node.get_path_str())
             url=f'javascript:s=&quot;{escape_path}\\n{tip}&quot;; console.log(s); alert(s);'
             dot.node(node.get_id(), label, href=url, **tipd)
         for edge in self.edges:

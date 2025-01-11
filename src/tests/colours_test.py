@@ -1,8 +1,8 @@
 import unittest
 
 
-from anchorscad.colours import Colour 
-from tests.test_tools import iterable_assert
+from anchorscad_lib.utils.colours import Colour 
+from anchorscad_lib.test_tools import iterable_assert
 
 
 class ColourTest(unittest.TestCase):

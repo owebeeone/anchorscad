@@ -18,7 +18,6 @@ from anchorscad import datatree, Node, surface_args, anchorscad_main, shape, \
 
 from anchorscad.models.cases.rpi.rpi5_outline import RaspberryPi5Outline
 from anchorscad.models.cases.rpi.rpi_case import RaspberryPiCase
-from anchorscad.linear import translate
 
 
 @shape

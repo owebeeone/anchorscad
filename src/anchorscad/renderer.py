@@ -11,7 +11,7 @@ from dataclasses import dataclass, field
 from dataclasses_json import dataclass_json, config
 
 from anchorscad import core, graph_model
-from anchorscad import linear as l
+import anchorscad_lib.linear as l
 import pythonopenscad as posc
 from typing import Any, Hashable, Dict, List, Tuple, Set, Optional, Union
 from functools import total_ordering
@@ -727,7 +727,7 @@ class Context():
         
         if reference_frame:
             if reference_frame != l.IDENTITY:
-                container.add_head(self.model.Multmatrix(reference_frame.m.A))
+                container.add_head(self.model.Multmatrix(reference_frame.A))
             
         if diff_mapped_attrs.colour:
             container.add_head(self.model.Color(c=diff_mapped_attrs.colour.value))

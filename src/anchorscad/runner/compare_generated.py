@@ -13,11 +13,9 @@ import os
 import filecmp
 import argparse
 import re
-import argparse
 from dataclasses import dataclass, field
 from dataclasses_json import dataclass_json
 from typing import Optional, List, Tuple, Dict
-import numpy as np
 from PIL import Image, ImageChops
 
 import http.server

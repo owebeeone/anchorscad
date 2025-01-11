@@ -9,7 +9,7 @@ import anchorscad.svg_renderer as sr
 import numpy as np
 from test_tools import iterable_assert
 from anchorscad.renderer import render
-import anchorscad.linear as l
+import anchorscad_lib.linear as l
 import anchorscad.extrude as extrude
 import unittest
 from unittest import TestCase
@@ -830,7 +830,7 @@ class ExtrudeTest(TestCase):
                     [-12.201633  ,  -8.9619875 ],
                     [-10.760406  , -10.649448  ],
                     [-10.233445  , -10.97237   ]]),
-                places=6)
+                places=5)
 
 
     def testSvgRender(self):

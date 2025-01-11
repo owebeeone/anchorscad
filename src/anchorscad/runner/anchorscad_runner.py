@@ -25,8 +25,8 @@ import pickle
 import argparse
 import traceback
 
-from anchorscad.runner.opendscad_finder import openscad_exe_properties, OpenscadProperties
-from anchorscad.runner.process_manager import ProcessManager, ProcessManagerEntry
+from anchorscad_lib.utils.openscad_finder import openscad_exe_properties, OpenscadProperties
+from anchorscad_lib.utils.process_manager import ProcessManager, ProcessManagerEntry
 
 GENERATE_STL_DEFAULT = True
 GENERATE_3MF_DEFAULT = True

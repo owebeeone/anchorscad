@@ -12,7 +12,6 @@ from dataclasses import dataclass, field
 
 import anchorscad as ad
 import anchorscad.extrude as e
-import anchorscad.linear as l
 import numpy as np
 
 EPSILON = 1.e-10
@@ -166,7 +165,7 @@ class BoxOpenShell(ad.CompositeShape):
         
         maker = outer_box.solid('outer').at('centre')
         maker.add_at(inner_box.hole('inner').at(
-            'face_centre', 4, pre=l.translate([0, 0, self.z_adjust])), 'face_centre', 4)
+            'face_centre', 4, pre=ad.translate([0, 0, self.z_adjust])), 'face_centre', 4)
         
         return maker
         
@@ -179,12 +178,12 @@ class BoxCutter(ad.CompositeShape):
     model: ad.Shape   # The model to be cut
     cut_size: tuple=(200, 200, 200)
     cut_face: int=1
-    post: l.GVector=l.IDENTITY
+    post: ad.GVector=ad.IDENTITY
     
     
     EXAMPLE_SHAPE_ARGS=ad.args(
         BoxShell([100., 80., 40.], bevel_radius=8, shell_size=1.5, fn=40), 
-        post=l.translate([0, 0, 10]) * l.ROTY_180)
+        post=ad.translate([0, 0, 10]) * ad.ROTY_180)
     
     EXAMPLE_ANCHORS=BoxSideBevels.EXAMPLE_ANCHORS
     

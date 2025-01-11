@@ -11,7 +11,7 @@ import unittest
 
 from frozendict import frozendict
 
-from anchorscad import linear as l
+import anchorscad_lib.linear as l
 from anchorscad.core import Box, Colour, Text, Cone, Arrow, Coordinates, \
     Sphere, AnnotatedCoordinates, at_spec, lazy_shape, args, CoordinatesCage
 from anchorscad.renderer import render

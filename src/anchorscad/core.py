@@ -19,10 +19,10 @@ import traceback
 from frozendict import frozendict
 from abc import abstractmethod
 
-from anchorscad import linear as l
+import anchorscad_lib.linear as l
 from datatrees import Node, BoundNode, datatree, dtfield,\
                       METADATA_DOCS_NAME, get_injected_fields
-from anchorscad.colours import Colour
+from anchorscad_lib.utils.colours import Colour
 from anchorscad.svg_renderer import HtmlRenderer
 import numpy as np
 import pythonopenscad as posc

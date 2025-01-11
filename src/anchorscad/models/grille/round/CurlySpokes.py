@@ -5,7 +5,6 @@ Created on 27 Sep 2021
 '''
 
 import anchorscad as ad
-import anchorscad.linear as l
 import numpy as np
 
 
@@ -97,8 +96,8 @@ class CurlySpokes(ad.CompositeShape):
         for i in range(count):
             maker.add_at(shape
                          .named_shape(('spoke', i), spokes_mode)
-                         .at(post=l.rotZ(i * 360 / count)),
-                         'base', post=l.tranZ(-self.h - self.epsilon / 2)
+                         .at(post=ad.rotZ(i * 360 / count)),
+                         'base', post=ad.tranZ(-self.h - self.epsilon / 2)
                          )
             
         

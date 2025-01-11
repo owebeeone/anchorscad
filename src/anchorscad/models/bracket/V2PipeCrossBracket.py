@@ -5,7 +5,6 @@ Created on 26 Aug 2021
 '''
 
 import anchorscad as ad
-import anchorscad.linear as l
 from anchorscad.models.screws.CountersunkScrew import FlatSunkScrew
 import numpy as np
 

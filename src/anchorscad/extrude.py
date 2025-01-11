@@ -14,7 +14,7 @@ from frozendict import frozendict
 import anchorscad.core as core
 from datatrees import datatree, dtfield
 from dataclasses import replace
-import anchorscad.linear as l
+import anchorscad_lib.linear as l
 from anchorscad.path_utils import remove_colinear_points
 import numpy as np
 import traceback as tb

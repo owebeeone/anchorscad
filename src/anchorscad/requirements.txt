@@ -12,6 +12,12 @@ matplotlib
 svgelements
 svgpathtools
 lxml
-numpstl
+numpy-stl
 datatrees
 xdatatrees
+anchorscad-utils
+anchorscad-linear
+pythonopenscad
+anchorscad-test-tools
+to_3mf
+matplotlib
