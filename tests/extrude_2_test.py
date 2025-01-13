@@ -64,8 +64,8 @@ class ExtrudeTest2(unittest.TestCase):
         path = (extrude.PathBuilder()
             .move([0, 0])
             .line([0, -r_sphere], 'edge1')
-            .arc_tangent_point(p1, degrees=90, name='sphere')
-            .arc_tangent_point(p2, degrees=0, name='bevel')
+            .arc_tangent_point(p1, angle=90, name='sphere')
+            .arc_tangent_point(p2, angle=0, name='bevel')
             .line([0, 0], 'edge2')
             .build())
         
@@ -97,9 +97,9 @@ class ExtrudeTest2(unittest.TestCase):
     def test_stroke(self):
         path = (extrude.PathBuilder()
             .move([0, 0], direction=[0, -1])
-            .stroke(2, degrees=-120, name='stroke1')
-            .stroke(2, degrees=-120, name='stroke2')
-            .stroke(2, degrees=-120, name='stroke3')
+            .stroke(2, angle=-120, name='stroke1')
+            .stroke(2, angle=-120, name='stroke2')
+            .stroke(2, angle=-120, name='stroke3')
             .build())
 
         iterable_assert(self.assertAlmostEqual, path.polygons(TEST_META_DATA),
@@ -112,13 +112,13 @@ class ExtrudeTest2(unittest.TestCase):
     def test_all(self):
         path = (ad.PathBuilder()
             .move([0, 0], direction=[0, -1])
-            .stroke(2, degrees=-120, name='stroke')
+            .stroke(2, angle=-120, name='stroke')
             .line((5, 5), 'line')
             .spline(((10, 7), (10, 5)), cv_len=(1,), name='spline')
             .arc_tangent_point((0,0), name='arc')
             .build())
         
-        print(ad.render(ad.LinearExtrude(path, h=10)))
+        #print(ad.render(ad.LinearExtrude(path, h=10)))
 
         iterable_assert(self.assertAlmostEqual, path.polygons(TEST_META_DATA),
                         ([
@@ -146,7 +146,7 @@ class ExtrudeTest2(unittest.TestCase):
                             [ 1.18968176e+00, -7.01514758e-01],
                             [-1.77635684e-15, -8.88178420e-16]],))
         
-        print(path.extents())
+        #print(path.extents())
         
         
         

@@ -884,7 +884,7 @@ class Renderer():
 class RenderResult():
     '''A result of rendering.'''
     shape: core.Shape  # The AnchorScad Shape that was rendered.
-    rendered_shape: Any  # The resulting POSC shape.
+    rendered_shape: posc.PoscParentBase | Any  # The resulting POSC shape.
     graph: graph_model.DirectedGraph  # The graph of the rendered shape.
     paths: dict  # A dictionary of Path to list of anchors in the graph.
     material_stats: MaterialStats  # Mapped material stats.

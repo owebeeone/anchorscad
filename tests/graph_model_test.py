@@ -5,15 +5,16 @@ Created on 31 Dec 2021
 '''
 import unittest
 
-from anchorscad.graph_model import DirectedGraph
+import anchorscad.graph_model as graph_model
 import pathlib as pl
 
 
-class Test(unittest.TestCase):
+class TestDirectedGraph(unittest.TestCase):
 
     def setUp(self):
         
-        dg = DirectedGraph()
+        graph_model._num = 0  # reset the node counter for hatchling runs
+        dg = graph_model.DirectedGraph()
         
         na = dg.new_node('a')
         nb = dg.new_node('b')
@@ -40,7 +41,7 @@ class Test(unittest.TestCase):
 
     def test_simple_graph(self):
         
-        self.assertEquals(self.dg.dump('foo'), 
+        self.assertEqual(self.dg.dump('foo'), 
                 'digraph foo {\n'
                 '    a_1 [label="a"];\n'
                 '    b_2 [label="b"];\n'

@@ -1,0 +1,55 @@
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[project]
+name = "anchorscad-core"
+version = "0.1.0"
+authors = [
+  { name="Gianni Mariani", email="gianni@mariani.ws" },
+]
+description = "Linear algebra API for AnchorSCAD. Includes GMatrix, GVector, translate, rotate, angle and more."
+readme = "README.md"
+requires-python = ">=3.10"
+classifiers = [
+    "Programming Language :: Python :: 3",
+    "License :: OSI Approved :: GNU Lesser General Public License v2 or later (LGPLv2+)",
+    "Operating System :: OS Independent",
+]
+dependencies = [
+  "anchorscad-test-tools>=0.1.0", 
+  "anchorscad-utils>=0.1.1",
+  "anchorscad-linear>=0.1.0",
+  "datatrees>=0.1.7",
+  "xdatatrees>=0.1.0",
+  "pythonopenscad>=1.1.0",
+  "frozendict",
+  "manifold3d>=3.0.1",
+  "dataclasses_json",
+  "debugpy",
+  "dill",
+  "sortedcontainers",
+  "sortedcollections",
+  "graphviz",
+  "Pillow",
+  "matplotlib",
+  "svgelements",
+  "svgpathtools",
+  "lxml",
+  "numpy-stl",
+  "numpy",
+  "to_3mf",
+  "matplotlib",
+]
+
+[project.urls]
+"Homepage" = "https://github.com/owebeeone/anchorscad-core"
+"Bug Tracker" = "https://github.com/owebeeone/anchorscad-core/issues"
+
+[tool.hatch.envs.test]
+dependencies = [
+  "pytest>=7.0.0",
+  "pytest-cov>=4.0.0",
+] 
+[tool.hatch.build.targets.wheel]
+packages = ["src/anchorscad_lib"]

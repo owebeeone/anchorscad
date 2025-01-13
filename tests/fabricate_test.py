@@ -12,7 +12,7 @@ from anchorscad import Fabricator, \
 
 @ad.datatree
 @ad.fabricator
-class TestBoxFabricator(Fabricator):
+class BoxFabricator(Fabricator):
     '''
     Example fabricator to generate stl and png image.
     '''

@@ -190,12 +190,9 @@ def compare_scad_tokens(tokens1, tokens2, line1, line2, line_num, epsilon) -> Op
     
     return None
 
-def compare_scad_files(file1, file2, epsilon=1e-6) -> Optional[FileDifference]:
-    """Compare two files while ignoring small differences in floating-point numbers."""
-    with open(file1, 'r') as f1, open(file2, 'r') as f2:
-        lines1 = f1.readlines()
-        lines2 = f2.readlines()
-    
+def compare_scad_lines(lines1: list[str], lines2: list[str], epsilon=1e-6) -> Optional[FileDifference]:
+    """Compare two lines while ignoring small differences in floating-point numbers."""
+
     max_len = max(len(lines1), len(lines2))
     
     for line_num in range(max_len):
@@ -210,6 +207,14 @@ def compare_scad_files(file1, file2, epsilon=1e-6) -> Optional[FileDifference]:
             return result
     
     return None
+
+def compare_scad_files(file1, file2, epsilon=1e-6) -> Optional[FileDifference]:
+    """Compare two files while ignoring small differences in floating-point numbers."""
+    with open(file1, 'r') as f1, open(file2, 'r') as f2:
+        lines1 = f1.readlines()
+        lines2 = f2.readlines()
+    return compare_scad_lines(lines1, lines2, epsilon)
+
 
 def make_image_output_dir(dir1, dir2):
     '''Returns a name for the output directory for image diff files.'''
@@ -362,7 +367,7 @@ def compare_directories(args) -> Tuple[bool, DirectoryDiffResults]:
                     diff.set_png_diff(output_path)
                     print(f'    Diff image saved to {output_path}')
                 else:
-                    print(f'    No change detected in the images')
+                    print('    No change detected in the images')
 
     if unique_to_dir1:
         print(f'\nFiles unique to {args.dir1} with suffixes {args.suffixes}:')
@@ -607,7 +612,7 @@ def main():
     
 
     if args.start_server:
-        print(f'Not starting server, no differences found. Nothing to serve.')
+        print('Not starting server, no differences found. Nothing to serve.')
     return 0
 
 if __name__ == '__main__':

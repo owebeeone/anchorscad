@@ -4,10 +4,12 @@ Created on 8 Jan 2021
 @author: gianni
 '''
 
+import os
 from anchorscad.extrude_flex import make_offset_polygon2d, PathOffsetMaker
+from anchorscad.runner import compare_generated
 import anchorscad.svg_renderer as sr
 import numpy as np
-from test_tools import iterable_assert
+from anchorscad_lib.test_tools import iterable_assert
 from anchorscad.renderer import render
 import anchorscad_lib.linear as l
 import anchorscad.extrude as extrude
@@ -20,18 +22,69 @@ import anchorscad.core as core
 
 
 @dataclass
-class TestMetaData:
+class MockMetaData:
     fn: int = 10
     segment_lines: bool = False
 
+UPDATE_GOLDEN_FILES = os.getenv('UPDATE_GOLDEN_FILES')
 
 class ExtrudeTest(TestCase):
+    
+    def setUp(self):
+        self.points = []
+        # Golden files are stored in 'test-data' directory next to the test file
+        self.golden_dir = os.path.join(os.path.dirname(__file__), 'test-data')
+        self.update_golden_files = UPDATE_GOLDEN_FILES
+        self.verbose = False
+        
+    def log_verbose(self, *args, **kwargs):
+        if self.verbose:
+            print(*args, **kwargs)
 
     def write(self, maker, test):
         result = render(maker)
         filename = f'test_{test}.scad'
-        result.rendered_shape.write(filename)
-        print(f'written scad file: {filename}')
+        self.log_verbose(f'testing scad file: {filename}')
+        
+        scad_output = str(result.rendered_shape)
+        
+        self.compare_scad_with_golden(filename, scad_output)
+        
+    def compare_scad_with_golden(self, filename, scad_output: str):
+        
+        if self.update_golden_files:
+            with open(os.path.join(self.golden_dir, filename), 'w') as f:
+                f.write(scad_output)
+            return
+        
+        # Load them into a list of lines
+        with open(os.path.join(self.golden_dir, filename), 'r') as f:
+            golden_lines = f.readlines()[:-1]
+        
+        # Convert the scad output to a list of lines, explicitly keeping newlines
+        actual_lines = scad_output.splitlines(keepends=True) # remove the last empty line
+            
+        difference : compare_generated.FileDifference = compare_generated.compare_scad_lines(
+            golden_lines, actual_lines)   
+        if difference:
+            self.fail(f'Difference found in {filename}: {difference}')    
+            
+    def compare_with_golden(self, filename, actual_output):
+        golden_path = os.path.join(self.golden_dir, filename)
+        if self.update_golden_files:
+            # Update golden files if environment variable is set
+            os.makedirs(os.path.dirname(golden_path), exist_ok=True)
+            with open(golden_path, 'w') as f:
+                f.write(actual_output)
+        else:
+            # Compare with existing golden file
+            try:
+                with open(golden_path, 'r') as f:
+                    expected_output = f.read()
+                self.assertEqual(expected_output, actual_output)
+            except FileNotFoundError:
+                self.fail(f"Golden file {golden_path} not found. Run with UPDATE_GOLDEN=1 to create it.")
+        
 
     def testBezierExtents2D(self):
         b = extrude.CubicSpline([[0, 0], [1, -1], [1, 1], [0, 1]])
@@ -47,7 +100,7 @@ class ExtrudeTest(TestCase):
             [[1, -1], [1, 1], [0, 1]], 'curve')
 
         path = builder.build()
-        points = path.points(TestMetaData())
+        points = path.points(MockMetaData())
 
         expected = np.array([
             [0.,  0.],
@@ -77,7 +130,7 @@ class ExtrudeTest(TestCase):
                             ).spline([[2, 0], [2.5, 4], [3, 3]], 'curve')
 
         path = builder.build()
-        points = path.points(TestMetaData())
+        points = path.points(MockMetaData())
 
         expected = np.array([
             [0., 0.],
@@ -113,7 +166,7 @@ class ExtrudeTest(TestCase):
                             ).spline([[2.5, 4], [3, 3]], 'curve', cv_len=(0.5,))
 
         path = builder.build()
-        points = path.points(TestMetaData())
+        points = path.points(MockMetaData())
 
         iterable_assert(self.assertAlmostEqual,
                         path.get_node('curve').points,
@@ -141,10 +194,10 @@ class ExtrudeTest(TestCase):
 
         builder.move([0, 0], 'start'
                      ).line([1, 0], 'line'
-                            ).spline([[2.5, 4], [3, 3]], 'curve', cv_len=(0.5,), degrees=(90,))
+                            ).spline([[2.5, 4], [3, 3]], 'curve', cv_len=(0.5,), angle=(90,))
 
         path = builder.build()
-        points = path.points(TestMetaData())
+        points = path.points(MockMetaData())
 
         iterable_assert(self.assertAlmostEqual,
                         path.get_node('curve').points,
@@ -171,7 +224,7 @@ class ExtrudeTest(TestCase):
         builder = extrude.PathBuilder()
         builder.move([0, 0], 'start'
                      ).line([1, 0], 'line'
-                            ).spline([[2.5, 4], [3, 3]], 'curve', cv_len=(0.5,), degrees=(None, -90))
+                            ).spline([[2.5, 4], [3, 3]], 'curve', cv_len=(0.5,), angle=(None, -90))
 
         path = builder.build()
 
@@ -207,7 +260,7 @@ class ExtrudeTest(TestCase):
 
         path = builder.build()
 
-        iterable_assert(self.assertAlmostEqual, path.polygons(TestMetaData()),
+        iterable_assert(self.assertAlmostEqual, path.polygons(MockMetaData()),
                         (([[0., 0.],
                            [1., 0.],
                            [1.25326914, 0.12753619],
@@ -230,7 +283,7 @@ class ExtrudeTest(TestCase):
         # Try rotating the path.
         new_path = path.transform(l.rotZ(90))
 
-        iterable_assert(self.assertAlmostEqual, new_path.polygons(TestMetaData()),
+        iterable_assert(self.assertAlmostEqual, new_path.polygons(MockMetaData()),
                         (([[0.,  0.],
                            [0.,  1.],
                            [-0.12753619,  1.25326914],
@@ -256,7 +309,7 @@ class ExtrudeTest(TestCase):
             .move([0, 0])
             .line([100 * scale, 0], 'linear')
             .spline([[150 * scale, 100 * scale], [20 * scale, 100 * scale]],
-                    name='curve', cv_len=(0.5, 0.4), degrees=(90,), rel_len=0.8)
+                    name='curve', cv_len=(0.5, 0.4), angle=(90,), rel_len=0.8)
             .line([0, 100 * scale], 'linear2')
             .line([0, 0], 'linear3')
             .build(),
@@ -272,7 +325,7 @@ class ExtrudeTest(TestCase):
             .move([0, 0])
             .line([100 * scale, 0], 'linear')
             .spline([[0,  100 * scale], [0, 100 * scale]],
-                    name='curve', cv_len=(0.5, 0.4), degrees=(100,), rel_len=0.8)
+                    name='curve', cv_len=(0.5, 0.4), angle=(100,), rel_len=0.8)
             .line([0, 1 * scale], 'linear2')
             .line([0, 0], 'linear3')
             .build(),
@@ -320,7 +373,7 @@ class ExtrudeTest(TestCase):
             .move([0, 0])
             .line([100 * scale, 0], 'linear')
             .arc_tangent_point([20 * scale, 100 * scale],
-                               name='arc', degrees=90)
+                               name='arc', angle=90)
             .line([0, 100 * scale], 'linear2')
             .line([0, 0], 'linear3')
             .build(),
@@ -345,11 +398,11 @@ class ExtrudeTest(TestCase):
             .move([0, 0])
             .line([100 * scale, 0], 'linear')
             .arc_tangent_point([20 * scale, 100 * scale],
-                               name='arc', degrees=90)
+                               name='arc', angle=90)
             .line([0, 100 * scale], 'linear2')
             .line([0, 0], 'linear3')
             .build(),
-            degrees=90
+            angle=90
         )
 
     def testArcArcExtrudeTestObject(self):
@@ -367,12 +420,12 @@ class ExtrudeTest(TestCase):
         path = (extrude.PathBuilder()
                 .move([0, 0])
                 .line([100 * SCALE, 0], 'linear')
-                .arc_tangent_point([0 * SCALE, 100 * SCALE], name='curve', degrees=90)
+                .arc_tangent_point([0 * SCALE, 100 * SCALE], name='curve', angle=90)
                 .line([0, 100 * SCALE], 'linear2')
                 .line([0, 0], 'linear3')
                 .build())
 
-        iterable_assert(self.assertAlmostEqual, path.polygons(TestMetaData()),
+        iterable_assert(self.assertAlmostEqual, path.polygons(MockMetaData()),
                         ([[0.,  0.],
                           [80.,  0.],
                           [79.01506725, 12.5147572],
@@ -399,12 +452,12 @@ class ExtrudeTest(TestCase):
         path = (extrude.PathBuilder()
                 .move([0, 0])
                 .line([0, -r_sphere], 'edge1')
-                .arc_tangent_point(p1, degrees=90, name='sphere')
-                .arc_tangent_point(p2, degrees=0, name='bevel')
+                .arc_tangent_point(p1, angle=90, name='sphere')
+                .arc_tangent_point(p2, angle=0, name='bevel')
                 .line([0, 0], 'edge2')
                 .build())
 
-        iterable_assert(self.assertAlmostEqual, path.polygons(TestMetaData()),
+        iterable_assert(self.assertAlmostEqual, path.polygons(MockMetaData()),
                         ([[0.00000000e+00,  0.00000000e+00],
                           [0.00000000e+00, -1.50000000e+01],
                           [1.97145374e+00, -1.48698813e+01],
@@ -435,11 +488,11 @@ class ExtrudeTest(TestCase):
         path = (extrude.PathBuilder()
                 .move([0, 0])
                 .line([0, -r_bevel], 'edge1')
-                .arc_tangent_point([r_bevel, 0], degrees=180, name='bevel')
+                .arc_tangent_point([r_bevel, 0], angle=180, name='bevel')
                 .line([0, 0], 'edge2')
                 .build())
 
-        iterable_assert(self.assertAlmostEqual, path.polygons(TestMetaData()),
+        iterable_assert(self.assertAlmostEqual, path.polygons(MockMetaData()),
                         ([[0.,   0.],
                           [0., -10.],
                           [0.12311659,  -8.43565535],
@@ -460,11 +513,11 @@ class ExtrudeTest(TestCase):
         path = (extrude.PathBuilder()
                 .move([0, 0])
                 .line([0, r], 'edge1')
-                .arc_tangent_point([0, -r], degrees=-90, name='arc')
+                .arc_tangent_point([0, -r], angle=-90, name='arc')
                 .line([0, 0], 'edge2')
                 .build())
 
-        iterable_assert(self.assertAlmostEqual, path.polygons(TestMetaData()),
+        iterable_assert(self.assertAlmostEqual, path.polygons(MockMetaData()),
                         ([[0.00000000e+00,  0.00000000e+00],
                           [0.00000000e+00,  1.00000000e+01],
                           [3.09016994e+00,  9.51056516e+00],
@@ -485,11 +538,11 @@ class ExtrudeTest(TestCase):
         path = (extrude.PathBuilder()
                 .move([0, 0])
                 .line([0, r], 'edge1')
-                .arc_tangent_point([0, -r], degrees=90, name='arc')
+                .arc_tangent_point([0, -r], angle=90, name='arc')
                 .line([0, 0], 'edge2')
                 .build())
 
-        iterable_assert(self.assertAlmostEqual, path.polygons(TestMetaData()),
+        iterable_assert(self.assertAlmostEqual, path.polygons(MockMetaData()),
                         ([[0.00000000e+00,  0.00000000e+00],
                           [0.00000000e+00,  1.00000000e+01],
                           [-3.09016994e+00,  9.51056516e+00],
@@ -510,11 +563,11 @@ class ExtrudeTest(TestCase):
         path = (extrude.PathBuilder()
                 .move([0, 0])
                 .line([r_bevel, 0], 'edge1')
-                .arc_tangent_point([0, r_bevel], degrees=180, name='bevel')
+                .arc_tangent_point([0, r_bevel], angle=180, name='bevel')
                 .line([0, 0], 'edge2')
                 .build())
 
-        iterable_assert(self.assertAlmostEqual, path.polygons(TestMetaData()),
+        iterable_assert(self.assertAlmostEqual, path.polygons(MockMetaData()),
                         ([[0., 0.],
                           [3., 0.],
                           [2.5306966, 0.03693498],
@@ -534,14 +587,14 @@ class ExtrudeTest(TestCase):
         return (extrude.PathBuilder()
                 .move([0, 0])
                 .line([-p, p], 'edge1')
-                .arc_tangent_point([-p, -p], degrees=angle, name='arc')
+                .arc_tangent_point([-p, -p], angle=angle, name='arc')
                 .line([0, 0], 'edge2')
                 .build())
 
     def testArcTangentPoint_7(self):
         path = self.makePathQ1Q3(-90)
 
-        iterable_assert(self.assertAlmostEqual, path.polygons(TestMetaData()),
+        iterable_assert(self.assertAlmostEqual, path.polygons(MockMetaData()),
                         ([[0.,   0.],
                           [-10.,  10.],
                           [-4.37016024,  13.44997024],
@@ -559,7 +612,7 @@ class ExtrudeTest(TestCase):
     def testArcTangentPoint_8(self):
         path = self.makePathQ1Q3(90)
 
-        iterable_assert(self.assertAlmostEqual, path.polygons(TestMetaData()),
+        iterable_assert(self.assertAlmostEqual, path.polygons(MockMetaData()),
                         ([[0.00000000e+00,  0.00000000e+00],
                           [-1.00000000e+01,  1.00000000e+01],
                           [-1.14412281e+01,  8.31253876e+00],
@@ -590,7 +643,7 @@ class ExtrudeTest(TestCase):
     def testArcPoints_1(self):
         path = self.makeArcPointsPath(10, 20, 30)
 
-        iterable_assert(self.assertAlmostEqual, path.polygons(TestMetaData()),
+        iterable_assert(self.assertAlmostEqual, path.polygons(MockMetaData()),
                         ([[5.,  5.],
                           [14.84807753,  6.73648178],
                           [14.78147601,  7.07911691],
@@ -608,7 +661,7 @@ class ExtrudeTest(TestCase):
     def testArcPoints_2(self):
         path = self.makeArcPointsPath(10, 35, 30)
 
-        iterable_assert(self.assertAlmostEqual, path.polygons(TestMetaData()),
+        iterable_assert(self.assertAlmostEqual, path.polygons(MockMetaData()),
                         ([[5.,  5.],
                           [14.84807753,  6.73648178],
                           [14.13545458,  0.93263357],
@@ -628,7 +681,7 @@ class ExtrudeTest(TestCase):
         for angles in test_angles:
             path = self.makeArcPointsPath(*angles)
 
-            iterable_assert(self.assertAlmostEqual, path.polygons(TestMetaData()),
+            iterable_assert(self.assertAlmostEqual, path.polygons(MockMetaData()),
                             ([[5.00000000e+00,  5.00000000e+00],
                               [-4.84807753e+00,  3.26351822e+00],
                               [-5.00000000e+00,  5.00000000e+00],
@@ -648,7 +701,7 @@ class ExtrudeTest(TestCase):
         for angles in test_angles:
             path = self.makeArcPointsPath(*angles)
 
-            iterable_assert(self.assertAlmostEqual, path.polygons(TestMetaData()),
+            iterable_assert(self.assertAlmostEqual, path.polygons(MockMetaData()),
                             ([[5.,  5.],
                               [-4.84807753,  3.26351822],
                               [-4.51056516,  8.09016994],
@@ -678,7 +731,7 @@ class ExtrudeTest(TestCase):
     def testArcPointsRadius_1(self):
         path = self.makeArcPointsRadius(0, 90, 10, False)
 
-        iterable_assert(self.assertAlmostEqual, path.polygons(TestMetaData()),
+        iterable_assert(self.assertAlmostEqual, path.polygons(MockMetaData()),
                         ([[5.,  5.],
                           [10.,  5.],
                           [15.43068778,  4.20139037],
@@ -696,7 +749,7 @@ class ExtrudeTest(TestCase):
     def testArcPointsRadius_2(self):
         path = self.makeArcPointsRadius(0, 90, 10, True)
 
-        iterable_assert(self.assertAlmostEqual, path.polygons(TestMetaData()),
+        iterable_assert(self.assertAlmostEqual, path.polygons(MockMetaData()),
                         ([[5.,  5.],
                           [10.,  5.],
                           [10.79860963, -0.43068778],
@@ -719,8 +772,8 @@ class ExtrudeTest(TestCase):
                 .line([-p, p], 'edge1')
                 .arc_tangent_radius_sweep(
                 r,
-                sweep_angle_degrees=sweep_angle,
-                degrees=angle,
+                sweep_angle=sweep_angle,
+                angle=angle,
                 name='arc')
                 .line([0, 0], 'edge2')
                 .build())
@@ -728,7 +781,7 @@ class ExtrudeTest(TestCase):
     def testArcTangentSweep_1(self):
         path = self.makePathWithSweep(-270, -90)
 
-        iterable_assert(self.assertAlmostEqual, path.polygons(TestMetaData()),
+        iterable_assert(self.assertAlmostEqual, path.polygons(MockMetaData()),
                         ([[0.,   0.],
                           [-10.,  10.],
                           [-4.37016024,  13.44997024],
@@ -746,7 +799,7 @@ class ExtrudeTest(TestCase):
     def testArcTangentSweep_2(self):
         path = self.makePathWithSweep(270, -90)
 
-        iterable_assert(self.assertAlmostEqual, path.polygons(TestMetaData()),
+        iterable_assert(self.assertAlmostEqual, path.polygons(MockMetaData()),
                         ([[0.00000000e+00,  0.00000000e+00],
                           [-1.00000000e+01,  1.00000000e+01],
                           [-1.34499702e+01,  4.37016024e+00],
@@ -769,7 +822,7 @@ class ExtrudeTest(TestCase):
                 .line([-p, p], 'edge1')
                 .arc_centre_sweep(
                 [0, 0],
-                sweep_angle_degrees=sweep_angle,
+                sweep_angle=sweep_angle,
                 name='arc')
                 .line([0, 0], 'edge2')
                 .build())
@@ -777,7 +830,7 @@ class ExtrudeTest(TestCase):
     def testArcCentreSweep_1(self):
         path = self.makePathWithCentreSweep(-270)
 
-        iterable_assert(self.assertAlmostEqual, path.polygons(TestMetaData()),
+        iterable_assert(self.assertAlmostEqual, path.polygons(MockMetaData()),
                         ([[0.,   0.],
                           [-10.,  10.],
                           [-4.37016024,  13.44997024],
@@ -796,7 +849,7 @@ class ExtrudeTest(TestCase):
         path = self.makePathWithCentreSweep(90)
 
         result = make_offset_polygon2d(
-            path, 1, PathOffsetMaker.OFFSET_ROUND, TestMetaData())
+            path, 1, PathOffsetMaker.OFFSET_ROUND, MockMetaData())
 
         iterable_assert(self.assertAlmostEqual, result,
                 np.array(
@@ -832,20 +885,28 @@ class ExtrudeTest(TestCase):
                     [-10.233445  , -10.97237   ]]),
                 places=5)
 
+    def svg_compare(self, filename: str, svgRenderer: sr.SvgRenderer):
+        svg_str = svgRenderer.to_svg_string()
+        self.compare_with_golden(filename, svg_str)
 
     def testSvgRender(self):
         path = self.makePathWithCentreSweep(150)
         model = sr.SvgRenderer(path, img_margin_size=150,
                                target_image_size=(700, 700))
-        model.write('testSvgRender.svg')
-        print(model.path_render._segs.to_json(indent=2))
+        self.svg_compare('testSvgRender.svg', model)
+        self.log_verbose(model.path_render._segs.to_json(indent=2))
 
     def testSvgRender2(self):
         path = self.makeTestObject(scale=11).path
         model = sr.SvgRenderer(path)
+        
+        self.svg_compare('testSvgRender2.svg', model)
 
-        model.write('testSvgRender2.svg')
 
+    def html_compare(self, filename: str, htmlRenderer: sr.HtmlRenderer):
+        svg_str = htmlRenderer.create_html()
+        self.compare_with_golden(filename, svg_str)
+        
     def testSvgRender3(self):
         import anchorscad.models.tools.funnel.FilterFunnel as funnel
         clz = funnel.FilterFunnel
@@ -855,7 +916,9 @@ class ExtrudeTest(TestCase):
                         initial_frame=None, 
                         initial_attrs=core.ModelAttributes())
         html_renderer = sr.HtmlRenderer(result.paths.paths)
-        html_renderer.write('testSvgRender3.html')
+        # self.update_golden_files = True
+        self.html_compare('testSvgRender3.html', html_renderer)
+        
         
     def testConstructionRender(self):
         
@@ -878,7 +941,9 @@ class ExtrudeTest(TestCase):
             {path: renderer.ShapePathCollection(
                     [renderer.ShapePath((gm.Node('test1'), gm.Node('test2')))])})
 
-        html_renderer.write('testConstructionRender.html')
+        # self.update_golden_files = True
+        self.html_compare('testConstructionRender.html', html_renderer)
+        
 
 if __name__ == "__main__":
     unittest.main()

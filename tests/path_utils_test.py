@@ -1,7 +1,7 @@
 import unittest
 import numpy as np
 
-from test_tools import iterable_assert
+from anchorscad_lib.test_tools import iterable_assert
 
 from anchorscad.path_utils import remove_duplicate_adjacent_points, remove_colinear_points
 

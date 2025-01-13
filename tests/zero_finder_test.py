@@ -44,9 +44,9 @@ class Test(unittest.TestCase):
             return y
         
         guess0 = 2
-        guess1 = 4
-        print(f"func({guess0})={func(guess0)}")
-        print(f"func({guess1})={func(guess1)}")
+        guess1 = -2
+        # print(f"func({guess0})={func(guess0)}")
+        # print(f"func({guess1})={func(guess1)}")
 
         root, stats = zf.zero_of(
             func, guess0, guess1, 
@@ -54,7 +54,8 @@ class Test(unittest.TestCase):
             max_iteration=70, 
             provide_details=True)
         
-        print("2*x - math.tan(x)root=", root, stats)
+        # print("2*x - math.tan(x) root=", root, stats)
+        self.assertAlmostEqual(root, 0)
         
         
 

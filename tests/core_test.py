@@ -4,19 +4,15 @@ Created on 31 Dec 2020
 @author: gianni
 '''
 
-
-from dataclasses import dataclass
-import sys
 import unittest
-
-from frozendict import frozendict
-
 import anchorscad_lib.linear as l
 from anchorscad.core import Box, Colour, Text, Cone, Arrow, Coordinates, \
     Sphere, AnnotatedCoordinates, at_spec, lazy_shape, args, CoordinatesCage
 from anchorscad.renderer import render
-import numpy as np
+import os
+import sys
 import pythonopenscad as posc
+import anchorscad.runner.compare_generated as compare_generated
 
 COLOURS=[
     Colour([1, 0, 0]),
@@ -27,6 +23,8 @@ COLOURS=[
     Colour([0, 1, 1]),
     ]
 
+UPDATE_GOLDEN_FILES = os.getenv('UPDATE_GOLDEN_FILES')
+
 def pick_colour(face, corner):
     return COLOURS[(face * 17 + corner) % len(COLOURS)]
 
@@ -34,16 +32,61 @@ class CoreTest(unittest.TestCase):
     
     def setUp(self):
         self.points = []
-
+        # Golden files are stored in 'test-data' directory next to the test file
+        self.golden_dir = os.path.join(os.path.dirname(__file__), 'test-data')
+        self.update_golden_files = UPDATE_GOLDEN_FILES
+        self.verbose = False
+        
+    def log_verbose(self, *args, **kwargs):
+        if self.verbose:
+            print(*args, **kwargs)
+        
     def write(self, maker, test):
         result = render(maker)
-        obj, graph = result.rendered_shape, result.graph
-        filename = f'test_{test}.scad'
-        obj.write(filename)
-        print(f'written scad file: {filename}')
-        dot_filename = f'test_{test}.dot'
-        graph.write(dot_filename)
-        print(f'written graphviz file: {dot_filename}')
+        obj: posc.PoscParentBase = result.rendered_shape
+        # Collect SCAD output instead of writing to file
+        scad_output = str(obj)
+        self.compare_scad_with_golden(f'test_{test}.scad', scad_output)
+        
+        # Collect DOT output instead of writing to file
+        
+        dot_output = result.graph.dump('D')  # Assuming there's a method to get the DOT code as string
+        self.compare_with_golden(f'test_{test}.dot', dot_output)
+        
+    def compare_scad_with_golden(self, filename, scad_output: str):
+        
+        if self.update_golden_files:
+            with open(os.path.join(self.golden_dir, filename), 'w') as f:
+                f.write(scad_output)
+            return
+        
+        # Load them into a list of lines
+        with open(os.path.join(self.golden_dir, filename), 'r') as f:
+            golden_lines = f.readlines()[:-1]
+        
+        # Convert the scad output to a list of lines, explicitly keeping newlines
+        actual_lines = scad_output.splitlines(keepends=True) # remove the last empty line
+            
+        difference : compare_generated.FileDifference = compare_generated.compare_scad_lines(
+            golden_lines, actual_lines)   
+        if difference:
+            self.fail(f'Difference found in {filename}: {difference}')
+        
+    def compare_with_golden(self, filename, actual_output):
+        golden_path = os.path.join(self.golden_dir, filename)
+        if self.update_golden_files:
+            # Update golden files if environment variable is set
+            os.makedirs(os.path.dirname(golden_path), exist_ok=True)
+            with open(golden_path, 'w') as f:
+                f.write(actual_output)
+        else:
+            # Compare with existing golden file
+            try:
+                with open(golden_path, 'r') as f:
+                    expected_output = f.read()
+                self.assertEqual(expected_output, actual_output)
+            except FileNotFoundError:
+                self.fail(f"Golden file {golden_path} not found. Run with UPDATE_GOLDEN=1 to create it.")
         
     def testSimple(self):
         b1 = Box([1, 1, 1])
@@ -206,7 +249,7 @@ class CoreTest(unittest.TestCase):
             align_plane=l.X_AXIS
             )
         
-        print(maker)
+        self.log_verbose(maker)
          
         for i in range(6):
             maker.add_at(Text(str(i)).solid(('face_text', 'inner', i)).colour([0,1,0]).at(), 'face_centre', i)
@@ -246,17 +289,7 @@ class CoreTest(unittest.TestCase):
         
         # Need the diff vector to align to.
         diff_vector = from_vec - to_vec
-        
-        #### remove from here
-    #     source_maker.add(
-    #          Coordinates().solid('diff_vec-fI').projection(l.translate(diff_vector + to_vec).I))
-    #     source_maker.add(
-    #          Coordinates().solid('diff_vec-tI').projection(l.translate(from_vec - diff_vector).I))
-    #     source_maker.add(
-    #          Coordinates().solid('diff_vec-f').projection(l.translate(diff_vector + to_vec)))
-    #     source_maker.add(
-    #          Coordinates().solid('diff_vec-t').projection(l.translate(from_vec - diff_vector)))
-        #### remove to here
+
         
         # The length allows us to build the shape now.
         length = diff_vector.length()
@@ -277,24 +310,12 @@ class CoreTest(unittest.TestCase):
         
         world_shape_to =  (shape_to_frame * shape_add_at_frame_inv)
         world_shape_from = (shape_from_frame * shape_add_at_frame_inv)
-        
-        #### remove from here
-    #     source_maker.add(
-    #         Coordinates().solid('wf_from').projection(world_shape_from))
-    #     source_maker.add(
-    #         Coordinates().solid('wf_to').projection(world_shape_to))
-        #### remove to here
+
         
         align_vec = world_shape_from.get_translation() - world_shape_to.get_translation()
         align_frame = l.rot_to_V(align_vec, diff_vector)
          
         if align_axis and align_plane:
-            
-    #         source_maker.add(
-    #             Coordinates().solid('shape_add_at_frame').projection(shape_add_at_frame.I))
-    #         source_maker.add(
-    #             Coordinates().solid('shape_add_at_frame*align_frame').projection((align_frame * shape_add_at_frame).I))
-            #align_axis_vec = shape_add_at_frame.get_rotation() * align_frame * align_axis
 
             wdiff = diff_vector
             align_axis_vec = align_frame * align_axis
@@ -316,16 +337,7 @@ class CoreTest(unittest.TestCase):
             #align_frame = align_frame.I * axis_alignment * align_frame
         
         add_at_frame = l.translate(to_vec) * align_frame
-        #add_at_frame  = l.translate(to_vec) #### remove
-        #add_at_frame = l.IDENTITY #### remove
-        
-            
-        #### remove from here
-    #     source_maker.add(
-    #         Coordinates().solid('nwf_from').projection(add_at_frame.I))
-    #     source_maker.add(
-    #         Coordinates().solid('nwf_to').projection(add_at_frame * world_shape_to))
-        #### remove to here
+
         
         target_maker = target_maker if target_maker else source_maker
         
@@ -340,7 +352,7 @@ class CoreTest(unittest.TestCase):
         target_maker.add_at(Coordinates().solid('base_ib').at('origin'), 'in_between', 'base')
         
         
-        print(maker)
+        self.log_verbose(maker)
          
         for i in range(6):
             maker.add_at(Text(str(i)).solid(('face_text', 'inner', i)).colour([0,1,0]).at(), 'face_centre', i)
@@ -411,4 +423,8 @@ class CoreTest(unittest.TestCase):
 
 if __name__ == "__main__":
     # import sys;sys.argv = ['', 'CoreTest.testAnnotated']
+    if len(sys.argv) > 1 and sys.argv[1] == 'update_golden':
+        UPDATE_GOLDEN_FILES = True
+        sys.argv.pop(1)  # Remove the second entry (index 1)
+        
     unittest.main()

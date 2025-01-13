@@ -8,7 +8,7 @@ import anchorscad as ad
 
 @ad.shape
 @ad.datatree
-class TestShape(ad.CompositeShape):
+class SomeTestShape(ad.CompositeShape):
     '''
     <description>
     '''
@@ -34,7 +34,7 @@ class IntersectShape(ad.CompositeShape):
     
     size: tuple=(10, 10, 10)
     box_node: ad.Node=ad.ShapeNode(ad.Box)
-    test_node: ad.Node=ad.ShapeNode(TestShape)
+    test_node: ad.Node=ad.ShapeNode(SomeTestShape)
     as_hole: bool=True
     
     _GEN_TEST_ARGS = lambda as_hole: \
@@ -59,7 +59,7 @@ class IntersectShape(ad.CompositeShape):
 
 # Uncomment the line below to default to writing OpenSCAD files
 # when anchorscad_main is run with no --write or --no-write options.
-MAIN_DEFAULT=ad.ModuleDefault(True)
+MAIN_DEFAULT=ad.ModuleDefault(all=False)
 
 if __name__ == "__main__":
     ad.anchorscad_main()
