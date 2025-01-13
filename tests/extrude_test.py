@@ -847,7 +847,7 @@ class ExtrudeTest(TestCase):
         model.write('testSvgRender2.svg')
 
     def testSvgRender3(self):
-        import anchorscad.models.tools.funnel.FilterFunnel as funnel
+        import anchorscad_models.tools.funnel.FilterFunnel as funnel
         clz = funnel.FilterFunnel
         maker, shape = clz.example('default')
         result = renderer.render(

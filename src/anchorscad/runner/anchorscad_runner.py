@@ -744,12 +744,12 @@ def run():
 
     # For debugging.
     # if not ENVIRON_NAME in runner.env:
-    #     runner = AnchorScadRunner(['src/anchorscad/models/components', 'anchorscad.models.components.switch_case'])
+    #     runner = AnchorScadRunner(['src/anchorscad/models/components', 'anchorscad_models.components.switch_case'])
     #     # args = ['--no_warn_deprecated_anchors_use',
     #     #         '--gen-stl',
     #     #         '--gen-3mf',
     #     #         'src/anchorscad/models/components/terminal_blocks/terminal_kf301.py',
-    #     #         'anchorscad.models.components.terminal_blocks.terminal_kf301']
+    #     #         'anchorscad_models.components.terminal_blocks.terminal_kf301']
     #     # runner = AnchorScadRunner(args)
     #     # runner.env[ENVIRON_NAME] = args[3]
     runner.run()
