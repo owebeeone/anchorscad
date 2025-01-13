@@ -147,7 +147,7 @@ Note the terms “shape” and “model” are used interchangeably since an Anc
 An AnchorSCAD shape is a subclass of the `anchorscad.Shape` class. The constructor parameters are arbitrary and specific to the implemented shape. Most AnchorSCAD models use the Python dataclass or `anchorscad.datatree` decorators to simplify the generation of Shape classes.
 
 ## An Hello World / SquarePipe Example
-The `anchorscad.models.basic.SquarePipe` model demonstrates the basic construction of a `CompositeShape`. The CompositeShape will likely be the most used base class in AnchorSCAD because most shapes are built from other shapes.
+The `anchorscad_models.basic.SquarePipe` model demonstrates the basic construction of a `CompositeShape`. The CompositeShape will likely be the most used base class in AnchorSCAD because most shapes are built from other shapes.
 
 The resultant shape will consist of a Box with a smaller Box "hole" aligned at the centers, hence a "square pipe".
 
