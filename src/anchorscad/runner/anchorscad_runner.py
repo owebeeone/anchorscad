@@ -150,7 +150,7 @@ class ExampleRunner:
 
     def __post_init__(self):
         self.module_dir = os.path.sep.join(self.module_name.split('.'))
-        self.openscad_properties = openscad_exe_properties(self.argp.use_dev_openscad)
+        self.openscad_properties = openscad_exe_properties()
 
     def get_example_record(self, clz, base_example_name) -> rs.RunnerExampleResults:
         results = self.runner_results.get(clz.__name__, None)

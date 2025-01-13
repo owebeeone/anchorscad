@@ -82,8 +82,13 @@ def strict_int_or_none(v):
 def strict_float_or_none(v):
     return strict_t_or_none(v, float)
 
+def strict_angle_or_none(v):
+    return strict_t_or_none(v, l.angle)
+
 LIST_2_FLOAT_OR_NONE = l.list_of(strict_float_or_none, len_min_max=(2, 2), fill_to_min=None)
 LIST_2_INT_OR_NONE = l.list_of(strict_float_or_none, len_min_max=(2, 2), fill_to_min=None)
+LIST_2_ANGLE_OR_NONE = l.list_of(strict_angle_or_none, len_min_max=(2, 2), fill_to_min=None)
+LIST_3_ANGLE_OR_NONE = l.list_of(strict_angle_or_none, len_min_max=(3, 3), fill_to_min=None)
 LIST_2_FLOAT = l.list_of(l.strict_float, len_min_max=(2, 3), fill_to_min=0.0)
 LIST_3_FLOAT = l.list_of(l.strict_float, len_min_max=(3, 3), fill_to_min=0.0)
 LIST_2X2_FLOAT = l.list_of(LIST_2_FLOAT, len_min_max=(2, 2), fill_to_min=None)
@@ -236,7 +241,7 @@ class CubicSpline():
     def azimuth_t(self, angle: Union[float, l.Angle]=0, t_end: bool=False, 
                 t_range: Tuple[float, float]=(0.0, 1.0)) -> Tuple[float, ...]:
         '''Returns the list of t where the tangent is at the given angle from the beginning of the
-        given t_range. The angle is in degrees or radians or as sin and cos values.'''
+        given t_range. The angle is in degrees or Angle.'''
         
         angle = l.angle(angle)
         
@@ -354,17 +359,17 @@ class QuadraticSpline():
         new_p = list((m * to_gvector(p)).A[0:self.dimensions] for p in self.p)
         return QuadraticSpline(np.array(new_p), self.dimensions)
     
-    def azimuth_t(self, angle: Union[float, l.Angle]=0, t_end: bool=False, 
+    def azimuth_t(self, angle: float | l.Angle=0, t_end: bool=False, 
                 t_range: Tuple[float, float]=(0.0, 1.0)) -> Tuple[float, ...]:
         '''Returns the list of t where the tangent is at the given angle from the beginning of the
-        given t_range. The angle is in degrees or radians or as sin and cos values.'''
+        given t_range. The angle is in degrees or Angle.'''
         
         angle = l.angle(angle)
         
         start_slope = self.normal2d(t_range[1 if t_end else 0])
         start_rot: l.GMatrix = l.rotZ(sinr_cosr=(-start_slope[1], start_slope[0]))
         
-        qs: QuadraticSpline = self.transform(l.rotZ(angle.inv()) * start_rot)
+        qs: QuadraticSpline = self.transform(angle.inv().rotZ * start_rot)
         
         roots = qs.curve_maxima_minima_t(t_range)
 
@@ -815,13 +820,13 @@ class Path():
         return node.get_centre()
     
 
-    def azimuth_t(self, name, angle: Union[float, l.Angle]=0, t_end: bool=False, 
+    def azimuth_t(self, name, angle: float | l.Angle=0, t_end: bool=False, 
                 t_range: Tuple[float, float]=(0.0, 1.0)) -> Tuple[float, ...]:
         '''Returns the list of t where the tangent is at the given angle changed
         from the beginning of the given t_range.
         Args:
             name: The name of the path element.
-            degrees, randians or sinr_cosr: The angle which it is desired to find the t.
+            angle: The angle (in degrees or l.Angle) which it is desired to find the t.
             t_end: If True then the angle is measured from the end of the segment.
             t_range: The range of t to search for the t value that matches the angle.
         '''
@@ -1804,15 +1809,12 @@ class PathBuilderPrimitives(ABC):
 
         
     def stroke(self,
-               length,
-               angle: Union[float, l.Angle]=None,
-               degrees=None, 
-               radians=None, 
-               sinr_cosr=None,
-               xform=None, 
-               abs_angle: Union[float, l.Angle]=None,
-               name=None,
-               metadata=None) -> 'PathBuilderPrimitives':
+               length: float,
+               angle: float | l.Angle | None=None,
+               xform: l.GMatrix | None=None, 
+               abs_angle: float | l.Angle | None=None,
+               name: Any=None,
+               metadata: core.ModelAttributes=None) -> 'PathBuilderPrimitives':
         '''A line from the current point to a length away given
         by following the tangent from the previous op transformed by rotating
         by angle or a GMatrix transform.
@@ -1826,15 +1828,15 @@ class PathBuilderPrimitives(ABC):
         '''
         assert length >= 0, f"Cannot stroke with a negative length of {length}"
         assert len(self.ops) > 0, "Cannot line to without starting point"
-        angle = l.angle(angle=angle, degrees=degrees, radians=radians, sinr_cosr=sinr_cosr)
+        angle = l.angle(angle)
         abs_angle = None if abs_angle is None else l.angle(angle=abs_angle) 
         d_vector = to_gvector(self.last_op().direction_normalized(1.0))
-        if abs_angle:
+        if abs_angle is not None:
             d_vector = abs_angle.rotZ * d_vector
         else:
-            if angle:
+            if angle is not None:
                 d_vector = angle.rotZ * d_vector
-            if xform:
+            if xform is not None:
                 d_vector = xform * d_vector
                 
             if length > 0:
@@ -1864,37 +1866,37 @@ class PathBuilderPrimitives(ABC):
                                         meta_data=metadata,
                                         path_modifier=self.get_path_modifier()))
         
-    def _rotate(self, direction: l.GVector, degrees: float, radians: float, sinr_cosr:float, 
-                xform: l.GMatrix) -> l.GVector:
+    def _rotate(self, direction: l.GVector, angle: l.Angle | None, 
+                xform: l.GMatrix | None) -> l.GVector:
         
         if xform:
             d_vector = xform * direction
-            
-        elif degrees or radians or sinr_cosr:
-            d_vector = l.rotZ(degrees=degrees, 
-                          radians=radians, 
-                          sinr_cosr=sinr_cosr) * direction
+        elif angle is not None:
+            d_vector = angle.rotZ * direction
         else:
             d_vector = direction
         return d_vector
     
-    def _rotate_n(self, direction: l.GVector, degrees: Tuple[float],
-                  radians: Tuple[float], sinr_cosr: Tuple[float, float], xform: Tuple[l.GMatrix],
-                  size: int, ) -> List[l.GVector]:
-        d = size if size else max(len(degrees), len(radians), len(sinr_cosr), len(xform))
+    def _rotate_n(self, 
+                  direction: l.GVector, 
+                  angle: Tuple[l.Angle | float | None, ...],
+                  xform: tuple[l.GMatrix, ...], 
+                  size: int) -> List[l.GVector]:
+        d = size if size else max(len(angle), len(xform))
         directions = []
         for i in range(d):
-            v_degress = degrees[i] if len(degrees) > i else None
-            v_radians = radians[i] if len(radians) > i else None
-            v_sinr_cosr = sinr_cosr[i] if len(sinr_cosr) > i else None
+            v_angle = angle[i] if len(angle) > i else None
             v_xform = xform[i] if len(xform) > i else None
-            directions.append(self._rotate(direction, v_degress, v_radians, v_sinr_cosr, v_xform))
+            directions.append(self._rotate(direction, v_angle, v_xform))
         return directions
 
     
-    def rspline(self, length_or_rpoint, cv_len=(1, 1), degrees=(0, 0, 0),
-                radians=(None, None, None), sinr_cosr=(None, None, None), 
-                xform=(None, None, None), name=None, metadata=None, rel_len=None) -> 'PathBuilderPrimitives':
+    def rspline(self, length_or_rpoint: float, cv_len: tuple[float, ...]=(1, 1), 
+                angle: Tuple[l.Angle | float | None, ...]=(0, 0, 0),
+                xform: tuple[l.GMatrix, ...]=(None, None, None), 
+                name: Any=None, 
+                metadata: core.ModelAttributes=None, 
+                rel_len: tuple[float, ...]=None) -> 'PathBuilderPrimitives':
         '''Like [spline] but the control points are relative to the last point and direction.
         In a similar vein to [stroke], it will determine the end point by following the previous
         direction rotated by the given angle. The control point 1 and 2 angle is provided by
@@ -1908,14 +1910,10 @@ class PathBuilderPrimitives(ABC):
                     Default is (1, 1)
             name: The name of this node. Naming a node will make it an anchor.
             metadata: Provides parameters for rendering that override the renderer metadata.
-            degrees: A 3 tuple that contains a rotation angle for control points 1, 2 and 3
+            angle: A 3 tuple that contains a rotation angle for control points 1, 2 and 3
                     respectively from the previous direction.
-            radians: like degrees but in radians. If radians are provided they override any
-                    degrees values provided.
-            sinr_cosr: like degrees but in sin/cos of angle. If sinr_cosr are provided 
-                    they override any degrees or radians values provided.
-            xform: like degrees but in a GMatrix transform, if provided it overrides any
-                    degrees, radians or sinr_cosr values provided.
+            xform: like angle but in a GMatrix transform, if provided it overrides any
+                    angle values provided.
             rel_len: Forces control points to have relatively the same length as the
                     distance from the end points. If cv_len is set it is used as a multiplier.
         '''
@@ -1929,17 +1927,13 @@ class PathBuilderPrimitives(ABC):
             rpoint = l.GVector(LIST_3_FLOAT(length_or_rpoint))
 
         assert len(self.ops) > 0, "Cannot rspline to without starting point"
-        if radians is None:
-            radians = (None, None, None)
-        if sinr_cosr is None:
-            sinr_cosr = (None, None, None)
-        if degrees is None:
-            degrees = (None, None, None)
+
+        angles = LIST_3_ANGLE_OR_NONE(angle)
         if xform is None:
             xform = (None, None, None)
         
         direction = to_gvector(self.last_op().direction_normalized(1.0))
-        directions = self._rotate_n(direction, degrees, radians, sinr_cosr, xform, 3)
+        directions = self._rotate_n(direction, angles, xform, 3)
         
         last_pos = to_gvector(self.last_op().lastPosition())
         points = [None, None, None]
@@ -1981,8 +1975,10 @@ class PathBuilderPrimitives(ABC):
                 path_modifier=self.get_path_modifier()))
         
     
-    def spline(self, points, name=None, metadata=None, 
-               cv_len=(None, None), degrees=(0, 0), radians=(0, 0), rel_len=None) -> 'PathBuilderPrimitives':
+    def spline(self, points, name: Any=None, metadata: core.ModelAttributes=None, 
+               cv_len: tuple[float | None, float | None]=(None, None), 
+               angle: Tuple[l.Angle | float | None, ...]=(0, 0), 
+               rel_len=None) -> 'PathBuilderPrimitives':
         '''Adds a cubic Bezier spline node to the path.
         Args:
             points: Either 3 point list (first control point is the last point) or a 
@@ -2000,8 +1996,7 @@ class PathBuilderPrimitives(ABC):
                     distance from the end points. If cv_len is set it is used as a multiplier.
         '''
         assert len(self.ops) > 0, "Cannot line to without starting point"
-        degrees = LIST_2_FLOAT_OR_NONE(degrees) if degrees else (None, None)
-        radians = LIST_2_FLOAT_OR_NONE(radians) if radians else (None, None)
+        angles = LIST_2_ANGLE_OR_NONE(angle)
         cv_len = LIST_2_FLOAT_OR_NONE(cv_len) if cv_len else (None, None)
         points = np.array(LIST_23X2_FLOAT(points))
         if len(points) == 2:
@@ -2025,8 +2020,8 @@ class PathBuilderPrimitives(ABC):
         if rel_len is not None:
             d = np.sqrt(np.sum((cv0 - cv3)**2))
             cv_len = tuple(rel_len * d if v is None else v * d * rel_len for v in cv_len)
-        cv1 = self.squeeze_and_rot(cv0, cv1, cv_len[0], degrees[0], radians[0])
-        cv2 = self.squeeze_and_rot(cv3, cv2, cv_len[1], degrees[1], radians[1])
+        cv1 = self.squeeze_and_rot(cv0, cv1, cv_len[0], angles[0])
+        cv2 = self.squeeze_and_rot(cv3, cv2, cv_len[1], angles[1])
         
         points = np.array(LIST_3X2_FLOAT([cv1, cv2, cv3]))
         return self.add_op(self._SplineTo(points=points,
@@ -2036,16 +2031,12 @@ class PathBuilderPrimitives(ABC):
                                           path_modifier=self.get_path_modifier()))
         
     def arc_tangent_radius_sweep(self,
-                                 radius,
-                                 sweep_angle_degrees=0,
-                                 sweep_angle_radians=None,
-                                 sweep_sinr_cosr=None,
-                                 sweep_direction=None,
-                                 side=False, 
-                                 degrees=0, 
-                                 radians=None, 
-                                 direction=None, 
-                                 sinr_cosr=None,
+                                 radius: float,
+                                 sweep_angle: float | l.Angle=0,
+                                 sweep_direction: bool=None,
+                                 side: bool=False, 
+                                 angle: float | l.Angle=0, 
+                                 direction: tuple[float, float]=None, 
                                  name=None,
                                  metadata=None) -> 'PathBuilderPrimitives':
         '''Defines a circular arc starting at the previous operator's end point
@@ -2056,9 +2047,8 @@ class PathBuilderPrimitives(ABC):
         else:
             direction = _normalize(direction)
         
-        t_dir = (
-            l.rotZ(degrees=degrees, radians=radians, sinr_cosr=sinr_cosr)
-            * to_gvector(direction))
+        angle = l.angle(angle)
+        t_dir = (angle.rotZ * to_gvector(direction))
         direction = t_dir.A[0:len(direction)]
         centre, _ = solve_circle_tangent_radius(start, direction, radius, side)
 
@@ -2066,18 +2056,16 @@ class PathBuilderPrimitives(ABC):
         cos_s = n_start[0]
         sin_s = n_start[1]
         
-        if sweep_angle_radians is None:
-            sweep_angle_radians = sweep_angle_degrees * np.pi / 180
+        sweep_angle = l.angle(sweep_angle)
         
-        if sweep_sinr_cosr is not None:
-            sin_sweep, cos_sweep = sweep_sinr_cosr
-            assert sweep_direction is not None, 'If sweep_sinr_cosr is specified a ' \
+        if isinstance(sweep_angle, l.AngleSinCos):
+            sin_sweep, cos_sweep = sweep_angle.sinr_cosr()
+            assert sweep_direction is not None, 'If sweep_angle sinr_cosr is specified a ' \
                 'sweep_direction must also be specified.'
             path_direction = sweep_direction
         else:
-            sin_sweep = np.sin(sweep_angle_radians)
-            cos_sweep = np.cos(sweep_angle_radians)
-            path_direction = sweep_angle_radians >= 0
+            sin_sweep, cos_sweep = sweep_angle.sinr_cosr()
+            path_direction = sweep_angle.degrees() >= 0
         
         cos_e = cos_s * cos_sweep - sin_s * sin_sweep
         sin_e = sin_s * cos_sweep + sin_sweep * cos_s
@@ -2094,9 +2082,8 @@ class PathBuilderPrimitives(ABC):
             path_modifier=self.get_path_modifier()))
 
     def arc_centre_sweep(self,
-                         centre, 
-                         sweep_angle_degrees=0,
-                         sweep_angle_radians=None,
+                         centre: tuple[float, float], 
+                         sweep_angle: float | l.Angle=0,
                          name=None,
                          metadata=None) -> 'PathBuilderPrimitives':
         '''Defines a circular arc starting at the previous operator's end point
@@ -2110,17 +2097,15 @@ class PathBuilderPrimitives(ABC):
         cos_s = n_start[0]
         sin_s = n_start[1]
         
-        if sweep_angle_radians is None:
-            sweep_angle_radians = sweep_angle_degrees * np.pi / 180
+        sweep_angle = l.angle(sweep_angle)
             
-        sin_sweep = np.sin(sweep_angle_radians)
-        cos_sweep = np.cos(sweep_angle_radians)
+        sin_sweep, cos_sweep = sweep_angle.sinr_cosr()
         
         cos_e = cos_s * cos_sweep - sin_s * sin_sweep
         sin_e = sin_s * cos_sweep + sin_sweep * cos_s
         last = np.array([cos_e * radius + centre[0], sin_e * radius + centre[1]])
         
-        path_direction = sweep_angle_radians >= 0
+        path_direction = sweep_angle.degrees() >= 0
         
         return self.add_op(self._ArcTo(end_point=last, 
                                        centre=centre, 
@@ -2200,8 +2185,12 @@ class PathBuilderPrimitives(ABC):
                                        meta_data=metadata,
                                        path_modifier=self.get_path_modifier()))
     
-    def arc_tangent_point(self, last, degrees=0, radians=None, direction=None, 
-                          name=None, metadata=None) -> 'PathBuilderPrimitives':
+    def arc_tangent_point(self, 
+                          last: tuple[float, float], 
+                          angle: l.Angle | float =0, 
+                          direction: tuple[float, float] | None=None, 
+                          name: Any=None, 
+                          metadata: core.ModelAttributes=None) -> 'PathBuilderPrimitives':
         '''Defines a circular arc starting at the previous operator's end point
         and ending at last. The tangent (vector given by the direction parameter or
         if not provided by the last segment's direction vector) may be optionally
@@ -2212,9 +2201,8 @@ class PathBuilderPrimitives(ABC):
             direction = self.last_op().direction_normalized(1.0)
         else:
             direction = _normalize(np.array(direction))
-        
-        t_dir = (
-            l.rotZ(degrees=degrees, radians=radians) * to_gvector(direction))
+        angle = l.angle(angle)
+        t_dir = angle.rotZ * to_gvector(direction)
         direction = t_dir.A[0:len(direction)]
         centre, radius = solve_circle_tangent_point(start, direction, last)
         if centre is None:
@@ -2268,8 +2256,8 @@ class PathBuilderPrimitives(ABC):
         
         angle = l.angle(angle)
     
-    def squeeze_and_rot(self, point, control, cv_len, degrees, radians):
-        if cv_len is None and not degrees and not radians:
+    def squeeze_and_rot(self, point: tuple[float, float], control: tuple[float, float], cv_len: float, angle: l.Angle | None):
+        if cv_len is None and not angle:
             return control
         gpoint = l.GVector(LIST_3_FLOAT(point))
         gcontrol = l.GVector(LIST_3_FLOAT(control))
@@ -2277,11 +2265,9 @@ class PathBuilderPrimitives(ABC):
         if cv_len is not None and g_rel.length() > EPSILON:
             g_rel = g_rel.N * cv_len
 
-        if radians:
-            g_rel = l.rotZ(radians=radians) * g_rel
-        elif degrees:
-            g_rel = l.rotZ(degrees=degrees) * g_rel
-            
+        if angle:
+            g_rel = angle.rotZ * g_rel
+    
         return (gpoint + g_rel).A[0:len(point)]
     
     def at(self, name: Any, t: float, apply_offset: bool=True) -> np.ndarray:
@@ -2722,7 +2708,7 @@ def test():
             .move([0, 0])
             .line([100 * SCALE, 0], 'linear')
             .spline([[150 * SCALE, 100 * SCALE], [20 * SCALE, 100 * SCALE]],
-                     name='curve', cv_len=(0.5,0.4), degrees=(90,), rel_len=0.8)
+                     name='curve', cv_len=(0.5,0.4), angle=(90,), rel_len=0.8)
             .line([0, 100 * SCALE], 'linear2')
             .line([0, 0], 'linear3')
             
@@ -2760,7 +2746,7 @@ class LinearExtrude(ExtrudedShape):
             .move([0, 0])
             .line([100 * _SCALE, 0], 'linear')
             .spline([[150 * _SCALE, 100 * _SCALE], [20 * _SCALE, 100 * _SCALE]],
-                     name='curve', cv_len=(0.5,0.4), degrees=(90,), rel_len=0.8)
+                     name='curve', cv_len=(0.5,0.4), angle=(90,), rel_len=0.8)
             .line([0, 100 * _SCALE], 'linear2')
             .line([0, 0], 'linear3')
             .build(),
@@ -2818,7 +2804,7 @@ class LinearExtrude(ExtrudedShape):
                 PathBuilder()
                     .move([0, 0])
                     .line([50 * _SCALE, 0], 'linear1')
-                    .arc_tangent_point([0, 50 * _SCALE], name='curve', degrees=90)
+                    .arc_tangent_point([0, 50 * _SCALE], name='curve', angle=90)
                     .line([0, 0], 'linear4')
                     .build(),
                 h=50,
@@ -3097,9 +3083,7 @@ class LinearExtrude(ExtrudedShape):
 class RotateExtrude(ExtrudedShape):
     '''Generates a circular/arc extrusion of a given Path.'''
     path: Path=core.dtfield(doc='The path to extrude.')
-    degrees: float=core.dtfield(360, doc='The number of degrees to extrude.')
-    radians: float=core.dtfield(
-        None, doc='The number of radians to extrude. (overrides degrees if not None)')
+    angle: l.Angle | float=core.dtfield(360, doc='The sweep angle to extrude.')
     convexity: int=core.dtfield(10, doc='Openscad convexity parameter.')
     path_fn: int=None
     fn: int=None
@@ -3114,11 +3098,11 @@ class RotateExtrude(ExtrudedShape):
         PathBuilder()
             .move([0, 0])
             .line([110 * _SCALE, 0], 'linear')
-            .arc_tangent_point([10 * _SCALE, 100 * _SCALE], name='curve', degrees=120)
+            .arc_tangent_point([10 * _SCALE, 100 * _SCALE], name='curve', angle=120)
             .line([0, 100 * _SCALE], 'linear2')
             .line([0, 0], 'linear3')
             .build(),
-        degrees=120,
+        angle=120,
         fn=80,
         use_polyhedrons=True
         )
@@ -3153,11 +3137,11 @@ class RotateExtrude(ExtrudedShape):
                     .move([0, 0])
                     .line([110 * _SCALE, 0], 'linear')
                     .line([25 * _SCALE, 25 * _SCALE], 'linear1')
-                    .arc_tangent_point([10 * _SCALE, 100 * _SCALE], name='curve', degrees=-40)
+                    .arc_tangent_point([10 * _SCALE, 100 * _SCALE], name='curve', angle=-40)
                     .line([0, 100 * _SCALE], 'linear2')
                     .line([0, 0], 'linear3')
                     .build(),
-                degrees=120,
+                angle=120,
                 fn=80,
                 ),
             anchors=(
@@ -3174,7 +3158,7 @@ class RotateExtrude(ExtrudedShape):
                     .qspline([(100 * _SCALE, 100 * _SCALE), (0, _SCALE * 50)], name='curve')
                     .line([_SCALE * 50, 0], 'linear1')
                     .build(),
-                degrees=120,
+                angle=120,
                 fn=80,
                 use_polyhedrons=False
                 ),
@@ -3190,13 +3174,13 @@ class RotateExtrude(ExtrudedShape):
                 core.surface_args('curve', 0.6, 0),
                 core.surface_args('curve', 1, 0),
                 core.surface_args('curve', 1, 120),
-                core.surface_args('azimuth', 'curve', az_angle=10, degrees=120),
-                core.surface_args('azimuth', 'curve', az_angle=20, degrees=120),
-                core.surface_args('azimuth', 'curve', az_angle=30, degrees=120),
-                core.surface_args('azimuth', 'curve', az_angle=40, degrees=120),
-                core.surface_args('azimuth', 'curve', az_angle=50, degrees=120),
-                core.surface_args('azimuth', 'curve', az_angle=0, degrees=121),
-                core.surface_args('azimuth', 'curve', az_angle=-5, t_end=True, degrees=120),
+                core.surface_args('azimuth', 'curve', az_angle=10, angle=120),
+                core.surface_args('azimuth', 'curve', az_angle=20, angle=120),
+                core.surface_args('azimuth', 'curve', az_angle=30, angle=120),
+                core.surface_args('azimuth', 'curve', az_angle=40, angle=120),
+                core.surface_args('azimuth', 'curve', az_angle=50, angle=120),
+                core.surface_args('azimuth', 'curve', az_angle=0, angle=121),
+                core.surface_args('azimuth', 'curve', az_angle=-5, t_end=True, angle=120),
                 )),
         'example7': core.ExampleParams(
             shape_args=core.args(
@@ -3208,7 +3192,7 @@ class RotateExtrude(ExtrudedShape):
                         (0, _SCALE * 50)], name='curve')
                     .line([_SCALE * 50, 0], 'linear1')
                     .build(),
-                degrees=120,
+                angle=120,
                 fn=80,
                 use_polyhedrons=False
                 ),
@@ -3224,13 +3208,13 @@ class RotateExtrude(ExtrudedShape):
                 core.surface_args('curve', 0.6, 0),
                 core.surface_args('curve', 1, 0),
                 core.surface_args('curve', 1, 120),
-                core.surface_args('azimuth', 'curve', az_angle=0, degrees=120),
-                core.surface_args('azimuth', 'curve', az_angle=2, degrees=120),
-                core.surface_args('azimuth', 'curve', az_angle=20, degrees=120),
-                core.surface_args('azimuth', 'curve', az_angle=30, degrees=120),
-                core.surface_args('azimuth', 'curve', az_angle=40, degrees=120),
-                core.surface_args('azimuth', 'curve', az_angle=140, degrees=120),
-                core.surface_args('azimuth', 'curve', az_angle=-1, t_end=True, degrees=120),
+                core.surface_args('azimuth', 'curve', az_angle=0, angle=120),
+                core.surface_args('azimuth', 'curve', az_angle=2, angle=120),
+                core.surface_args('azimuth', 'curve', az_angle=20, angle=120),
+                core.surface_args('azimuth', 'curve', az_angle=30, angle=120),
+                core.surface_args('azimuth', 'curve', az_angle=40, angle=120),
+                core.surface_args('azimuth', 'curve', az_angle=140, angle=120),
+                core.surface_args('azimuth', 'curve', az_angle=-1, t_end=True, angle=120),
                 )),
         'arc_azimuth': core.ExampleParams(
             shape_args=core.args(
@@ -3238,21 +3222,21 @@ class RotateExtrude(ExtrudedShape):
                     .move([0, _SCALE * -25])
                     .line([_SCALE * 25, _SCALE * -25], 'linear1')
                     .arc_tangent_point([_SCALE * 25, _SCALE * -50], name='curve1')
-                    .arc_tangent_point([_SCALE * 25, _SCALE * 50], degrees=180, name='curve2')
-                    .arc_tangent_point([_SCALE * 25, _SCALE * 25], degrees=180, name='curve3')
+                    .arc_tangent_point([_SCALE * 25, _SCALE * 50], angle=180, name='curve2')
+                    .arc_tangent_point([_SCALE * 25, _SCALE * 25], angle=180, name='curve3')
                     .line([0, _SCALE * 25], 'linear2')
                     .line([0, _SCALE * -25], 'linear3')
                     .build(),
-                degrees=120,
+                angle=120,
                 fn=80,
                 use_polyhedrons=False
                 ),
             anchors=(
                 core.surface_args('linear1', 0.5, 0),
-                core.surface_args('azimuth', 'curve1', az_angle=l.angle(-45), degrees=120),
-                core.surface_args('azimuth', 'curve1', az_angle=45, t_end=True, degrees=120),
-                core.surface_args('azimuth', 'curve2', az_angle=45, degrees=120),
-                core.surface_args('azimuth', 'curve2', az_angle=-45, t_end=True, degrees=120),
+                core.surface_args('azimuth', 'curve1', az_angle=l.angle(-45), angle=120),
+                core.surface_args('azimuth', 'curve1', az_angle=45, t_end=True, angle=120),
+                core.surface_args('azimuth', 'curve2', az_angle=45, angle=120),
+                core.surface_args('azimuth', 'curve2', az_angle=-45, t_end=True, angle=120),
                 )),
         'arc_azimuth2': core.ExampleParams(
             shape_args=core.args(
@@ -3260,21 +3244,21 @@ class RotateExtrude(ExtrudedShape):
                     .move([0, _SCALE * 25])
                     .line([_SCALE * 25, _SCALE * 25], 'linear1')
                     .arc_tangent_point([_SCALE * 25, _SCALE * 50], name='curve1')
-                    .arc_tangent_point([_SCALE * 25, _SCALE * -50], degrees=180, name='curve2')
-                    .arc_tangent_point([_SCALE * 25, _SCALE * -25], degrees=180, name='curve3')
+                    .arc_tangent_point([_SCALE * 25, _SCALE * -50], angle=180, name='curve2')
+                    .arc_tangent_point([_SCALE * 25, _SCALE * -25], angle=180, name='curve3')
                     .line([0, _SCALE * -25], 'linear2')
                     .line([0, _SCALE * 25], 'linear3')
                     .build(),
-                degrees=120,
+                angle=120,
                 fn=80,
                 use_polyhedrons=False
                 ),
             anchors=(
                 core.surface_args('linear1', 0.5, 0),
-                # core.surface_args('azimuth', 'curve1', az_angle=45, degrees=120),
-                # core.surface_args('azimuth', 'curve1', az_angle=-45, t_end=True, degrees=120),
-                # core.surface_args('azimuth', 'curve2', az_angle=-45, degrees=120),
-                # core.surface_args('azimuth', 'curve2', az_angle=45, t_end=True, degrees=120),
+                # core.surface_args('azimuth', 'curve1', az_angle=45, angle=120),
+                # core.surface_args('azimuth', 'curve1', az_angle=-45, t_end=True, angle=120),
+                # core.surface_args('azimuth', 'curve2', az_angle=-45, angle=120),
+                # core.surface_args('azimuth', 'curve2', az_angle=45, t_end=True, angle=120),
                 )),
         'offset_ex': core.ExampleParams(
             description='An example of using the offset modifier with a Path containing a '
@@ -3286,21 +3270,21 @@ class RotateExtrude(ExtrudedShape):
                     .arc_tangent_point([_SCALE * 25, _SCALE * -50], name='curve1')
                     .spline(
                         ([_SCALE * 50, _SCALE * -50], [_SCALE * 5, _SCALE * 50], [_SCALE * 25, _SCALE * 50]), 
-                        degrees=(0, 180), rel_len=0.5, name='curve2')
+                        angle=(0, 180), rel_len=0.5, name='curve2')
                     .qspline(([_SCALE * 55, _SCALE * 45], [_SCALE * 25, _SCALE * 25]), name='curve3')
                     .line([5 * _SCALE, _SCALE * 25], 'linear2')
                     .line([5 * _SCALE, _SCALE * -25], 'linear3')
                     .build(),
-                degrees=120,
+                angle=120,
                 fn=80,
                 use_polyhedrons=False
                 ),
             anchors=(
                 core.surface_args('linear1', 0.5, 0),
-                core.surface_args('azimuth', 'curve1', az_angle=l.angle(-45), degrees=120),
-                core.surface_args('azimuth', 'curve1', az_angle=45, t_end=True, degrees=120),
-                core.surface_args('azimuth', 'curve2', az_angle=45, degrees=120),
-                core.surface_args('azimuth', 'curve2', az_angle=-45, t_end=True, degrees=120),
+                core.surface_args('azimuth', 'curve1', az_angle=l.angle(-45), angle=120),
+                core.surface_args('azimuth', 'curve1', az_angle=45, t_end=True, angle=120),
+                core.surface_args('azimuth', 'curve2', az_angle=45, angle=120),
+                core.surface_args('azimuth', 'curve2', az_angle=-45, t_end=True, angle=120),
                 core.surface_args('curve3', 0.5),
                 )),
         }
@@ -3354,10 +3338,8 @@ class RotateExtrude(ExtrudedShape):
             renderer, 
             tuple(core.ARGS_XLATION_TABLE.keys()), 
             exclude=('path', 'path_fn', 'degrees', 'radians', 'use_polyhedrons'))
-        angle = self.degrees
-        if self.radians:
-            angle = self.radians * 180 / np.pi
-        params['angle'] = angle
+
+        params['angle'] = l.angle(self.angle).degrees() # Openscad uses degrees for angle.
         
         return renderer.add(renderer.model.rotate_extrude(**params)(polygon))
     
@@ -3371,11 +3353,8 @@ class RotateExtrude(ExtrudedShape):
         '''Generates a list of transforms for the given set of parameters.'''
         fn = self.select_attrs(renderer).fn
         segments = fn if fn else 16
-        radians = self.radians
-        if radians is None:
-            radians = np.pi * self.degrees / 180.0
-        
-        rotations = radians / (np.pi * 2)
+
+        rotations = l.angle(self.angle).radians() / (np.pi * 2)
         if np.abs(rotations) > 1:
             rotations = np.sign(rotations)
         
@@ -3406,9 +3385,9 @@ class RotateExtrude(ExtrudedShape):
                     faces=builder.faces))
         return renderer
 
-    def to_3d_from_2d(self, vec_2d, angle=0., degrees=0, radians=None):
-        return l.rotZ(degrees=degrees, radians=radians, angle=angle
-            ) * l.rotX(90) * l.GVector([vec_2d[0], vec_2d[1], 0])
+    def to_3d_from_2d(self, vec_2d, angle: float | l.Angle=0.):
+        angle = l.angle(angle)
+        return angle.rotZ * l.ROTX_90 * l.GVector([vec_2d[0], vec_2d[1], 0])
     
     def _z_radians_scale_align(self, rel_h, twist_vector):
         xelipse_max = self.scale[0] * rel_h + (1 - rel_h)
@@ -3418,17 +3397,18 @@ class RotateExtrude(ExtrudedShape):
         return eliplse_angle - circle_angle
 
     @core.anchor('Anchor to the path edge projected to surface.')
-    def edge(self, path_node_name, t=0, degrees=0, radians=None, apply_offset=True):
+    def edge(self, path_node_name, t=0, angle=0, apply_offset=True):
         '''Anchors to the edge projected to the surface of the rotated extrusion.
         Args:
             path_node_name: The path node name to attach to.
             t: 0 to 1 being the beginning and end of the segment. Numbers out of 0-1
                range will depart the path linearly.
-            degrees or radians: The angle along the rotated extrusion.
+            angle: The angle along the rotated extrusion.
             apply_offset: If True and the Path has an offset, then the offset will be
                     applied to the position. This provides an easy way to align
                     the anchor to the base Path of the extrusion.
         '''
+        angle: l.Angle = l.angle(angle)
         if path_node_name not in self.path.name_map:
             raise PathElelementNotFound(f'Could not find {path_node_name}')
         op = self.path.name_map.get(path_node_name)
@@ -3437,7 +3417,7 @@ class RotateExtrude(ExtrudedShape):
         normal = op.normal2d(t)
         pos = op.position(t, apply_offset=apply_offset)
         
-        return (l.rotZ(degrees=degrees, radians=radians)
+        return (angle.rotZ
                      * l.ROTX_90  # Projection from 2D Path to 3D space
                      * l.translate([pos[0], pos[1], 0])
                      * l.ROTY_90  
@@ -3448,7 +3428,7 @@ class RotateExtrude(ExtrudedShape):
         return l.IDENTITY
     
     @core.anchor('Centre of segment.')
-    def centre_of(self, segment_name, t=0, degrees=0, radians=None, normal_segment=None) -> l.GMatrix:
+    def centre_of(self, segment_name: Any, t: float=0, angle: l.Angle | float=0, normal_segment: Any=None) -> l.GMatrix:
         '''Returns a transformation to the centre of the given segment (arc) with the
         direction aligned to the coordinate system.'''
 
@@ -3460,15 +3440,15 @@ class RotateExtrude(ExtrudedShape):
         if not op:
             raise UnknownOperationException(f'Could not find normal segment name "{normal_segment}"')
         normal = op.normal2d(t)
-        
-        return (l.rotZ(degrees=degrees, radians=radians)
+        angle = l.angle(angle)
+        return (angle.rotZ
                 * l.ROTX_90  # Projection from 2D Path to 3D space
                 * l.translate([centre_2d[0], centre_2d[1], 0])
                 * l.rotZSinCos(-normal[1], -normal[0]))
         
     @core.anchor('Azimuth to segment start.')
     def azimuth(self, segment_name, az_angle: Union[float, l.Angle]=0,  t_index: int=0,
-                t_end: bool=False, degrees: float=0, radians: float=None, 
+                t_end: bool=False, angle: float | l.Angle=0, 
                 t_range: Tuple[float, float]=(0.0, 1.0), apply_offset=True) -> l.GMatrix:
         '''Returns a transformation to the point on the given curve segment (cubic, quadratic, 
         or arc) where the normal forms the specified azimuth from the start of the given t_range.
@@ -3487,7 +3467,7 @@ class RotateExtrude(ExtrudedShape):
                 f'Azimuth not possible for segment "{segment_name}" with {params_str}')
             
         t = azimuth_t[t_index]
-        return self.edge(segment_name, t, degrees, radians, apply_offset=apply_offset)
+        return self.edge(segment_name, t, angle, apply_offset=apply_offset)
         
 
 # Uncomment the line below to default to writing OpenSCAD files

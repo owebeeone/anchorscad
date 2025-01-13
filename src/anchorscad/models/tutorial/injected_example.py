@@ -23,7 +23,7 @@ class ClockFace(ad.CompositeShape):
                 if i % div == 0:
                     maker.add_at(self.sphere_node(r=r + self.r)
                                  .solid(('point', i)).at('centre'),
-                        'surface', degrees=i * 360 / self.count_points)
+                        'surface', angle=i * 360 / self.count_points)
                     break
         return maker
 

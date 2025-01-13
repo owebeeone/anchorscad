@@ -20,15 +20,15 @@ class Sleeve(ad.CompositeShape):
     outside_cyl_cage_node: ad.Node=ad.dtfield(
             ad.ShapeNode(ad.Cylinder, 'h', {'r': 'outside_r'}), init=False)
     cage_of_node: ad.Node=ad.CageOfNode()
-    start_degrees: float=ad.dtfield(0, 'Start angle of sleeve')
-    end_degrees: float=ad.dtfield(360, 'End angle of sleeve')
+    start_angle: float | ad.Angle=ad.dtfield(0, 'Start angle of sleeve')
+    end_angle: float | ad.Angle=ad.dtfield(360, 'End angle of sleeve')
     rotate_extrude_node: ad.Node=ad.dtfield(
             ad.ShapeNode(ad.RotateExtrude, {}), init=False)
     epsilon: float=0.01 
      
     EXAMPLE_SHAPE_ARGS=ad.args(hide_cage=False, h=10, fn=16, 
-                               start_degrees=20, 
-                               end_degrees=330)
+                               start_angle=20, 
+                               end_angle=330)
     EXAMPLE_ANCHORS=(ad.surface_args('surface', 0),
                      ad.surface_args('inner_surface', 0),)
 
@@ -52,27 +52,32 @@ class Sleeve(ad.CompositeShape):
                 .line((self.inside_r, -self.h / 2), name='base_segment')
                 .line((self.inside_r, 0), name='lower_inner')
                 .build())
-        sleeve_shape = self.rotate_extrude_node(
+        
+        s_end_angle: ad.Angle = ad.angle(self.end_angle)
+        s_start_angle: ad.Angle = ad.angle(self.start_angle)
+        sleeve_shape: ad.Shape = self.rotate_extrude_node(
                 path=path, 
-                degrees=self.end_degrees - self.start_degrees)
+                angle=s_end_angle - s_start_angle)
         
         maker.add_at(sleeve_shape.solid('sleeve').at('top_segment', 1), 
-                     'surface', degrees=self.start_degrees, rh=1,
+                     'surface', angle=s_start_angle, rh=1,
                      post=ad.ROTX_90)
         return maker
 
     @ad.anchor('outer surface anchor')
     def surface(self, *args, **kwds):
         '''Inner surface anchor with corrected Z points away from surface.'''
-        return ad.rotZ(-self.start_degrees) \
-                * self.maker.at('outer', 'surface', *args, **kwds)
+        s_start_angle: ad.Angle = ad.angle(self.start_angle)
+        return (-s_start_angle).rotZ * self.maker.at('outer', 'surface', *args, **kwds)
 
 
     @ad.anchor('inner surface anchor')
     def inner_surface(self, *args, **kwds):
         '''Inner surface anchor with corrected Z points away from surface.'''
-        return ad.rotZ(-self.start_degrees) \
-                * self.maker.at('inner', 'surface', *args, **kwds) * ad.ROTX_180
+        
+        s_start_angle: ad.Angle = ad.angle(self.start_angle)
+        return (-s_start_angle).rotZ * \
+                self.maker.at('inner', 'surface', *args, **kwds) * ad.ROTX_180
 
 @ad.shape
 @ad.datatree
@@ -88,19 +93,19 @@ class SleeveAndKeyway(ad.CompositeShape):
     outside_cyl_cage_node: ad.Node=ad.dtfield(
             ad.ShapeNode(ad.Cylinder, 'h', {'r': 'outside_r'}), init=False)
     cage_of_node: ad.Node=ad.CageOfNode()
-    start_degrees: float=ad.dtfield(0, 'Start angle of sleeve')
-    end_degrees: float=ad.dtfield(360, 'End angle of sleeve')
-    keyway_start_degrees: float=ad.dtfield(0, 'Start angle of keyway')
-    keyway_end_degrees: float=ad.dtfield(0, 'End angle of keyway')
+    start_angle: float | ad.Angle=ad.dtfield(0, 'Start angle of sleeve')
+    end_angle: float | ad.Angle=ad.dtfield(360, 'End angle of sleeve')
+    keyway_start_angle: float | ad.Angle=ad.dtfield(0, 'Start angle of keyway')
+    keyway_end_angle: float | ad.Angle=ad.dtfield(0, 'End angle of keyway')
     linear_extrude_node: ad.Node=ad.dtfield(
             ad.ShapeNode(ad.LinearExtrude, 'h'), init=False)
     epsilon: float=0.01 
      
     EXAMPLE_SHAPE_ARGS=ad.args(hide_cage=False, h=10, fn=16, 
-                               start_degrees=20,
-                               keyway_start_degrees=20,
-                               keyway_end_degrees=80, 
-                               end_degrees=330)
+                               start_angle=20,
+                               keyway_start_angle=20,
+                               keyway_end_angle=80, 
+                               end_angle=330)
     EXAMPLE_ANCHORS=(ad.surface_args('surface', 0),
                      ad.surface_args('inner_surface', 0),)
 
@@ -116,12 +121,17 @@ class SleeveAndKeyway(ad.CompositeShape):
                     h=self.h + self.epsilon), cage_name='inner')
                     .colour((1, 0, 0, 0.4)).at('centre'))
         
-        to_end_angle = self.end_degrees - self.start_degrees
-        keyway_to_end_angle = self.end_degrees - self.keyway_end_degrees
-        keyway_start_angle = self.keyway_start_degrees - self.start_degrees
+        s_start_angle = ad.angle(self.start_angle)
+        s_end_angle = ad.angle(self.end_angle)
+        s_keyway_start_angle = ad.angle(self.keyway_start_angle)
+        s_keyway_end_angle = ad.angle(self.keyway_end_angle)
+        
+        to_end_angle = s_end_angle - s_start_angle
+        keyway_to_end_angle = s_end_angle - s_keyway_end_angle
+        keyway_start_angle = s_keyway_start_angle - s_start_angle
         
         inner_p = ad.GVector((self.inside_r, 0, 0))
-        end_keyway_p = ad.rotZ(self.keyway_end_degrees - self.start_degrees) * inner_p
+        end_keyway_p = ad.rotZ(self.keyway_end_angle - self.start_angle) * inner_p
 
         path = (ad.PathBuilder()
                 .move((self.outside_r, 0))
@@ -141,21 +151,21 @@ class SleeveAndKeyway(ad.CompositeShape):
         
         maker.add_at(sleeve_shape.solid('sleeve')
                      .at('outside_arc', 1, post=ad.ROTX_270), 
-                     'surface', degrees=self.start_degrees, rh=1,
+                     'surface', angle=s_start_angle, rh=1,
                      post=ad.ROTX_90)
         return maker
 
     @ad.anchor('outer surface anchor')
     def surface(self, *args, **kwds):
         '''Inner surface anchor with corrected Z points away from surface.'''
-        return ad.rotZ(-self.start_degrees) \
+        return ad.rotZ(-self.start_angle) \
                 * self.maker.at('outer', 'surface', *args, **kwds)
 
 
     @ad.anchor('inner surface anchor')
     def inner_surface(self, *args, **kwds):
         '''Inner surface anchor with corrected Z points away from surface.'''
-        return ad.rotZ(-self.start_degrees) \
+        return ad.rotZ(-self.start_angle) \
                 * self.maker.at('inner', 'surface', *args, **kwds) * ad.ROTX_180
 
 

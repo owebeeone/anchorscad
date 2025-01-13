@@ -56,10 +56,10 @@ class TactileSwitchTL1105Lead(ad.CompositeShape):
         
         path = (ad.PathBuilder()
                 .move((0, 0), direction=(1, 0))
-                .stroke(self.lx_bend1, degrees=180, name='b0')
+                .stroke(self.lx_bend1, 180, name='b0')
                 .arc_tangent_radius_sweep(
                     self.thickness, 
-                    sweep_sinr_cosr=norm_bend,
+                    sweep_angle=ad.angle(sinr_cosr=norm_bend),
                     sweep_direction=False,
                     metadata=self.metadata,
                     name='bc1')
@@ -67,7 +67,7 @@ class TactileSwitchTL1105Lead(ad.CompositeShape):
                 .stroke(vlen, xform=rotI2, name='b2')
                 .arc_tangent_radius_sweep(
                     self.thickness, 
-                    sweep_sinr_cosr=norm_bend,
+                    sweep_angle=ad.angle(sinr_cosr=norm_bend),
                     sweep_direction=False,
                     metadata=self.metadata,
                     name='bc3')
@@ -77,7 +77,7 @@ class TactileSwitchTL1105Lead(ad.CompositeShape):
                 .stroke(vlen, xform=rotI, name='t2')
                 .arc_tangent_radius_sweep(
                     self.thickness, 
-                    sweep_sinr_cosr=norm_bend_back_x2,
+                    sweep_angle=ad.angle(sinr_cosr=norm_bend_back_x2),
                     sweep_direction=False,
                     metadata=self.metadata,
                     name='tc1')

@@ -41,11 +41,11 @@ class SwissEyeletBase(ad.CompositeShape):
     swiss_eyelet_sequence: tuple=ad.dtfield(self_default=lambda s:
         (
          ('P', ad.args(h=s.depth)),
-         ('R', ad.args(sweep_degrees=-s.swiss_eyelet_bend_degrees)),
+         ('R', ad.args(sweep_angle=-s.swiss_eyelet_bend_degrees)),
          ('P', ad.args(h=s.depth)),
-         ('R', ad.args(sweep_degrees=s.swiss_eyelet_bend_degrees)),
+         ('R', ad.args(sweep_angle=s.swiss_eyelet_bend_degrees)),
          ('P', ad.args(h=s.depth)),
-         ('R', ad.args(sweep_degrees=-s.swiss_eyelet_bend_degrees)),
+         ('R', ad.args(sweep_angle=-s.swiss_eyelet_bend_degrees)),
         ) * 4)
     
     swiss_eyelet_node: ad.Node=ad.ShapeNode(stadium.StadiumSequence, prefix='swiss_eyelet_')

@@ -198,7 +198,7 @@ class BasicClipPath:
                 
                 .spline(((self.d, self.lower_h),
                          (self.d, base_h)), 
-                        degrees=(0, 0),
+                        angle=(0, 0),
                         cv_len=(lower_outer_curve_size, lower_outer_curve_size),
                         name='lower_outer_curve')
                 

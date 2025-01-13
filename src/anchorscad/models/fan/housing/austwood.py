@@ -205,8 +205,8 @@ class FanModel(ad.CompositeShape):
     EXAMPLE_SHAPE_ARGS=ad.args(
         fn=64, 
         hole_h_delta=0.02,
-        motor_case_degrees=270,
-        plate_degrees=275
+        motor_case_angle=270,
+        plate_angle=275
         )
     
     EXAMPLE_ANCHORS=(

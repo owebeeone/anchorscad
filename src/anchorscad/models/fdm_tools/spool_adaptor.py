@@ -102,7 +102,7 @@ class SpoolAdaptor(ad.CompositeShape):
             maker.add_at(
                 self.rib_node().composite(('rib', i)).at('base', 0.5),
                 'spool_adaptor', 'adaptor', 'left', 0,
-                degrees=360 * i / self.rib_count
+                angle=360 * i / self.rib_count
             )
         return maker
 

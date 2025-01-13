@@ -61,7 +61,7 @@ class LockTabsAssembly(ad.CompositeShape):
         self_default=lambda s: (PathBuilder()
           .move([0,0], name='origin')
           .line([0, s.edge_dist], 'centre_to_edge')
-          .arc_centre_sweep([0,0], sweep_angle_radians=s.tab_arc_sweep_radians, 
+          .arc_centre_sweep([0,0], sweep_angle=ad.angle(radians=s.tab_arc_sweep_radians), 
                             name='tab_arc')
           .spline(
               (s.tab_bevel_control_point, s.tab_bevel_end_point), 
@@ -103,7 +103,7 @@ class LockTabsAssembly(ad.CompositeShape):
         
         for i in range(3):
             maker.add_at(tab.solid(('tab', i)).at('tab_arc', 0, rh=0.5), 
-                     'surface', degrees=i * 120, rh=0.5)
+                     'surface', angle=i * 120, rh=0.5)
         
         return maker   
     

@@ -42,15 +42,15 @@ class PawnPath:
                     .line((0, self.h), 'axis')
                     .arc_tangent_radius_sweep(
                         radius=self.r_dome,
-                        sweep_angle_degrees=-self.a_dome,
-                        degrees=90,
+                        sweep_angle=-self.a_dome,
+                        angle=90,
                         side=True,
                         name='dome'
                         )
                     .spline(
                         ((self.r_collar, self.h_collar_centre + 1),
                          (self.r_collar, self.h_collar_centre)),
-                         degrees=(self.a_dome, 0),
+                         angle=(self.a_dome, 0),
                          cv_len=(0.25, 1.0),
                         name='collar_top')
                     .spline(
@@ -79,7 +79,7 @@ class PawnPath:
                     .spline(
                         ((self.r_base, 0 + 1),
                          (self.r_base, 0)),
-                         degrees=(90, 0),
+                         angle=(90, 0),
                          cv_len=(1.5, 0.8),
                         name='base_lower_edge')
                     .line((0, 0), 'base')

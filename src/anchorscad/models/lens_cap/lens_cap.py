@@ -71,7 +71,7 @@ class TaperedFlange(ad.CompositeShape, SharedDimensions):
     flange_shape_node: Node=ad.ShapeNode(ad.Cylinder, prefix='flange_shape_')
     
     flange_extrude_path: Path=None
-    flange_extrude_degrees: float=55
+    flange_extrude_angle: float=55
     flange_extrude_node: Node=ad.ShapeNode(RotateExtrude, prefix='flange_extrude_')
     
     fn: float=128
@@ -88,7 +88,7 @@ class TaperedFlange(ad.CompositeShape, SharedDimensions):
         extrusion = self.flange_extrude_node(path)
         
         flange = extrusion.solid('extrusion')\
-                    .at('base', degrees=self.flange_extrude_degrees / 2)
+                    .at('base', angle=self.flange_extrude_angle / 2)
                     
         intersector_size = [self.flange_r,
                             self.flange_r,
@@ -144,7 +144,7 @@ class FlangeOutline(ad.CompositeShape, SharedDimensions):
         for i in range(3):
             maker.add_at(extrusion.solid(('flange', i))
                               .at('outer', 1, post=ad.ROTX_180),
-                              'surface', 0, degrees=(360 / 3) * i)
+                              'surface', 0, angle=(360 / 3) * i)
             
         return maker
 
@@ -244,7 +244,7 @@ class LensCap(ad.CompositeShape):
 
         for i in range(self.grip_rib_count):
 
-            degrees = (360 / self.grip_rib_count) * i
+            angle = (360 / self.grip_rib_count) * i
             
             if self.grip_rib_as_recess:
                 orientation = ad.IDENTITY
@@ -259,7 +259,7 @@ class LensCap(ad.CompositeShape):
                 .at('base', 0.5, rh=0.5, post=ad.ROTZ_90 * orientation)
             maker.add_at(
                 rib_maker,
-                'outline', 'stock', 'surface', degrees=degrees, rh=0.5, 
+                'outline', 'stock', 'surface', angle=angle, rh=0.5, 
                 post=ad.tranZ(zoffs))
 
         return maker

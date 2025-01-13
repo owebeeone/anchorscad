@@ -122,7 +122,7 @@ class TerminalKF301Body(ad.CompositeShape):
         path = (ad.PathBuilder()
                 .move((0, 0), direction=(-1, 0))
                 .stroke(self.w / 2, name='base_lhs')
-                .stroke(self.trap_p0, sinr_cosr=(-1, 0), name='lower_lhs')
+                .stroke(self.trap_p0, angle=ad.angle(sinr_cosr=(-1, 0)), name='lower_lhs')
                 .relative_line((self.trap_p1, trap_y), name='upper_lhs')
                 .line((0, self.h), 'top_lhs')
                 .line((self.w / 2 -self.trap_p2, self.h), 'top_rhs')

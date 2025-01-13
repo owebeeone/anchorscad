@@ -155,9 +155,9 @@ class RoofRackBracketUBoltCutout(ad.CompositeShape):
     ubolt_w: float=9
     ubolt_sequence: tuple=ad.dtfield(self_default=lambda s:
         (('P', ad.args(h=s.depth)),
-         ('R', ad.args(sweep_degrees=90)),
+         ('R', ad.args(sweep_angle=90)),
          ('P', ad.args(h=s.base_w - 2 * s.ubolt_inner_r)),
-         ('R', ad.args(sweep_degrees=90)),
+         ('R', ad.args(sweep_angle=90)),
          ('P', ad.args(h=s.depth)),))
 
     ubolt_node: ad.Node=ad.ShapeNode(stadium.StadiumSequence, prefix='ubolt_')

@@ -35,7 +35,7 @@ class SolarPanelEdgeOutline:
             
             .stroke(self.inner_r * self.ROOT2, 45, name='inner_top_right')
             .stroke(self.inner_h - 2 * self.inner_r, 45, name='inner_right')
-            .arc_tangent_radius_sweep(self.inner_r, 90, degrees=-180, name='inner_bottom_right')
+            .arc_tangent_radius_sweep(self.inner_r, 90, angle=-180, name='inner_bottom_right')
             .stroke(self.inner_w - self.inner_r, 0, name='inner_bottom')
             .stroke(self.thickness, -90, name='lower_right')
         ).build()

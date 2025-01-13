@@ -24,7 +24,7 @@ class ExamplePathBuilder:
         
         
         if self.n > 0:
-            builder.arc_tangent_radius_sweep(self.r, -180, degrees=90, name=('rise', 0)) \
+            builder.arc_tangent_radius_sweep(self.r, -180, angle=90, name=('rise', 0)) \
                 .arc_tangent_radius_sweep(self.r, 180, side=True, name=('fall', 0))
             
             for i in range(1, self.n):

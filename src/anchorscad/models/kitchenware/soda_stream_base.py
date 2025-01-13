@@ -44,7 +44,7 @@ class SodaStreamBasePath:
         with builder.construction() as cbuilder:
             (cbuilder.move((0, self.w))
                 .arc_centre_sweep(centre, 90, name='bottle-outline')
-                .stroke(10, 'bottle-outline-wall')
+                .stroke(10, name='bottle-outline-wall')
             )
 
         sp = builder.at('bottle-outline', self.support_arc_t)
@@ -85,7 +85,7 @@ class SodaStreamBase(ad.CompositeShape):
         for i in range(self.drain_count):
             maker = maker.add_at(
                 hole_shape.hole(('hole', i)).at('centre'),
-                'support-start', 0, degrees=i * 360 / self.drain_count)
+                'support-start', 0, angle=i * 360 / self.drain_count)
         
         return maker
 

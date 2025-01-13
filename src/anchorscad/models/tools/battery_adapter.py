@@ -13,7 +13,7 @@ class BatteryAdapterProfile:
     r_small: float=ad.dtfield(14.2 / 2, doc='Radius of the smaller battery')
     r_large: float=ad.dtfield(26.2 / 2, doc='Radius of the larger battery')
     compensation: float=ad.dtfield(0.2, doc='Compensation for FDM printer')
-    gap_degrees: float=ad.dtfield(110, doc='Gap of the enlosing cylinder in degrees')
+    gap_angle: float=ad.dtfield(110, doc='Gap of the enlosing cylinder in angle')
 
     def build(self) -> ad.Path:
 
@@ -25,14 +25,14 @@ class BatteryAdapterProfile:
                 .line((0, outer_r), 'start')
                 .arc_tangent_radius_sweep(
                     radius=outer_r,
-                    sweep_angle_degrees=self.gap_degrees-360,
-                    degrees=-90,
+                    sweep_angle =self.gap_angle-360,
+                    angle=-90,
                     name='outer')
-                .stroke(outer_r - inner_r, degrees=-90, name='end')
+                .stroke(outer_r - inner_r, angle=-90, name='end')
                 .arc_tangent_radius_sweep(
                     radius=inner_r,
-                    sweep_angle_degrees=360-self.gap_degrees,
-                    degrees=90,
+                    sweep_angle =360-self.gap_angle,
+                    angle=90,
                     sweep_direction=True,
                     name='inner')
                 .build())

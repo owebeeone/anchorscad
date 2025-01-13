@@ -12,16 +12,17 @@ class CircularSection:
     '''
     A circular section with a angle range.
     '''
-    degrees: float=10
+    angle: float=10
     depth: float=50
     r: float=100
     fn: int=4
     
     def build(self) -> ad.Path:
 
-        radians = np.radians(self.degrees / 2)
-        widthd2 = np.sin(radians) * self.r
-        height = np.cos(radians) * self.r
+        angle: ad.Angle = ad.angle(self.angle)
+        sinr, cosr = angle.sinr_cosr()
+        widthd2 = sinr * self.r
+        height = cosr * self.r
         assert self.depth <= height, "Depth must be less than height"
 
         path = (ad.PathBuilder()
@@ -48,22 +49,23 @@ class SphereSection(ad.CompositeShape):
     '''
     A spherical section with a angle range for the lat and long.
     '''
-    lat_degrees: float=30
-    lng_degrees: float=45
+    lat_angle: float | ad.Angle=30
+    lng_angle: float | ad.Angle=45
     depth: float=250
     r: float=300
-    path_node: ad.Node=ad.Node(CircularSection, {'degrees': 'lat_degrees'}, expose_all=True)
+    path_node: ad.Node=ad.Node(CircularSection, {'angle': 'lat_angle'}, expose_all=True)
 
     path: ad.Path=ad.dtfield(self_default=lambda self: self.path_node().build())
 
     rot_extrude_node: ad.Node=ad.dtfield(
-        ad.ShapeNode(ad.RotateExtrude, {'degrees': 'lng_degrees'}, expose_all=True))
+        ad.ShapeNode(ad.RotateExtrude, {'angle': 'lng_angle'}, expose_all=True))
 
     fn: int=128
     
     def build(self) -> ad.Maker:
 
-        shape = self.rot_extrude_node(fn=self.fn * int(1 + 360 / self.lat_degrees) )
+        a_lat_angle = ad.angle(degrees=self.lat_angle)
+        shape = self.rot_extrude_node(fn=self.fn * int(1 + 360 / a_lat_angle.degrees()) )
 
         maker = shape.solid('section').at()
 

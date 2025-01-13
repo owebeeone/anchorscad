@@ -139,7 +139,7 @@ class DoorHolderRing(ad.CompositeShape):
     @ad.anchor('top front of the ring.')
     def front_top(self, rw=0):
         
-        return self.at('scaffold', 'surface', degrees=180) * ad.ROTX_90 \
+        return self.at('scaffold', 'surface', angle=180) * ad.ROTX_90 \
                 * ad.tranY(- rw * self.upper_width())
     
 # A door holder hook outline.
@@ -155,29 +155,27 @@ class DoorHolderHookPath:
     ring_thickness: float=ad.dtfield(14, doc='Ring thickness.')
     
     hook_segment_size: float=ad.dtfield(30, doc='The size of the hook segments.')
-    hook_mid_segment_size: float=ad.dtfield(5, doc='The size of the hook segments.')
     
     def build(self):
         
         ssize = self.hook_segment_size
-        mssize = self.hook_mid_segment_size
         
         builder = (ad.PathBuilder()
             .move([0, 0], direction=(-1, 0))
-            .arc_centre_sweep((0, self.ring_thickness), sweep_angle_degrees=-60, name='base_start')
+            .arc_centre_sweep((0, self.ring_thickness), sweep_angle=-60, name='base_start')
             .spline(((-ssize + 1, self.ring_thickness), (-ssize, self.ring_thickness)), 
                    cv_len=(self.ring_thickness * 0.5, self.ring_thickness * 1.3),
                    name='base_mid')
-            .stroke(self.ring_thickness, degrees=90, name='hook_catch_side')
+            .stroke(self.ring_thickness, angle=90, name='hook_catch_side')
             
             .rspline((-ssize * 1, 1.5 * self.ring_thickness),
                      cv_len=(self.ring_thickness * 1.1, self.ring_thickness),
-                     degrees=(-90, -100, 0),
+                     angle=(-90, -100, 0),
                      name='base_tail')
             
             .rspline((ssize, self.ring_thickness * 2),
                      cv_len=(self.ring_thickness * 2, self.ring_thickness * 3),
-                     degrees=(0, 180, 180),
+                     angle=(0, 180, 180),
                      name='left')
             
             .spline(((-1, self.ring_thickness * 2), (0, self.ring_thickness * 2)),

@@ -136,10 +136,10 @@ class StadiumRevolution(ad.CompositeShape):
         StadiumOutline, {'offset': 'inner_r'}, expose_all=True)
     outline: ad.Path=ad.dtfield(self_default=lambda s: s.outline_node())
     
-    sweep_degrees: float=90
+    sweep_angle: float=90
     rotate_extrude_node: ad.Node=ad.ShapeNode(
         ad.RotateExtrude, 'path',
-        {'degrees': 'sweep_degrees'}, prefix='rot_extrude_', expose_all=True)
+        {'angle': 'sweep_angle'}, prefix='rot_extrude_', expose_all=True)
     rot_extrude_path: ad.Path= ad.dtfield(self_default=lambda s: s.outline.build())
     
     
@@ -158,7 +158,7 @@ class StadiumRevolution(ad.CompositeShape):
     
     @ad.anchor('The "top" side of the stadium revolution.')
     def top(self) -> ad.GMatrix:
-        return self.maker.at('stadium', 'top', 0.5, degrees=self.sweep_degrees
+        return self.maker.at('stadium', 'top', 0.5, angle=self.sweep_angle
             ) * ad.tranZ(self.r + self.t / 2) * ad.ROTX_90 * ad.ROTY_270 * ad.ROTX_180
     
     @ad.anchor('The "base" side of the stadium revolution.')    
@@ -212,9 +212,11 @@ class StadiumSequence(ad.CompositeShape):
         elif adargs[0] == 'R':
             transform = ad.ROTX_180
             
-            if 'sweep_degrees' in kwds and kwds['sweep_degrees'] < 0:
-                transform = ad.ROTX_180 * ad.ROTZ_180
-                kwds['sweep_degrees'] = -kwds['sweep_degrees']
+            if 'sweep_angle' in kwds:
+                angle = ad.angle(kwds['sweep_angle'])
+                if angle.degrees() < 0:
+                    transform = ad.ROTX_180 * ad.ROTZ_180
+                    kwds['sweep_angle'] = -kwds['sweep_angle']
                 
             shape = self.revolution_node(*args, **kwds)
             return shape, transform * user_transform

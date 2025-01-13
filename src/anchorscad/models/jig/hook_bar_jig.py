@@ -33,25 +33,25 @@ class BarProfile:
             .line((0, w - r), 'lhs')
             .arc_tangent_radius_sweep(
                 radius=r, 
-                sweep_angle_degrees=-90, 
+                sweep_angle=-90, 
                 name='arc_lhs_upper',
                 metadata=self.metadata)
             .stroke(t - 2 * r, name='upper')
             .arc_tangent_radius_sweep(
                 radius=r,
-                sweep_angle_degrees=-90, 
+                sweep_angle=-90, 
                 name='arc_rhs_upper',
                 metadata=self.metadata)
             .stroke(w - 2 * r, name='rhs')
             .arc_tangent_radius_sweep(
                 radius=r,
-                sweep_angle_degrees=-90, 
+                sweep_angle=-90, 
                 name='arc_rhs_lower',
                 metadata=self.metadata)
             .stroke(t - 2 * r, name='lower')
             .arc_tangent_radius_sweep(
                 radius=r,
-                sweep_angle_degrees=-90, 
+                sweep_angle=-90, 
                 name='arc_lhs_lower',
                 metadata=self.metadata)
         )
@@ -232,7 +232,7 @@ class HookBarHoleJig(ad.CompositeShape):
     
     lube_hole_yoffset: float=ad.dtfield(4.5, doc='The y offset of the lubricant hole')
     lube_hole_zoffset: float=ad.dtfield(14, doc='The z offset of the lubricant hole')
-    lube_hole_slant_angle_degrees: float=ad.dtfield(25, 
+    lube_hole_slant_angle_angle: float=ad.dtfield(25, 
         doc='The slant angle of the lubricant hole')
     
     cutout_node: ad.Node=ad.dtfield(
@@ -275,7 +275,7 @@ class HookBarHoleJig(ad.CompositeShape):
                     .hole(('lube_hole', i))
                     .at('centre'),
                 'stock_centres', ('hole', i), 'centre',
-                post=ad.rotX(90 - self.lube_hole_slant_angle_degrees) 
+                post=ad.rotX(90 - self.lube_hole_slant_angle_angle) 
                     * ad.tranY(-self.lube_hole_yoffset) 
                     * ad.tranZ(-self.lube_hole_zoffset))
                 

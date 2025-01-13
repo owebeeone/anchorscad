@@ -16,7 +16,7 @@ class WingNutWings(ad.CompositeShape):
     h: float=10.6
     
     outer_r: float=16 / 2
-    sweep_angle_degrees: float=44
+    sweep_angle : float=44
     linex_node: ad.Node=ad.ShapeNode(ad.LinearExtrude, 'h')
     fn: int=64
     
@@ -28,7 +28,7 @@ class WingNutWings(ad.CompositeShape):
                 .move([0, 0], direction=[-1, 0])
                 .arc_tangent_radius_sweep(
                     radius=self.outer_r,
-                    sweep_angle_degrees=self.sweep_angle_degrees,
+                    sweep_angle =self.sweep_angle ,
                     side=True,
                     name='arc')
                 .line([-3/2, 16], name='side')

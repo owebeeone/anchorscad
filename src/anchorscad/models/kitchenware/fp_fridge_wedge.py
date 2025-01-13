@@ -41,7 +41,7 @@ class FisherPaykelWedgePathBuilder:
         builder = (ad.PathBuilder()
                 .move((0, 0), direction=(0, -1))
                 .line(-chamfer, name='rear_chamfer')
-                .stroke(self.rh - self.c1, sinr_cosr=normalized_chamfer, name='rear')
+                .stroke(self.rh - self.c1, angle=ad.angle(sinr_cosr=normalized_chamfer), name='rear')
                 .stroke(self.lw, 90, name='rear_lip')
                 .stroke(self.lh, 90, name='rear_inner_lip')
                 .stroke(self.de, 90, name='rear_inner_upper_lip')

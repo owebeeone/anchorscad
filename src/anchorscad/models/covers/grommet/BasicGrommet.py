@@ -115,7 +115,7 @@ class SealedGrommet(ad.CompositeShape):
                          'grommet_outer', 'surface', 
                          tangent=False, 
                          rh=1,
-                         degrees=i * 360 / self.screw_count,
+                         angle=i * 360 / self.screw_count,
                          radius_delta=-self.cover_radius_delta / 2, 
                          post=ad.ROTX_270)
         

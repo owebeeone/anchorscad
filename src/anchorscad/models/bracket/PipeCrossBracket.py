@@ -339,7 +339,7 @@ class PipeCrossBracket(ad.CompositeShape):
         tie_arc_path = tie_path.transform(
             ad.translate([-tie_arc_radius, 0, 0]) * ad.ROTZ_90)
         tie_round_shape = self.rotate_extrude_node(
-            tie_arc_path, degrees=tie_arc_angle)
+            tie_arc_path, angle=tie_arc_angle)
         
         tie_edge_offset = self.tie_edge_offset
         

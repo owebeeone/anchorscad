@@ -25,16 +25,16 @@ class PullHandleScaffold(ad.CompositeShape):
     scaffold_r: float=7
     scaffold_w: float=10
     scaffold_t: float=8
-    scaffold_bend_degrees: float=80
+    scaffold_bend_angle: float=80
     scaffold_sequence: tuple=ad.dtfield(self_default=lambda s:
         (('P', ad.args(h=s.depth_outer, square_right=True)),
-         ('R', ad.args(sweep_degrees=s.scaffold_bend_degrees, transform=ad.tranZ(s.overlap))),
+         ('R', ad.args(sweep_angle=s.scaffold_bend_angle, transform=ad.tranZ(s.overlap))),
          ('P', ad.args(h=s.riser_l)),
-         ('R', ad.args(sweep_degrees=-s.scaffold_bend_degrees)),
+         ('R', ad.args(sweep_angle=-s.scaffold_bend_angle)),
          ('P', ad.args(h=s.depth)),
-         ('R', ad.args(sweep_degrees=s.scaffold_bend_degrees)),
+         ('R', ad.args(sweep_angle=s.scaffold_bend_angle)),
          ('P', ad.args(h=s.riser_l)),
-         ('R', ad.args(sweep_degrees=-s.scaffold_bend_degrees)),
+         ('R', ad.args(sweep_angle=-s.scaffold_bend_angle)),
          ('P', ad.args(h=s.depth_outer, square_right=True, transform=ad.tranZ(s.overlap))),
          ))
     

@@ -226,10 +226,10 @@ class ResinFilterFunnel(ad.CompositeShape):
         tab_shape = ad.Box([self.w_tab, self.d_tab, self.h_rim])
         
         maker.add_at(tab_shape.solid('tab1').at('face_edge', 2, 0),
-            'surface', degrees=self.a_tab1, tangent=False)
+            'surface', angle=self.a_tab1, tangent=False)
         
         maker.add_at(tab_shape.solid('tab2').at('face_edge', 2, 0),
-            'surface', degrees=self.a_tab2, tangent=False)
+            'surface', angle=self.a_tab2, tangent=False)
         
         # Boss
         
@@ -239,7 +239,7 @@ class ResinFilterFunnel(ad.CompositeShape):
             maker.add_at(boss_shape.solid(('boss', i))
                     .at('surface', post=ad.tranZ(-self.h_boss)),
                     'bottle_outer_adapter', 'inner', 
-                    'surface', h=self.p_boss, degrees=boss_angle * i,
+                    'surface', h=self.p_boss, angle=boss_angle * i,
                     post=ad.ROTX_180)
         
         # Debug cut-away

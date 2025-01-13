@@ -20,7 +20,7 @@ class EdgeBracketPathBuilder:
                 .move((0, self.w / 2), direction=(1, 0))
                 .arc_tangent_radius_sweep(self.w / 2, 180, name='base')
                 .stroke(self.l - self.w, 0, name='right')
-                .arc_tangent_radius_sweep(self.w / 2, 180, degrees=180, name='top')
+                .arc_tangent_radius_sweep(self.w / 2, 180, angle=180, name='top')
                 .stroke(self.l - self.w, 0, name='left'))
  
                     

@@ -34,18 +34,18 @@ class DrainProfile:
                         name='bevel')
                 .stroke(flat, name='inner_flange_flat')
                 .stroke(self.h_drain_inner,
-                        degrees=-90, 
+                        angle=-90, 
                         name='upper_inside')
                 .stroke(self.r_drain_lip,
-                        degrees=90,
+                        angle=90,
                         name='lip')
                 .stroke(self.h_small_drain,
-                        degrees=-90,
+                        angle=-90,
                         name='lower_inside')
                 .stroke(18,
-                        degrees=-90,
+                        angle=-90,
                         name='cutline')
-                .stroke(65, degrees=-90, name='outer_drain')
+                .stroke(65, angle=-90, name='outer_drain')
                 .build())
         
         return path
@@ -167,7 +167,7 @@ class DrainHolderProfile(DrainProfile):
                 .line((self.inside_r - self.pipe_side_lower_interference, -self.pipe_side_h), 'pipe_side')
                 .line((self.r_drain_inner - self.drain_side_upper_interference, drain_y_start), 'wedge')
                 .line((self.r_drain_inner - self.drain_side_lower_interference, drain_y_start - self.h_drain_inner), 'drain_side')
-                .stroke(self.r_holder_thickness + r_diff, degrees=-90 - angle_degrees, name='drain_lip')
+                .stroke(self.r_holder_thickness + r_diff, angle=-90 - angle_degrees, name='drain_lip')
                 .build())
 
         return path
@@ -243,7 +243,7 @@ class DrainHolder(ad.CompositeShape):
 
     fn: int=ad.dtfield(128, doc='Number of facets for the linear extrusion')
 
-    EXAMPLE_SHAPE_ARGS=ad.args(hide_cage=False, drain_outline_degrees=90)
+    EXAMPLE_SHAPE_ARGS=ad.args(hide_cage=False, drain_outline_angle=90)
 
     def build(self) -> ad.Maker:
 
@@ -270,7 +270,7 @@ class DrainHolder(ad.CompositeShape):
                 reinforcer_shape
                     .composite(('reinforcer', i))
                     .at('surface'),
-                'holder', 'top_edge', -0.5, degrees=i * 360 / self.reinforcer_count, post=ad.ROTX_90)
+                'holder', 'top_edge', -0.5, angle=i * 360 / self.reinforcer_count, post=ad.ROTX_90)
             
         snap_hole_shape = self.snap_hole_node()
         for i in range(self.snap_hole_count):
@@ -279,7 +279,7 @@ class DrainHolder(ad.CompositeShape):
                     .hole(('snap_hole', i))
                     .at('surface'),
                 'holder', 'top_edge', -0.5,
-                degrees=i * 360 / self.snap_hole_count + self.snap_hole_angle_offset,
+                angle=i * 360 / self.snap_hole_count + self.snap_hole_angle_offset,
                 post=ad.tranZ(self.pipe_side_h - self.snap_hole_z_pos))
             
         bottom_hole_shape = self.bottom_hole_node()
@@ -289,7 +289,7 @@ class DrainHolder(ad.CompositeShape):
                     .hole(('bottom_hole', i))
                     .at('base'),
                 'holder', 'wedge', 0.5,
-                degrees=i * 360 / self.bottom_hole_count + self.bottom_hole_angle_offset,
+                angle=i * 360 / self.bottom_hole_count + self.bottom_hole_angle_offset,
                 post=ad.tranZ(self.bottom_hole_z_pos) * ad.tranY(self.bottom_hole_offset) * ad.ROTZ_90)
 
         return maker
@@ -308,10 +308,10 @@ class DrainGuageProfile(DrainHolderProfile):
             .move((self.r_drain_inner - self.r_holder_thickness, drain_y_start))
             .line((self.r_drain_inner - self.drain_side_upper_interference, drain_y_start), 'top')
             .line((self.r_drain_inner - self.drain_side_lower_interference, drain_y_start - self.h_drain_inner), 'drain_side')
-            #.stroke(self.r_holder_thickness, degrees=-90, name='drain_lip')
+            #.stroke(self.r_holder_thickness, angle=-90, name='drain_lip')
             .line((0, drain_y_start - self.h_drain_inner), 'base_plate_bottom')
-            .stroke(self.h_base_plate, degrees=-90, name='base_plate_centre')
-            .stroke(self.r_drain_inner - self.r_holder_thickness, degrees=-90, name='base_plate_top')
+            .stroke(self.h_base_plate, angle=-90, name='base_plate_centre')
+            .stroke(self.r_drain_inner - self.r_holder_thickness, angle=-90, name='base_plate_top')
             .build())
 
         return path
@@ -383,9 +383,9 @@ class DrainWedgeOutline(DrainHolderProfile):
                 'drain_side')
             .arc_tangent_radius_sweep(
                 radius=self.base_bevel_r,
-                sweep_angle_degrees=-90,
+                sweep_angle=-90,
                 name='base_bevel')
-            .stroke(self.r_holder_thickness - self.base_bevel_r, degrees=0, name='drain_lip')
+            .stroke(self.r_holder_thickness - self.base_bevel_r, angle=0, name='drain_lip')
             .line((self.drain_outline_inner_r, drain_y_start - self.h_drain_inner), 'base_plate_bottom')
             .build())
 

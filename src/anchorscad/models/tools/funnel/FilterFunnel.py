@@ -40,7 +40,7 @@ class ElipticCone(ad.CompositeShape):
         
         builder.arc_centre_sweep(
             (0.0, 0.0), 
-            sweep_angle_degrees=-360.0, 
+            sweep_angle=-360.0, 
             name='surface')
 
         path = builder.build()
@@ -171,8 +171,8 @@ class FilterFunnel(ad.CompositeShape):
     EXAMPLE_SHAPE_ARGS=ad.args(show_cutaway=False)
     NOEXAMPLE_ANCHORS=(
         
-        ad.surface_args('tail', 'tail_outer', 'surface', rh=0, degrees=60),
-        ad.surface_args('tail', 'tail_outer', 'surface', rh=1, degrees=60),
+        ad.surface_args('tail', 'tail_outer', 'surface', rh=0, angle=60),
+        ad.surface_args('tail', 'tail_outer', 'surface', rh=1, angle=60),
         ad.surface_args('tail', ('tail_rib', 1), 'face_edge', 1, 2),
         ad.surface_args('tail', ('tail_rib', 1), 'face_edge', 1, 0),
 #         ad.surface_args('base'),
@@ -298,12 +298,12 @@ class FilterFunnel(ad.CompositeShape):
             rib_shape = ad.Box((self.t, self.l_tail, self.tail_rib_h))
             tail_maker.add_at(
                 rib_shape.solid(('tail_rib', i)).at('face_edge', 1, 0),
-                        'tail_outer', 'surface', rh=1, degrees=degs,
+                        'tail_outer', 'surface', rh=1, angle=degs,
                         post=ad.ROTX_180)
 #             tail_rib_shape = self.tail_rib_factory.solid(('tail_rib', i))
 #             tail_maker.add_between(
-#                 ad.at_spec('tail_outer', 'surface', rh=1, degrees=degs),
-#                 ad.at_spec('tail_inner', 'surface', h=0, rh=0, degrees=degs),
+#                 ad.at_spec('tail_outer', 'surface', rh=1, angle=degs),
+#                 ad.at_spec('tail_inner', 'surface', h=0, rh=0, angle=degs),
 #                 tail_rib_shape,
 #                 ad.at_spec('face_edge', 0, 0),
 #                 ad.at_spec('face_edge', 0, 2),

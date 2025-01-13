@@ -24,18 +24,18 @@ class HingeHolePath:
         
         builder.move((0, 0), direction=(0, 1))
         builder.stroke(self.sep, name='centre_line')
-        builder.stroke(self.nib_r, degrees=-90, name='inner_nib')
-        builder.stroke(self.nib_ang_len, degrees=self.nib_angle, name='i_nib_angle_surface')
+        builder.stroke(self.nib_r, -90, name='inner_nib')
+        builder.stroke(self.nib_ang_len, self.nib_angle, name='i_nib_angle_surface')
         builder.arc_tangent_radius_sweep(radius=self.sep, 
-                                         sweep_angle_degrees=-self.nib_angle, 
+                                         sweep_angle=-self.nib_angle, 
                                          name='inner_nib_arc',
                                          metadata=self.nib_metadata)
         builder.stroke(self.edge_len, name='inner_face')
-        builder.stroke(self.sep, degrees=-90, name='gap')
-        builder.stroke(self.edge_len, degrees=-90, name='outer_face')
-        builder.stroke(self.nib_ang_len, degrees=self.nib_angle, name='o_nib_angle_surface')
+        builder.stroke(self.sep, -90, name='gap')
+        builder.stroke(self.edge_len, -90, name='outer_face')
+        builder.stroke(self.nib_ang_len, self.nib_angle, name='o_nib_angle_surface')
         builder.arc_tangent_radius_sweep(radius=self.sep, 
-                                         sweep_angle_degrees=-self.nib_angle, 
+                                         sweep_angle=-self.nib_angle, 
                                          name='outer_nib_arc',
                                          metadata=self.nib_metadata)
         
@@ -314,18 +314,18 @@ class HingeBar(ad.CompositeShape):
                 h=h, 
                 inside_r=inside_r,
                 outside_r=self.sleeve_r,
-                start_degrees=0, 
-                end_degrees=180,
-                keyway_start_degrees=keyway_start_degrees,
-                keyway_end_degrees=keyway_end_degrees)
+                start_angle=0, 
+                end_angle=180,
+                keyway_start_angle=keyway_start_degrees,
+                keyway_end_angle=keyway_end_degrees)
     
     def gen_end(self, h):
         inside_r = 0
         return self.cyl_sleeve_node(h=h, 
                                     inside_r=inside_r,
                                     outside_r=self.sleeve_r,
-                                    start_degrees=0, 
-                                    end_degrees=180)
+                                    start_angle=0, 
+                                    end_angle=180)
         
     @ad.anchor('Base of the hinge')
     def hinge_base(self):

@@ -73,7 +73,7 @@ class Tnut(ad.CompositeShape):
                          .colour((1, 0, 1))
                          .at('face_corner', 0, 0, 
                              pre=ad.rotZ(angle_shift) * ad.tranZ(-epsilon)),
-                         'flat', 'surface', degrees=i * 360 / 4
+                         'flat', 'surface', angle=i * 360 / 4
                          )
         
         return maker

@@ -42,8 +42,8 @@ class ButtonBody(CompositeShape):
     
     metadata: object=EMPTY_ATTRS.with_fn(8)
     cage_shape_node: Node=ShapeNode(Cylinder, {})
-    degrees: float=360
-    extrude_node: Node=ShapeNode(RotateExtrude, 'degrees')
+    angle: float=360
+    extrude_node: Node=ShapeNode(RotateExtrude, 'angle')
     cage_node: Node=CageOfNode()
     plate_cage_node: Node=CageOfNode(prefix='plate_cage_')
     rim_cage_node: Node=CageOfNode(prefix='rim_cage_')
@@ -73,7 +73,7 @@ class ButtonBody(CompositeShape):
     EXAMPLE_SHAPE_ARGS=args(hide_cage=True,
                                 plate_cage_hide_cage=False, 
                                 rim_cage_hide_cage=False,
-                                degrees=270)
+                                angle=270)
     EXAMPLE_ANCHORS=(surface_args('base', scale_anchor=0.5),
                      surface_args('plate', scale_anchor=0.5),)
     
@@ -230,8 +230,8 @@ class ButtonAssemblyTest(CompositeShape):
     EXAMPLE_SHAPE_ARGS=args(switch_type='TL1105',
                             body_hide_cage=True,
                             body_plate_cage_hide_cage=True, 
-                            body_degrees=270, 
-                            body_ex_degrees=270,
+                            body_angle=270, 
+                            body_ex_angle=270,
                             fn=64)
     EXAMPLE_ANCHORS=tuple()
     

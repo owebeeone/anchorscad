@@ -6,7 +6,7 @@ Created on 29 Jan 2022
 
 import inspect
 import sys
-from anchorscad.runner.process_manager import ProcessManager, ProcessManagerEntry
+from anchorscad_lib.utils.process_manager import ProcessManager, ProcessManagerEntry
 
 
 def get_fabricator_class(module, name):

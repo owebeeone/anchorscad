@@ -21,10 +21,10 @@ class ParallelogramRoundedPath:
     l2: float=ad.dtfield(20, doc='Length 2 of the parallelogram')
 
     r: float=ad.dtfield(4, doc='Radius of the rounded corners')
-    degrees: float=ad.dtfield(60,
+    angle: float | ad.Angle=ad.dtfield(60,
         doc='Degrees of the first arc, the adjacent arcs are 180 - degrees')
-    degrees2: float=ad.dtfield(
-        self_default=lambda s: 180 - s.degrees, 
+    angle2: ad.Angle=ad.dtfield(
+        self_default=lambda s: ad.angle(180) - ad.angle(s.angle), 
         doc='Degrees of the second arc')
 
     def build(self) -> ad.Path:
@@ -32,13 +32,13 @@ class ParallelogramRoundedPath:
         builder = (ad.PathBuilder()
                 .move((0, 0), direction=(1, 0)))
 
-        l = (self.l1, self.l2)
-        degrees = (self.degrees, self.degrees2)    
+        lx = (self.l1, self.l2)
+        angles = (ad.angle(self.angle), self.angle2)    
         for n in range(4):
             builder.arc_tangent_radius_sweep(
                 radius=self.r, 
-                sweep_angle_degrees=-degrees[n % 2], name=('arc', n))
-            builder.stroke(l[n % 2], name=('side', n))
+                sweep_angle=-angles[n % 2], name=('arc', n))
+            builder.stroke(lx[n % 2], name=('side', n))
         
         return builder.build()
 

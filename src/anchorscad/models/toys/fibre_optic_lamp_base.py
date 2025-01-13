@@ -86,7 +86,7 @@ class FibreOpticLampShell(ad.CompositeShape):
             expose_all=True)
     outer_shape: ad.Node = ad.dtfield(self_default=lambda s: s.outer_extrude_node())
 
-    EXAMPLE_SHAPE_ARGS = ad.args(fn=256, outer_degrees=270)
+    EXAMPLE_SHAPE_ARGS = ad.args(fn=256, outer_angle=270)
     EXAMPLE_ANCHORS = ()
 
     def build(self) -> ad.Maker:
@@ -201,7 +201,7 @@ class FibreOpticLampLargeLens(ad.CompositeShape):
                 wing_shape.solid(('wing', i)).at('tag_top', 0, rh=0.5),
                 'outer_lens_hole',
                 'surface',
-                degrees=180 * i,
+                angle=180 * i,
                 rh=1,
                 post=ad.ROTX_90 * ad.ROTZ_90 * ad.ROTX_180 * ad.ROTZ_180 * ad.rotY(2),
             )
@@ -318,7 +318,7 @@ class FasteningColumns(ad.CompositeShape):
                 column,
                 'base',
                 self.col_base_offset,
-                degrees=(i + self.col_angle_offset) * 360 / self.col_count,
+                angle=(i + self.col_angle_offset) * 360 / self.col_count,
             )
 
         columns_maker = caged_maker.composite('all_columns').at()
@@ -354,7 +354,7 @@ class PowerAdapterHousing(ad.CompositeShape):
 
         # Use the shell inner shape to position the jack.
         housing.add_at(
-            shell_shape.cage('shell_cage').at('inner', 'base', 1, degrees=90),
+            shell_shape.cage('shell_cage').at('inner', 'base', 1, angle=90),
             'stadium',
             'right',
             rh=0,
@@ -535,10 +535,10 @@ class FibreOpticLampBase(ad.CompositeShape):
         FibreOpticLampMockLedPcbSupportBox, {'height': None}, expose_all=True)
     
     switch_pos_anchor: ad.AnchorArgs = ad.surface_args(
-        'outer', 'azimuth', 'corner', az_angle=14, degrees=173 + 80)
+        'outer', 'azimuth', 'corner', az_angle=14, angle=173 + 80)
     
     jack_pos_anchor: ad.AnchorArgs = ad.surface_args(
-        'shell', 'outer', 'base', degrees=135)
+        'shell', 'outer', 'base', angle=135)
     
     buck_pad: ad.Node = ad.ShapeNode(
         ModuleBuckLm2586Hw411MountPad, 'pad_margin', prefix='buck_pad_')
@@ -550,7 +550,7 @@ class FibreOpticLampBase(ad.CompositeShape):
         fn=32, 
         path_fn=16, 
         outer_fn=128,
-        outer_degrees=270, 
+        outer_angle=270, 
         path_metadata=None) #ad.EMPTY_ATTRS.with_fn(8))
     EXAMPLE_ANCHORS = (ad.surface_args('corner', 1),
                        ad.surface_args('pipe', 'base'),
@@ -583,7 +583,7 @@ class FibreOpticLampBase(ad.CompositeShape):
                 .at('base', rh=0.1),
                 'corner',
                 1,
-                degrees=i * 360 / self.count_small_lens,
+                angle=i * 360 / self.count_small_lens,
             )
 
         large_lens_shape = self.large_lens_node()
@@ -594,7 +594,7 @@ class FibreOpticLampBase(ad.CompositeShape):
                 .at('outer_lens_hole', 'surface', 0, rh=0.8),
                 'top_slant',
                 0.3,
-                degrees=i * 360 / self.count_large_lens,
+                angle=i * 360 / self.count_large_lens,
                 post=ad.ROTX_90,
             )
 

@@ -110,7 +110,7 @@ class Merlin1846(ad.CompositeShape):
             hole_maker = hole_shape.hole(('hole', i)).at('top')
             maker.add_at(
                 hole_maker,
-                'surface', rh=1, degrees=i * 360 / self.holes, 
+                'surface', rh=1, angle=i * 360 / self.holes, 
                 post=ad.ROTX_270 * ad.tranZ(self.epsilon))
 
         return maker

@@ -16,12 +16,12 @@ class Pie(ad.CompositeShape):
     pie_cage_node: ad.Node=ad.ShapeNode(ad.Cylinder)
     sweep_angle: float=ad.dtfield(360, doc='Angle of the pie slice')
     
-    rot_extrude_node: ad.Node=ad.ShapeNode(ad.RotateExtrude, {'degrees': 'sweep_angle'})
+    rot_extrude_node: ad.Node=ad.ShapeNode(ad.RotateExtrude, {'angle': 'sweep_angle'})
     
     EXAMPLE_SHAPE_ARGS=ad.args(sweep_angle=120, h=20, fn=64, r=30)
     EXAMPLE_ANCHORS=(
         ad.surface_args('base'),
-        ad.surface_args('surface', degrees=0),
+        ad.surface_args('surface', angle=0),
         )
 
     def build(self) -> ad.Maker:

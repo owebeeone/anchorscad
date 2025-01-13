@@ -52,7 +52,7 @@ class ButtonWings(ad.CompositeShape):
             )
         maker = self.winge_cageof_node().at('base', post=ad.ROTX_180)
         
-        shape = self.extruder(path, degrees=self.wing_angle)
+        shape = self.extruder(path, angle=self.wing_angle)
         
         angle_remaining = 360 - self.wing_count * self.wing_angle
         assert angle_remaining >= 0, 'Too many wings, they will overlap.'
@@ -84,7 +84,7 @@ class ButtonCap(ad.CompositeShape):
     cageof_node: ad.Node=ad.Node(ad.cageof, prefix='bc_cage_')
     spline1_meta_data: object=ad.ModelAttributes().with_fn(15)
     spline2_meta_data: object=ad.ModelAttributes().with_fn(5)
-    extruder: ad.Node=ad.ShapeNode(ad.RotateExtrude, {'degrees': 'ex_degrees'})
+    extruder: ad.Node=ad.ShapeNode(ad.RotateExtrude, {'angle': 'ex_angle'})
     with_wings: bool=True
     wings_node: ad.Node=ad.ShapeNode(ButtonWings)
     engrave_shape: ad.Shape=None

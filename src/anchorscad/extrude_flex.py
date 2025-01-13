@@ -358,7 +358,7 @@ class LinearFlexExtrude(ExtrudedShape):
             .move([0, 0])
             .line([100 * _SCALE, 0], 'linear')
             .spline([[150 * _SCALE, 100 * _SCALE], [20 * _SCALE, 100 * _SCALE]],
-                     name='curve', cv_len=(0.5,0.4), degrees=(90,), rel_len=0.8)
+                     name='curve', cv_len=(0.5,0.4), angle=(90,), rel_len=0.8)
             .line([0, 100 * _SCALE], 'linear2')
             .line([0, 0], 'linear3')
             .build(),
@@ -415,7 +415,7 @@ class LinearFlexExtrude(ExtrudedShape):
                 PathBuilder()
                     .move([0, 0])
                     .line([50 * _SCALE, 0], 'linear1')
-                    .arc_tangent_point([0, 50 * _SCALE], name='curve', degrees=90)
+                    .arc_tangent_point([0, 50 * _SCALE], name='curve', angle=90)
                     .line([0, 0], 'linear4')
                     .build(),
                 h=50,

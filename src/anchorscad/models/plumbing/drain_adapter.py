@@ -216,18 +216,18 @@ class DrainAdapter(ad.CompositeShape):
         
         maker.add_at(
             tab_assembly.composite(('tab', 0)).at('tab_base', 0, rh=0.5),
-            'inner_surface', degrees=0, rh=0.5, post=ad.ROTY_90 * ad.ROTX_180
+            'inner_surface', angle=0, rh=0.5, post=ad.ROTY_90 * ad.ROTX_180
             )
         maker.add_at(
             tab_assembly.composite(('tab', 1)).at('tab_base', 0, rh=0.5),
-            'inner_surface', degrees=self.sweep_angle, rh=0.5, post=ad.ROTY_90
+            'inner_surface', angle=self.sweep_angle, rh=0.5, post=ad.ROTY_90
             )
         
         if self.with_drain_port:
             port_shape = self.port_node()
             maker.add_at(
                 port_shape.composite('port').at('face_centre', 'top'),
-                'inner_surface', degrees=self.port_angle_position, rh=0.5, post=ad.ROTZ_90
+                'inner_surface', angle=self.port_angle_position, rh=0.5, post=ad.ROTZ_90
                 )
         
         return maker

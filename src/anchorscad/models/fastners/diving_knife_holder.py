@@ -30,17 +30,17 @@ class DivingKnifeHolderPathBuilder(ad.CompositeShape):
         pathBuilder = (ad.PathBuilder()
             .move((0, 0))
             .line((self.base_w / 2, 0), name='base_bottom_right')
-            .stroke(self.base_t, degrees=90, name='base_right')
-            .stroke(base_len, degrees=90, name='base_top_right')
+            .stroke(self.base_t, 90, name='base_right')
+            .stroke(base_len, 90, name='base_top_right')
             .arc_tangent_radius_sweep(self.base_bevel_r, -90, name='base_top_right_bevel')
-            .stroke(self.stem_l - self.base_bevel_r, degrees=0, name='stem_right')
-            .stroke(self.stem_w / 2, degrees=90, name='stem_top_right')
-            .stroke(self.stem_w / 2, degrees=0, name='stem_top_left')
-            .stroke(self.stem_l - self.base_bevel_r, degrees=90, name='stem_left')
+            .stroke(self.stem_l - self.base_bevel_r, 0, name='stem_right')
+            .stroke(self.stem_w / 2, 90, name='stem_top_right')
+            .stroke(self.stem_w / 2, 0, name='stem_top_left')
+            .stroke(self.stem_l - self.base_bevel_r, 90, name='stem_left')
             .arc_tangent_radius_sweep(self.base_bevel_r, -90, name='base_top_left_bevel')
-            .stroke(base_len, degrees=0, name='base_top_left')
-            .stroke(self.base_t, degrees=90, name='base_left')
-            .stroke(self.base_w / 2, degrees=90, name='base_bottom_left')
+            .stroke(base_len, 0, name='base_top_left')
+            .stroke(self.base_t, 90, name='base_left')
+            .stroke(self.base_w / 2, 90, name='base_bottom_left')
                        )
         
         return pathBuilder.build()
@@ -203,27 +203,27 @@ class SpringBase(ad.CompositeShape):
     tab_w: float=3
     scaffold_sequence: tuple=ad.dtfield(self_default=lambda s:
         (('P', ad.args(h=s.depth_outer, square_right=True)),
-         ('R', ad.args(sweep_degrees=s.scaffold_bend_degrees)),
+         ('R', ad.args(sweep_angle=s.scaffold_bend_degrees)),
          ('P', ad.args(h=s.depth)),
         )
         +
         (
-         ('R', ad.args(sweep_degrees=s.scaffold_bend_degrees)),
+         ('R', ad.args(sweep_angle=s.scaffold_bend_degrees)),
          ('P', ad.args(h=s.riser_l)),
-         ('R', ad.args(sweep_degrees=-s.scaffold_bend_degrees)),
+         ('R', ad.args(sweep_angle=-s.scaffold_bend_degrees)),
          ('P', ad.args(h=s.depth)),
         ) * s.num_springs
         +
         (
-         ('R', ad.args(sweep_degrees=s.scaffold_bend_degrees)),
+         ('R', ad.args(sweep_angle=s.scaffold_bend_degrees)),
          ('P', ad.args(h=s.depth_outer, square_right=True)),
-         ('R', ad.args(sweep_degrees=-180 + s.tab_angle, inner_r=s.knife_handle_r)),
-         ('R', ad.args(sweep_degrees=-90 + s.tab_angle, inner_r=s.tab_bevel_r)),
+         ('R', ad.args(sweep_angle=-180 + s.tab_angle, inner_r=s.knife_handle_r)),
+         ('R', ad.args(sweep_angle=-90 + s.tab_angle, inner_r=s.tab_bevel_r)),
          ('P', ad.args(h=s.tab_l)),
-         ('R', ad.args(sweep_degrees=-180, inner_r=s.tab_w/2)),
+         ('R', ad.args(sweep_angle=-180, inner_r=s.tab_w/2)),
          ('P', ad.args(h=s.tab_l)),
-         ('R', ad.args(sweep_degrees=-90 + s.tab_angle, inner_r=s.tab_bevel_r)),
-         ('R', ad.args(sweep_degrees=-180 + s.tab_angle, inner_r=s.knife_handle_r)),
+         ('R', ad.args(sweep_angle=-90 + s.tab_angle, inner_r=s.tab_bevel_r)),
+         ('R', ad.args(sweep_angle=-180 + s.tab_angle, inner_r=s.knife_handle_r)),
          ))
     
     scaffold_node: ad.Node=ad.ShapeNode(stadium.StadiumSequence, prefix='scaffold_')

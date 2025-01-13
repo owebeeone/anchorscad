@@ -24,9 +24,9 @@ class TrapezoidPrismPath:
         builder = (ad.PathBuilder()
                    .move((0, 0))
                    .line((self.base_w, 0), 'path_base')
-                   .stroke(self.side_l, sinr_cosr=(cosr, sinr), name='right')
+                   .stroke(self.side_l, angle=ad.angle(sinr_cosr=(cosr, sinr)), name='right')
                    
-                   .stroke(self.top_w, sinr_cosr=(cosr, -sinr), name='path_top')
+                   .stroke(self.top_w, angle=ad.angle(sinr_cosr=(cosr, -sinr)), name='path_top')
                    .line((0, 0), 'left'))
         
         return builder.build()
