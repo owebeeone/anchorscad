@@ -16,7 +16,7 @@ For more information about [AnchorSCAD](https://docs.google.com/document/u/0/d/1
 For an overview of AnchorSCAD and how to build complex models see [html](https://owebeeone.github.io/anchorscad/) [docs](https://docs.google.com/document/d/1D2kI2W5mLDGU19RZ1440_adDrhwZDFRImPWi2vifMag/edit?usp=sharing) - this documents in detail [shape operators (solid, hole etc)](https://owebeeone.github.io/anchorscad/#h.vmyont8is7vh) and how to [chain calls to create Makers/model graph node builders](https://owebeeone.github.io/anchorscad/#h.7w0f9846dojm).
 
 ### How do I get set up?
-You can follow the [installation instructions](https://github.com/owebeeone/anchorscad/blob/master/docs/InstallingAnchorSCAD.md) to install AnchorSCAD and the prerequisite software.
+You can follow the [installation instructions](https://github.com/owebeeone/anchorscad-core/blob/master/docs/InstallingAnchorSCAD.md) to install AnchorSCAD and the prerequisite software.
 
 # Simple Shape
 AnchorSCAD provides tools to wrap your creations in its own `Shape` class. The example below simplifies to demonstrate how shapes are composed in AnchorSCAD. The code below will print OpenSCAD script text to standard output, rendering a box tube.
