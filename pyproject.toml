@@ -1,0 +1,16 @@
+[project]
+name = "anchorscad"
+version = "0.2.0"
+authors = [
+    { name = "Gianni Mariani", email = "gianni@mariani.ws" },
+]
+description = "A Python 3D modelling API for generating OpenSCAD source code. This library simplifies the creating of 3D models and contains a suite of completed models including Raspberry Pi cases and other models."
+readme = "README.md"
+requires-python = ">=3.10"
+classifiers = [
+    "Programming Language :: Python :: 3",
+    "License :: OSI Approved :: GNU Lesser General Public License v2 or later (LGPLv2+)",
+    "Operating System :: OS Independent",
+]
+dependencies = ["anchorscad-core"]
+
