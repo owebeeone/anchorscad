@@ -184,7 +184,7 @@ class OutlineHoleSpec:
     
     
     def mount_hole(self, depth, params):
-        return ad.Cylinder(h=depth * 2 * DELTA, r=self.r, **params)
+        return ad.Cylinder(h=depth * 2 + DELTA, r=self.r, **params)
     
     def screw_hole(self, tap_len, dia, thru_len, params):
         return SelfTapHole(

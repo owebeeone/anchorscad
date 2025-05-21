@@ -689,6 +689,6 @@ class KitchenDrawerBracket(ad.CompositeShape):
         return self.maker.at('face_edge', *args, **kwds)
 
 
-MAIN_DEFAULT=ad.ModuleDefault(True, write_path_files=True)
+MAIN_DEFAULT=ad.ModuleDefault(all=True)
 if __name__ == '__main__':
     ad.anchorscad_main(False)

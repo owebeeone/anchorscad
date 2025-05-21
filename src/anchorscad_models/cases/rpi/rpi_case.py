@@ -37,6 +37,7 @@ class RaspberryPiCase(CompositeShape):
     '''A Generic Raspberry Pi Case.'''
     outline_model: Shape=dtfield(
         self_default=lambda s: s.outline_model_node(), doc='The outline of the Raspberry Pi.')
+    outline_bevel_radius: float=3.0
     outline_model_node: Node=ad.dtfield(
         ShapeNode(RaspberryPi4Outline, prefix='outline_'), init=True)
     inner_size_delta: tuple=(3, 2, 22)
@@ -50,6 +51,9 @@ class RaspberryPiCase(CompositeShape):
                 s.outline_model.bevel_radius
                     + (-s.inner_offset[0] - s.inner_offset[1]) / 2)
     outer_bevel_radius: float =dtfield(self_default=lambda s: s.inner_bevel_radius + s.wall_thickness)
+    fn: int=None
+    fa: float=None
+    fs: float=None
     shell_shape_node: Node=dtfield(
         ShapeNode(bbox.BoxShell, 
             {'size': 'outer_size', 
@@ -373,7 +377,7 @@ class RaspberryPiCase(CompositeShape):
     def get_example_version(self):
         return self.version.text if self.do_versioned_example else None
 
-MAIN_DEFAULT=ModuleDefault(True)
+MAIN_DEFAULT=ModuleDefault(all=True)
 
 if __name__ == "__main__":
     anchorscad_main(False)

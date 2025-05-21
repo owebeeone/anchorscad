@@ -28,7 +28,7 @@ class HeadDimensions(object):
     head_countersink_depth: float
     
     def overall_screw_head_height(self):
-        return self.head_countersink_depth + self.head_mid_depth; 
+        return self.head_countersink_depth + self.head_mid_depth
 
 
 SHAFT_MAP = {
@@ -40,11 +40,17 @@ SHAFT_MAP = {
     'M6' : ShaftDimensions(6.0, 6.14, 6.05),
     'BUGLE_14g-10' : ShaftDimensions(6.3, 6.7, 6.4),
     'DECK_10g-10' : ShaftDimensions(4.8, 5.1, 4.9),
+    '9g' : ShaftDimensions(4.52, 4.8, 4.55),
     }
 
 
 HEAD_MAP = {
-    
+    '9g' : HeadDimensions(
+                head_top_d=9.5,
+                head_bot_d=4.55,
+                head_protrusion_height=2,
+                head_mid_depth=0.1,
+                head_countersink_depth=2),
     'M3' : HeadDimensions(
                 head_top_d=6.2,
                 head_bot_d=3.25,

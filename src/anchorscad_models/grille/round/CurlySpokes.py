@@ -27,11 +27,11 @@ class CurlySpokes(ad.CompositeShape):
     min_solid_size: float=1.4
     min_hole_size: float=1.4
     epsilon: float=1.e-2
+    fn: int=None
     
     cylinder_node: ad.Node=ad.ShapeNode(ad.Cylinder, {})
     linear_extrude_node: ad.Node=ad.ShapeNode(ad.LinearExtrude, {})
     
-    fn: int=None
     
     EXAMPLE_SHAPE_ARGS=ad.args(h=2)
     EXAMPLE_ANCHORS=()

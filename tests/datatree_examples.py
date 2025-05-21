@@ -1,10 +1,15 @@
 '''
+Creates documentation of the datatree examples.
+
+
 Created on 11 Apr 2022
 
 @author: gianni
 '''
 import inspect
 import re
+import pydoc
+import io
 
 
 
@@ -13,20 +18,36 @@ from datatrees import datatree, Node, BindingDefault, dtfield, field, dtargs, ov
 SP='[ \n\t]'
 CLEANER_REGEX=re.compile(
     f'(?:{SP}*describe{SP}*\()?(?:{SP}*lambda{SP}*:)?((?:.|\n)*)(?:{SP}*)?[\)]')
+
 def describe(func):
+    '''Prints the source code of a function/class and its result when called/constructed.'''
     src = inspect.getsource(func)
     mtch = CLEANER_REGEX.match(src)
     if mtch:
         src = mtch.group(1).strip()
+    if type(func) is type:
+        print(f'\n\n***** class {func.__name__} *****')
+    else:
+        print('')
     try:
         print(f'{src}\n  -> {func()}')
     except Exception as e:
         print(f'{src}\n  -> raises {e}')
+
         
-def doc(msg):
-    print('---' + msg)
+def doc(*msg):
+    '''Prints a message prefixed with ---.'''
+    print('---', *msg)
 
+def help(S):
+    '''Prints the help message for a class/function and avoids the "more" prompt.'''
+    with io.StringIO() as sio:
+        h: pydoc.Helper = pydoc.Helper(output=sio)
+        h.help(S)
+        print(sio.getvalue())
 
+#------------------------------------------------------------------------------
+# Examples start here:
 
 @datatree
 class A:
@@ -39,7 +60,7 @@ class A:
     v2: int=2
     v3: int=dtfield(default=3)
     v4: int=dtfield(default_factory=lambda: 7 - 3)
-    #)
+
 
 describe(A)
 doc('Default construction fails because v1 is required since it has no default.')
@@ -50,7 +71,7 @@ describe(lambda: A(v1=2) == A(v1=2))
 
 help(A)
 
-V4_DEFAULT_FACTORY = lambda: 7 - 3
+V4_DEFAULT_FACTORY = lambda: 7 - 3  # noqa: E731
 class A_NotDatatree:
     def __init__(self, v1: int, v2: int = 2, v3: int = 3, v4: int = None):
         self.v1 = v1
@@ -128,7 +149,7 @@ describe(lambda: BindFunc().lambda_node())
 describe(lambda: BindFunc(x=5).func_node())
 
 
-@datatree
+@datatree(provide_override_field=True)
 class C:
     '''Multiple nodes of the same type with parameter name mapping.'''
     a_v1: int=11
@@ -143,7 +164,7 @@ class C:
     def make_stuff(self):
         return self.a_node(v2=22), self.b_node(), self.computed
 
-#help(C) 
+help(C) 
 describe(lambda: C())
 describe(lambda: C(b_v2=44).computed)
 describe(lambda: C().a_node())
@@ -166,12 +187,14 @@ describe(lambda: D().a_node())
     
 @datatree
 class E:
-    '''Using the dtfield() function to create a BindingDefault entry.'''
+    '''Using the dtfield() self_default parameter.'''
     v1: int=1
     v2: int=2
-    v_computed: Node=dtfield(self_default=lambda s: s.v1 + s.v2)
+    # init=False for self_default fields.
+    v_computed: Node=dtfield(self_default=lambda s: s.v1 + s.v2, init=True)
 
 describe(E)
+doc('v_computed can be overridden if init=True but don\'t inject it into other classes.')
 describe(lambda: E(v_computed=55))
 
 @datatree
@@ -181,9 +204,11 @@ class F(E, A):
     
 describe(F)
 describe(lambda: F(v4=44))
+describe(lambda: F(v1=44))
 
 
-@datatree
+
+@datatree(provide_override_field=True)
 class O:
     '''Deep tree of injected fields.'''
     c_node: Node=dtfield(Node(C, 'a_v1'), init=False, repr=False)
@@ -200,10 +225,8 @@ describe(lambda: O(
                 b_node=dtargs(v2=909090)
                 )))).c_node().b_node(v2=55555))
 
-    
-    
+
 
 if __name__ == "__main__":
     # #main()
-    import sys
-    sys.exit(0)
+    pass

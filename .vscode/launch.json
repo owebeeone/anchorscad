@@ -15,7 +15,7 @@
             "args": ["--write", "--write_path_files"],
             "justMyCode": true,
             "env": {
-                "PYTHONPATH": "${workspaceFolder}${pathSeparator}src;${workspaceFolder}${pathSeparator}pythonopenscad${pathSeparator}src;${workspaceFolder}${pathSeparator}datatrees${pathSeparator}src;${env:PYTHONPATH}"
+                "PYTHONPATH": "${workspaceFolder}${pathSeparator}src"
             }
         }
     ]

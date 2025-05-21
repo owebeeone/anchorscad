@@ -238,8 +238,12 @@ class TactileSwitchTL59(ad.CompositeShape):
     fn: int=32
     
     EXAMPLE_SHAPE_ARGS=ad.args(leadx_cage_hide_cage=True)
-    EXAMPLE_ANCHORS=tuple(ad.surface_args('lead_hole', i + 1, at_end=True, 
-                                       scale_anchor=0.3) for i in range(2))
+    EXAMPLE_ANCHORS=(
+        ad.surface_args('lead_hole', 1, at_end=True, 
+                        scale_anchor=0.3),
+        ad.surface_args('lead_hole', 2, at_end=True, 
+                        scale_anchor=0.3)
+        )
     
     LEADS_COUNT=2
     

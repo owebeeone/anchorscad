@@ -1,4 +1,3 @@
- 
 # Source files
 # ============
 *.pxd    text diff=python
@@ -18,9 +17,16 @@
 *.pyc    binary export-ignore
 *.pyo    binary export-ignore
 *.pyd    binary
+*.png    binary
+*.jpg    binary
+*.jpeg   binary
+*.gif    binary
+*.bmp    binary
+*.tiff   binary
+*.tif    binary
+*.webp   binary
 
-
-*  text eol=lf
+#*  text eol=lf
 
 # Note: .db, .p, and .pkl files are associated
 # with the python modules ``pickle``, ``dbm.*``,

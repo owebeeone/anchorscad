@@ -8,6 +8,7 @@ from anchorscad import datatree, Node, tranZ, ROTY_180, shape, CompositeShape, \
                        cageof, ShapeNode, args, Maker, Box, ModeShapeFrame, \
                        anchor, anchorscad_main
 
+from anchorscad.core import ModuleDefault
 from anchorscad_models.basic.pipe import Pipe
 from anchorscad_models.screws.dims import holeMetricDims 
 from anchorscad_models.grille.round.CurlySpokes import CurlySpokes
@@ -120,5 +121,6 @@ class FanVent(CompositeShape):
     def grille_base(self, *args, **kwds):
         return self.maker.at('grille', 'base', *args, **kwds)
 
+MAIN_DEFAULT=ModuleDefault(all=True)
 if __name__ == '__main__':
     anchorscad_main(False)
