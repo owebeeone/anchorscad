@@ -65,7 +65,8 @@ class CountersunkScrew(ad.CompositeShape):
     EXAMPLE_ANCHORS=(
                 ad.surface_args('screw_cage', 'base'),
                 ad.surface_args('access_hole', 'top'),
-                ad.surface_args('screw_hole', 'head_mid', 0.5),)
+                ad.surface_args('screw_hole', 'head_mid', 0.5),
+                ad.surface_args('top'))
     
     EXAMPLES_EXTENDED={
         'show_cage': ad.ExampleParams(
@@ -172,6 +173,11 @@ class CountersunkScrew(ad.CompositeShape):
                      'base', post=ad.rotY(180))
         
         return maker
+    
+    
+    @ad.anchor('Screw head surface interface top')
+    def top(self) -> ad.GMatrix:
+        return self.maker.at('screw_hole', 'top_edge', 1)
 
     def createHeadDims(self, shaft_dims):
         '''Creates a default set of countersunk screw set of head dimensions.'''

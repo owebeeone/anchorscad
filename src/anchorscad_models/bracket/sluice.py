@@ -70,7 +70,7 @@ class SluiceBracketBlock(ad.CompositeShape):
     
     screw_shaft_overall_length: float = ad.dtfield(25, doc='Overall length of the screw shaft')
     screw_shaft_thru_length: float = ad.dtfield(25, doc='Thru length of the screw shaft')
-    screw_size_name: str = ad.dtfield('DECK_10g-10', doc='Size name of the screw')
+    screw_size_name: str = ad.dtfield('9g', doc='Size name of the screw')
     screw_include_thru_shaft: bool = ad.dtfield(False, doc='Include thru shaft')
     screw_shaft_hide_cage: bool = ad.dtfield(False, doc='Hide cage of the screw shaft')
     screw_as_solid: bool = ad.dtfield(False, doc='As solid')
@@ -78,9 +78,24 @@ class SluiceBracketBlock(ad.CompositeShape):
     
     screw_node: ad.Node[CountersunkScrew] = ad.ShapeNode(CountersunkScrew, prefix="screw_")
     
+    provide_front_tnut: bool = ad.dtfield(True, doc='Provide front tnut')
+    provide_back_tnut: bool = ad.dtfield(True, doc='Provide back tnut')
+    
     
     EXAMPLE_SHAPE_ARGS=ad.args(fn=32)
     EXAMPLE_ANCHORS=()
+    
+    EXAMPLES_EXTENDED={
+        'front_tnut': ad.ExampleParams(
+            shape_args=ad.args(provide_front_tnut=True, provide_back_tnut=False, fn=64),
+            anchors=()),
+        'back_tnut': ad.ExampleParams(
+            shape_args=ad.args(provide_front_tnut=False, provide_back_tnut=True, fn=64),
+            anchors=()),
+        'both_tnuts': ad.ExampleParams(
+            shape_args=ad.args(provide_front_tnut=True, provide_back_tnut=True, fn=64),
+            anchors=())
+    }
 
     def build(self) -> ad.Maker:
         maker = self.cage_node().cage('cage').colour("red", 0.5).transparent(True) \
@@ -108,17 +123,28 @@ class SluiceBracketBlock(ad.CompositeShape):
         )
         
         tnut_shape = self.tnut_node()
-        tnut_maker = tnut_shape.hole('tnut').at('flat', 'top', 1, post=ad.rotX(180))
+        tnut_maker = tnut_shape.hole('tnut-front').at('flat', 'top', 1, post=ad.rotX(180))
         
-        maker.add_at(
-            tnut_maker,
-            "face_centre",
-            'front',
-            post=ad.translate((-1, 3, 0))
-        )
+        if self.provide_front_tnut:
+            maker.add_at(
+                tnut_maker,
+                "face_centre",
+                'front',
+                post=ad.translate((-1, 3, 0))
+            )
+        
+        tnut_maker = tnut_shape.hole('tnut-back').at('flat', 'top', 1, post=ad.rotX(180))
+                
+        if self.provide_back_tnut:
+            maker.add_at(
+                tnut_maker,
+                "face_centre",
+                'back',
+                post=ad.translate((-1, -3, 0))
+            )
         
         screw_shape = self.screw_node()
-        screw_maker = screw_shape.composite('screw').at('thru_shaft', 'top', 1)
+        screw_maker = screw_shape.composite('screw').at('top', post=ad.ROTX_180)
         
         maker.add_at(
             screw_maker,
