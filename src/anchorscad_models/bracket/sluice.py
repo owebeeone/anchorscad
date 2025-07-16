@@ -45,7 +45,7 @@ class SluiceBracketBlock(ad.CompositeShape):
     path_builder: ad.Node = ad.ShapeNode(BlockPathBuilder)
     path: ad.Path=ad.dtfield(self_default=lambda s: s.path_builder().build())
     
-    h: float=ad.dtfield(10, doc='Height of the block')
+    h: float=ad.dtfield(24, doc='Height of the block')
     extrude_node: ad.Node[ad.LinearExtrude]=ad.ShapeNode(ad.LinearExtrude)
     
     cage_size: tuple=ad.dtfield(
@@ -66,11 +66,12 @@ class SluiceBracketBlock(ad.CompositeShape):
     angle_node: ad.Node[AngleExtrusion]=ad.ShapeNode(AngleExtrusion, prefix="brace_")
     brace_angle: float | ad.Angle = ad.dtfield(120, doc='Angle of the brace')
     
+    tnut_h_shaft_extension: float = ad.dtfield(self_default=lambda s: s.h)
     tnut_node: ad.Node[Tnut]=ad.ShapeNode(Tnut, prefix="tnut_")
     
     screw_shaft_overall_length: float = ad.dtfield(25, doc='Overall length of the screw shaft')
     screw_shaft_thru_length: float = ad.dtfield(25, doc='Thru length of the screw shaft')
-    screw_size_name: str = ad.dtfield('9g', doc='Size name of the screw')
+    screw_size_name: str = ad.dtfield('9g-a', doc='Size name of the screw')
     screw_include_thru_shaft: bool = ad.dtfield(False, doc='Include thru shaft')
     screw_shaft_hide_cage: bool = ad.dtfield(False, doc='Hide cage of the screw shaft')
     screw_as_solid: bool = ad.dtfield(False, doc='As solid')

@@ -41,13 +41,13 @@ SHAFT_MAP = {
     'BUGLE_14g-10' : ShaftDimensions(6.3, 6.7, 6.4),
     'DECK_10g-10' : ShaftDimensions(4.8, 5.1, 4.9),
     '9g' : ShaftDimensions(4.52, 4.8, 4.55),
-    '9g-a' : ShaftDimensions(4.52, 4.8, 4.55),
+    '9g-a' : ShaftDimensions(4.48, 4.8, 4.53),
     }
 
 
 HEAD_MAP = {
     '9g-a' : HeadDimensions(
-                head_top_d=9.5,
+                head_top_d=11.5,
                 head_bot_d=4.55,
                 head_protrusion_height=2,
                 head_mid_depth=0.1,
