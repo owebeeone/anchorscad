@@ -1,0 +1,203 @@
+'''
+Created on ${date}
+
+@author: ${user}
+'''
+
+import anchorscad as ad
+from anchorscad_models.joins.DoveTail import DoveTail
+
+
+@ad.datatree
+class BittenRectanglePathBuilder:
+    '''A path builder for a rectangle with circular "bites" at the corners.'''
+    
+    w: float=ad.dtfield(10.5 * 25.4, doc='Width of rectangle')
+    d: float=ad.dtfield(10.5 * 25.4, doc='Height of rectangle')
+    r: float=ad.dtfield(6 * 25.4, doc='Radius of arc')
+    
+    def build(self) -> ad.Path:
+        
+        builder = (ad.PathBuilder()
+                .move((self.w, 0))
+                .line((self.r, 0), 'base')
+                .arc_centre_sweep((0, 0), 90, name='left-arc')
+                .stroke(self.d - self.r, -90, name='left-side')
+                .stroke(self.w - self.r, -90, name='top')
+                .arc_centre_sweep((self.w, self.d), 90, name='right-arc')
+                .stroke(self.d - self.r, -90, name='right-side')
+                )
+                    
+        return builder.build()
+
+
+@ad.shape
+@ad.datatree
+class GoingDottyMain(ad.CompositeShape):
+    '''
+    A shape for a going dotty quilt.
+    '''
+    path_builder: ad.Node[BittenRectanglePathBuilder]
+    path: ad.Path=ad.dtfield(self_default=lambda s: s.path_builder().build())
+    
+    h: float=ad.dtfield(3.5, doc='Height of the shape')
+    
+    extrude_node: ad.Node[ad.LinearExtrude]=ad.ShapeNode(ad.LinearExtrude)
+    
+    cage_size: tuple=ad.dtfield(self_default=lambda s: (s.w, s.d, s.h))
+    cage_node: ad.Node[ad.Box]=ad.ShapeNode(ad.Box, {'size': 'cage_size'})
+    
+    mouse_ear_r: float=ad.dtfield(5, doc='Radius of the mouse ear')
+    mouse_ear_h: float=ad.dtfield(0.4, doc='Height of the mouse ear')
+    mouse_ear_node: ad.Node[ad.Cylinder] = ad.ShapeNode(
+        ad.Cylinder, prefix='mouse_ear_')
+    
+    EXAMPLE_SHAPE_ARGS=ad.args(fn=32)
+    EXAMPLE_ANCHORS=(ad.surface_args('going-dotty', 'left-arc', 0),
+                     ad.surface_args('going-dotty', 'left-arc', 1),)
+    
+
+    def build(self) -> ad.Maker:
+        cage_shape = self.cage_node()
+        maker = cage_shape.cage('cage').at('centre')
+        maker.add_at(self.extrude_node().solid('going-dotty').at('base', 0), 
+                     'face_corner', 'base', 0, post=ad.ROTX_270)
+        
+
+
+        return maker
+    
+@ad.shape
+@ad.datatree
+class GoingDottyCut(ad.CompositeShape):
+    '''
+    If the GoingDottyMain shape is too large to 3D print, this shape can be used
+    using the dovetail join to print the shape in two parts.
+    '''
+    path_builder: ad.Node[GoingDottyMain]
+    main: GoingDottyMain=ad.dtfield(self_default=lambda s: s.path_builder().build())
+    
+    
+    dt_depth: float=3
+    dt_widtha: float=15
+    dt_widthb: float=14
+    dt_edge_width: float=100
+    overall_width: float=ad.dtfield(self_default=lambda s: s.w + s.epsilon)
+    overall_height: float=ad.dtfield(self_default=lambda s: s.d + s.epsilon)
+    overall_t: float=ad.dtfield(self_default=lambda s: s.h + s.epsilon)
+    edge_shrink: float=0.1
+    dovetail_node: ad.Node[DoveTail]=ad.ShapeNode(
+        DoveTail, 
+        {'t': 'overall_t'},
+        expose_all=True)
+    
+    mouse_ear_r: float=ad.dtfield(5, doc='Radius of the mouse ear')
+    mouse_ear_h: float=ad.dtfield(0.1, doc='Height of the mouse ear')
+    mouse_ear_node: ad.Node[ad.Cylinder] = ad.ShapeNode(
+        ad.Cylinder, prefix='mouse_ear_')
+    
+    epsilon: float=0.01
+    
+    EXAMPLE_SHAPE_ARGS=ad.args(fn=32)
+    EXAMPLE_ANCHORS=()
+    EXAMPLES_EXTENDED={
+        'upper': ad.ExampleParams(
+            shape_args=ad.args(side=False, fn=128),
+            anchors=()),
+        'lower': ad.ExampleParams(
+            shape_args=ad.args(side=True, fn=128),
+            anchors=())
+        }
+    
+    def build(self) -> ad.Maker:
+        
+        maker = self.main.solid('main').at('centre')
+        
+        maker.add_at(self.dovetail_node().hole('dovetail').colour('red').at('centre'), 'centre')
+        
+        mouse_ear_shape = self.mouse_ear_node()
+        
+        if self.side:
+            anchors = (('left-arc', 1), ('right-arc', 0))
+        else:
+            anchors = (('left-arc', 0),  ('right-arc', 1))
+        
+        for i in anchors:
+            maker.add_at(mouse_ear_shape.solid(('mouse-ear',) + i).at('base'), 'going-dotty', *i, 
+                         post=ad.ROTX_90)
+        
+        return maker
+
+@ad.datatree
+class QuadrantPathBuilder:
+    r: float=ad.dtfield(4.5 * 25.4, doc='Radius of arc')
+    
+    def build(self) -> ad.Path:
+        return (ad.PathBuilder()
+                .move((self.r, 0))
+                .line((0, 0), name='base')
+                .stroke(self.r, -90, name='side')
+                .arc_tangent_radius_sweep(self.r, sweep_angle=-90, angle=-90, side=False, name='arc')
+                ).build()
+        
+@ad.shape
+@ad.datatree
+class Quadrant(ad.CompositeShape):
+    '''
+    A quadrant of a going dotty quilt.
+    '''
+    path_builder: ad.Node[QuadrantPathBuilder]
+    h: float=ad.dtfield(3.5, doc='Height of the quadrant')
+    path: ad.Path=ad.dtfield(self_default=lambda s: s.path_builder().build())
+
+    extrude_node: ad.Node[ad.LinearExtrude]=ad.ShapeNode(ad.LinearExtrude)
+    
+    EXAMPLE_SHAPE_ARGS=ad.args(fn=32)
+    EXAMPLE_ANCHORS=()
+    
+    def build(self) -> ad.Maker:
+        return self.extrude_node().solid('quadrant').at('base', 1)
+    
+    
+@ad.datatree
+class ArcStripPathBuilder:
+    '''
+    A path builder for an arc strip.
+    '''
+    r_inner: float=ad.dtfield(4.0 * 25.4, doc='Radius of inner arc')
+    r_outer: float=ad.dtfield(6.5 * 25.4, doc='Radius of outer arc')
+    
+    def build(self) -> ad.Path:
+        return (ad.PathBuilder()
+                .move((self.r_inner, 0))
+                .arc_centre_sweep((0, 0), 90, name='inner-arc')
+                .stroke(self.r_outer - self.r_inner, -90, name='left')
+                .arc_centre_sweep((0, 0), -90, name='outer-arc')
+                .stroke(self.r_outer - self.r_inner, -90, name='base')
+                ).build()
+    
+@ad.shape
+@ad.datatree
+class ArcStrip(ad.CompositeShape):
+    '''
+    An arc strip.
+    '''
+    path_builder: ad.Node[ArcStripPathBuilder]
+    path: ad.Path=ad.dtfield(self_default=lambda s: s.path_builder().build())
+    
+    h: float=ad.dtfield(3.5, doc='Height of the arc strip')
+    extrude_node: ad.Node[ad.LinearExtrude]=ad.ShapeNode(ad.LinearExtrude)
+    
+    EXAMPLE_SHAPE_ARGS=ad.args(fn=32)
+    EXAMPLE_ANCHORS=()
+
+    def build(self) -> ad.Maker:
+        return self.extrude_node().solid('arc-strip').at('base', 0)
+    
+
+# Uncomment the line below to default to writing OpenSCAD files
+# when anchorscad_main is run with no --write or --no-write options.
+MAIN_DEFAULT=ad.ModuleDefault(all=True)
+
+if __name__ == "__main__":
+    ad.anchorscad_main()

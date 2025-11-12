@@ -10,8 +10,6 @@ from anchorscad_models.basic.angle_extrusion import AngleExtrusion
 from anchorscad_models.screws.CountersunkScrew import CountersunkScrew
 from anchorscad_models.screws.tnut import Tnut
 
-SMALL="20x3"
-LARGE="40x3.2"
 
 @ad.datatree
 class BlockPathBuilder:
@@ -153,6 +151,14 @@ class SluiceBracketBlock(ad.CompositeShape):
             'base',
             post=ad.tranX(-9)
         )
+        
+        try:
+            line = ad.surface_args('tnut-back', 'flat', 'top', 1).apply(maker)
+            plane = ad.surface_args('face_centre', 'top').apply(maker)
+            distance = ad.distance_between_point_plane(line, plane)
+            print(f"{distance=}")
+        except Exception as e:
+            print(f"{e=}")
         
         return maker
 

@@ -33,10 +33,13 @@ class PatternRunner:
     '''
     svgr_path: ad.Path = ad.dtfield(None, 'The path to run the pattern on.')
     svgr_fill_color: str = ad.dtfield('none', 'The fill colour for the SVG')
-    svgr_node: ad.Node = ad.Node(svgr.SvgRenderer, prefix='svgr_')
+    path_id: str = ad.dtfield("default", 'The path ID for the SVG')
+    svgr_node: ad.Node = ad.Node(
+        svgr.SvgRenderer, {'path_id': 'path_id'}, prefix='svgr_', expose_all=True)
     args: ap.ArgumentParser = field(default_factory=maker_argparser, init=False)
     
-    csq_node: ad.Node = ad.Node(CsqPathRenderer, prefix='csq_')
+    csq_node: ad.Node = ad.Node(
+        CsqPathRenderer, {'path_id': 'path_id'}, prefix='csq_', expose_all=True)
     
     
     def run(self, argv: List[str] = None):
@@ -57,9 +60,9 @@ class PatternRunner:
         
         
 
-def main(path: ad.Path):
+def main(path: ad.Path, argv: List[str] = None):
     '''
     Run the pattern.
     '''
     runner = PatternRunner(path, svgr_is_path_closed=False)
-    runner.run(sys.argv[1:])
+    runner.run(sys.argv[1:] if argv is None else argv)

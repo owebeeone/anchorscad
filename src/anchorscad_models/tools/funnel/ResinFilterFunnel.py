@@ -63,6 +63,7 @@ class ConePipe(ad.CompositeShape):
     t: float=None
     t_base: float=None
     t_top: float=None
+    fn: int=None
     outer_cone_node: ad.Node=ad.ShapeNode(ad.Cone)
     inner_cone_node: ad.Node=ad.ShapeNode(ad.Cone, suffix='_inner')
     epsilon: float=0.005

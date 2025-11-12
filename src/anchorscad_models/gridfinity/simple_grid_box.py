@@ -98,6 +98,15 @@ class SimpleGridBox(ad.CompositeShape):
                 y=(348- 1.5) / 2,
                 nx=10,
                 ny=1),
+        ),
+        'ice_cubes' : ad.ExampleParams(
+            shape_args=ad.args(
+                x=(26.2 + 1.8) * 3,
+                y=(26.2 + 1.8) * 7,
+                z=24,
+                t=1.8,
+                nx=3,
+                ny=7),
         )
     }
 

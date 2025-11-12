@@ -195,5 +195,9 @@ class DresdenBorder(ad.CompositeShape):
                 t=self.t)
             return shape.maker
 
+# Uncomment the line below to default to writing OpenSCAD files
+# when anchorscad_main is run with no --write or --no-write options.
+MAIN_DEFAULT=ad.ModuleDefault(all=True)
+
 if __name__ == '__main__':
     ad.anchorscad_main(False)

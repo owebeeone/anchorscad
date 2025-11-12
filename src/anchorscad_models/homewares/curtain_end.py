@@ -71,7 +71,7 @@ class CurtainEndCap(ad.CompositeShape):
     rotate_extrude_node: ad.Node=ad.ShapeNode(ad.RotateExtrude)
     
     # Try a stupidly high number of facets to get a smoother curve.
-    fn: int=ad.dtfield(256, doc='The number of facets for the rotate_extrude.')
+    fn: int=ad.dtfield(64, doc='The number of facets for the rotate_extrude.')
 
     EXAMPLE_SHAPE_ARGS=ad.args()
     EXAMPLE_ANCHORS=()

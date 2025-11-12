@@ -256,7 +256,7 @@ class HingedLidLabel(ad.CompositeShape):
     label_size: float=ad.dtfield(
         self_default=lambda s: s.big_lid_w * 0.6,
         doc='Size of text')
-    label_boss: float=ad.dtfield(0.2, 'Height of boss for label')
+    label_boss: float=ad.dtfield(0.3, 'Height of boss for label')
         
     EXAMPLE_SHAPE_ARGS=ad.args(
             sep=0.2,
@@ -266,9 +266,10 @@ class HingedLidLabel(ad.CompositeShape):
             fn=128)
     
     def build(self) -> ad.Maker:
-        maker = self.hinged_lid.solid('lid').at()
+        maker = self.hinged_lid.solid('lid').material(ad.Material('lid', priority=9)).at()
 
-        maker.add_at(self.label_node().solid('text').colour((1, 0, 0)).at('default'),
+        maker.add_at(self.label_node().solid('text').material(
+                       ad.Material('lid', priority=9)).colour("lime").at('default'),
                      'big_lid_arc', 0.5, rh=1,
                      post=ad.ROTY_180 
                         * ad.ROTX_270 

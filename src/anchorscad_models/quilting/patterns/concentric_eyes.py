@@ -173,4 +173,4 @@ class ConcentricEyes(ad.CompositeShape):
     
     
 if __name__ == '__main__':
-    pu.main(ConcentricEyes().build())
+    pu.main(ConcentricEyes().build(), ['--csq'])
