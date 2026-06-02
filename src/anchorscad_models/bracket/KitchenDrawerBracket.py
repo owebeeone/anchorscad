@@ -408,6 +408,9 @@ class KitchenDrawerBracket(ad.CompositeShape):
     outline: ad.Shape=ad.dtfield(self_default=lambda s: s.outline_node())
     
     front_bevel_radius: float=RADIUS_TOP
+    fn: int=64
+    fa: float=None
+    fs: float=None
 
     mount_hole_lower_h=17
     mount_hole_lower_node: ad.Node=ad.ShapeNode(
@@ -456,9 +459,6 @@ class KitchenDrawerBracket(ad.CompositeShape):
     
     tnut_node: ad.Node=ad.ShapeNode(Tnut, {})
     
-    fn: int=64
-    fa: float=None
-    fs: float=None
     
     EXAMPLE_SHAPE_ARGS=ad.args()
     EXAMPLE_ANCHORS=()
@@ -643,7 +643,7 @@ class KitchenDrawerBracket(ad.CompositeShape):
                      .at('top'),
                      post=screw2_intersection * ad.tranZ(-epsilon))
         
-        
+        as_solid = False
         tnut_screw_hole = self.countersunk_scew_hole_type(
                 shaft_overall_length=self.outline.front_size[1] + self.inner_h,
                 shaft_thru_length=self.inner_h,
@@ -651,7 +651,7 @@ class KitchenDrawerBracket(ad.CompositeShape):
                 size_name="M6",
                 head_depth_factor=1.1,
                 include_thru_shaft=False,
-                as_solid=False,
+                as_solid=as_solid,
                 fn=self.fn)
         
         # Adjuster fixer screw.
@@ -662,19 +662,19 @@ class KitchenDrawerBracket(ad.CompositeShape):
                 size_name="M2.6",
                 head_depth_factor=0.8,
                 include_thru_shaft=False,
-                as_solid=False,
+                as_solid=as_solid,
                 fn=self.fn)
         
         maker.add_at(adjuster_fixer.composite('adjuster_fixer').at('top'), 
                      'holder', 'top_l', 0.72, rh=0.71,
-                     post=ad.ROTX_180)
+                     post=ad.IDENTITY)
         
         # Inner plate transforms
         screw1_intersection = ad.find_intersection(
             maker, inner_plate_plane, screw1_axis)
         
         maker.add_at(tnut_screw_hole.composite('screw1').at('top'),
-                     post=screw1_intersection)
+                     post=screw1_intersection * ad.ROTX_180 * ad.tranZ(epsilon))
         
         if self.show_adjuster:
             return self.adjuster_solid.solid('adjuster').at('base')

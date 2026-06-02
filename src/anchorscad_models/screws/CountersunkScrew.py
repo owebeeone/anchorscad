@@ -165,7 +165,7 @@ class CountersunkScrew(ad.CompositeShape):
             .build()
             )
         
-        shape = self.rotate_extrude_node(path)
+        shape = self.rotate_extrude_node(path, use_polyhedrons=False)
         
         shape_func = shape.solid if self.as_solid else shape.hole
         

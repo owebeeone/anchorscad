@@ -69,7 +69,7 @@ class Petals6Shape(ad.CompositeShape):
     '''A six-petal quilt pattern: inner circle plus six outward arcs.'''
     petals6: Petals6 = ad.dtfield(default_factory=Petals6, doc='The petals6 pattern')
     path: ad.Path = ad.dtfield(self_default=lambda s: s.petals6.build())
-    h: float = ad.dtfield(3, 'The height of the shape')
+    h: float = ad.dtfield(1.5, 'The height of the shape')
     linear_extrude: ad.Node = ad.ShapeNode(ad.LinearExtrude)
     fn: int = ad.dtfield(64, 'The number of facets for the extrusion')
 

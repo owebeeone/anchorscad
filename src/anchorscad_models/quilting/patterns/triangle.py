@@ -53,7 +53,7 @@ class TriangleShape(ad.CompositeShape):
     '''A six-petal quilt pattern: inner circle plus six outward arcs.'''
     triangle: Triangle = ad.dtfield(default_factory=Triangle, doc='The triangle pattern')
     path: ad.Path = ad.dtfield(self_default=lambda s: s.triangle.build())
-    h: float = ad.dtfield(3, 'The height of the shape')
+    h: float = ad.dtfield(1.5, 'The height of the shape')
     linear_extrude: ad.Node = ad.ShapeNode(ad.LinearExtrude)
     fn: int = ad.dtfield(64, 'The number of facets for the extrusion')
 

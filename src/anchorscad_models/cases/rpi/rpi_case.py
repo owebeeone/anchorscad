@@ -22,6 +22,7 @@ from anchorscad_models.vent.fan.fan_vent import FanVent
 from anchorscad_models.screws.screw_tab import ScrewTab
 import anchorscad_models.cases.outline_tools as ot 
 from anchorscad_models.cases.rpi.rpi4_outline import RaspberryPi4Outline
+from anchorscad_models.screws.CountersunkScrew import CountersunkScrew
 
 from time import time
 
@@ -94,6 +95,17 @@ class RaspberryPiCase(CompositeShape):
     cageof_node: Node=Node(cageof, prefix='rpi_cage_')
     rpi_cage_properties: CageOfProperties=CageOfProperties(
         name='split_box_cage')
+    base_mount_screw_hole: bool=dtfield(False, doc='Whether to add mount via base.')
+    base_screw_hole_shaft_overall_length: float=ad.dtfield(
+        10, doc='The overall length of the screw shaft.')
+    base_screw_hole_shaft_thru_length: float=ad.dtfield(
+        self_default=lambda s: s.base_screw_hole_shaft_overall_length,
+        doc='The length of the screw shaft that freely passes the screw threads.')
+    base_screw_hole_size_name: str=ad.dtfield('M2.5', doc='The name of the screw size.')
+    base_screw_hole_as_solid: bool=dtfield(False, doc='Whether to add the base screw hole as a solid.')
+    base_mount_screw_hole_node: Node=dtfield(
+        ShapeNode(CountersunkScrew, prefix='base_screw_hole_'))
+    
     fn: int=None
     fa: float=None
     fs: float=None
@@ -297,6 +309,13 @@ class RaspberryPiCase(CompositeShape):
                          .composite(('support', i))
                          .at('start', post=ROTX_180),
                          'outline', ('mount_hole', i), 'top')
+            if self.base_mount_screw_hole:
+                base_screw_hole = self.base_mount_screw_hole_node()
+                maker.add_at(base_screw_hole
+                            .composite(('base_screw_hole', i))
+                            .at('top'),
+                            ('support', i), 'base', 
+                            post=tranZ(-0.3) * ROTX_180)
             
         # Add mounting screw tabs.
         if not self.make_case_top:
