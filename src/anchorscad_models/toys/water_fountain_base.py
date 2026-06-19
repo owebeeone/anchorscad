@@ -68,7 +68,7 @@ class WaterFountainBase(ad.CompositeShape):
     screw_hole_node: ad.Node = ad.ShapeNode(CountersunkScrew, prefix='screw_')
 
     screw_cage_r: float = ad.dtfield(0.4 + (41.35 + 21.3) / 4, doc="Screw cage radius")
-    screw_cage_h: float = ad.dtfield(8, doc="Screw cage height")
+    screw_cage_h: float = ad.dtfield(5, doc="Screw cage height")
     screw_cage_node: ad.Node = ad.ShapeNode(ad.Cylinder, prefix='screw_cage_')
 
     rib_w: float = ad.dtfield(1.25, doc="Rib width")
@@ -78,6 +78,9 @@ class WaterFountainBase(ad.CompositeShape):
         doc='The (x,y,z) size of the rib',
     )
     rib_node: ad.Node = ad.ShapeNode(ad.Box, prefix='rib_')
+    rib_count: int = ad.dtfield(5, doc="Number of ribs")
+    rib_angle_offset: float = ad.dtfield(90, doc="Angle offset for the ribs")
+    use_polyhedrons: bool = False
 
 
     EXAMPLE_SHAPE_ARGS = ad.args(fn=128)
@@ -95,9 +98,9 @@ class WaterFountainBase(ad.CompositeShape):
 
         screw_cage = screw_cage_shape.solid("screw_cage").colour('red', 0.5).transparent(True).at("top", rh=1)
 
-        maker.add_at(screw_cage, "centre-line", 0, post=ad.ROTX_270)
+        maker.add_at(screw_cage, "centre-line", 1, post=ad.ROTX_90)
 
-        screw_shape = self.screw_hole_node()
+        screw_shape = self.screw_hole_node(as_solid=False)
 
         for i in range(2):
             maker.add_at(
@@ -106,22 +109,39 @@ class WaterFountainBase(ad.CompositeShape):
                 "surface",
                 rh=1,
                 angle=180 * i,
-                post=ad.ROTX_270,
+                post=ad.ROTX_90,
             )
 
         rib_shape = self.rib_node()
-        rib_count = 5
+        rib_count = self.rib_count
+        rib_angle_offset = self.rib_angle_offset
         for i in range(rib_count):
             maker.add_at(
                 rib_shape.hole(("rib", i)).at("face_centre", "front"),
                 "fountain_base",
                 "outer",
                 t=0.5,
-                angle=90 +360 * i / rib_count,
+                angle=rib_angle_offset +360 * i / rib_count,
                 post=ad.ROTY_180,
             )
         return maker
     
+    
+@ad.shape
+@ad.datatree
+class WaterFountainBase2(WaterFountainBase):
+    """
+    A base for a water dispenser that would normally be placed on a 
+    20L water bottle.
+    """
+    
+    h: float = ad.dtfield(12, doc="Height")
+    rib_count: int = ad.dtfield(6, doc="Number of ribs")
+    rib_angle_offset: float = ad.dtfield(0, doc="Angle offset for the ribs")
+    rib_w: float = ad.dtfield(1.8, doc="Rib width")
+    rib_h: float = ad.dtfield(3, doc="Rib height")
+    rou: float = ad.dtfield(62.25 / 2, doc="Upper outer radius")  # type: ignore
+    rol: float = ad.dtfield(62.5 / 2, doc="Lower outer radius")  # type: ignore
 
 
 # Uncomment the line below to default to writing OpenSCAD files
