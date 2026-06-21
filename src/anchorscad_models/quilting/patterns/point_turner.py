@@ -121,14 +121,14 @@ class PointTurnerShape(ad.CompositeShape):
         wedge = self.wedge_node()
         INCH=25.4
         count = int((self.point_turner.l - self.point_turner.w / 2 ) // (INCH / 4))
-        angle_list = (65, 40, 55, 40)
+        angle_list = (79, 70, 76, 70)
         for i in range(count - 1):
             wedge_shape = wedge.hole(('grad', i)).at()
             angle = angle_list[i % len(angle_list)]
             maker.add_at(
                 wedge_shape, 
                 'extrusion', 'top', 0, 
-                post=ad.tranX(i * (INCH / 4)) * ad.tranY(self.h - self.bevel -2) * ad.rotX(angle) * ad.ROTY_180 )
+                post=ad.tranX(i * (INCH / 4)) * ad.tranY(self.h - self.bevel) * ad.rotX(angle) * ad.ROTY_180 )
  
         hole = self.hole_node()
         for i in range(4):
